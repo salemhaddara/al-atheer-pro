@@ -1,0 +1,661 @@
+{
+  "permissions": {
+    "title": "الصلاحيات والأدوار",
+    "subtitle": "إدارة صلاحيات المستخدمين والأدوار",
+    "stats": {
+      "totalUsers": "إجمالي المستخدمين",
+      "activeUsers": "مستخدم نشط",
+      "definedRoles": "الأدوار المحددة",
+      "differentRoles": "دور مختلف",
+      "suspendedUsers": "المستخدمين المعلقين",
+      "pendingActivation": "بانتظار التفعيل"
+    },
+    "roles": {
+      "title": "الأدوار والصلاحيات",
+      "subtitle": "تحديد الأدوار والصلاحيات لكل دور",
+      "addNew": "دور جديد",
+      "createTitle": "إنشاء دور جديد",
+      "createDescription": "قم بتحديد اسم الدور والصلاحيات",
+      "name": "اسم الدور",
+      "namePlaceholder": "مثال: مدير فرع",
+      "description": "الوصف",
+      "descriptionPlaceholder": "وصف مختصر للدور",
+      "permissions": "الصلاحيات",
+      "saveRole": "حفظ الدور",
+      "roleCreated": "تم إنشاء الدور بنجاح",
+      "tableHeaders": {
+        "roleName": "اسم الدور",
+        "description": "الوصف",
+        "userCount": "عدد المستخدمين",
+        "permissionCount": "عدد الصلاحيات",
+        "actions": "إجراءات"
+      },
+      "userCount": "مستخدم",
+      "allPermissions": "جميع الصلاحيات",
+      "permissionCount": "صلاحية",
+      "edit": "تعديل",
+      "view": "عرض",
+      "predefined": {
+        "systemAdmin": {
+          "name": "مدير النظام",
+          "description": "صلاحيات كاملة على جميع الأقسام"
+        },
+        "accountant": {
+          "name": "محاسب",
+          "description": "صلاحيات المحاسبة والفواتير"
+        },
+        "salesManager": {
+          "name": "مدير مبيعات",
+          "description": "إدارة المبيعات والعملاء"
+        },
+        "warehouseManager": {
+          "name": "مدير مستودع",
+          "description": "إدارة المستودعات والمخزون"
+        },
+        "hrEmployee": {
+          "name": "موظف موارد بشرية",
+          "description": "إدارة الموظفين والرواتب"
+        },
+        "salesEmployee": {
+          "name": "موظف مبيعات",
+          "description": "إدخال المبيعات فقط"
+        }
+      }
+    },
+    "users": {
+      "title": "المستخدمين",
+      "subtitle": "إدارة مستخدمي النظام",
+      "addNew": "مستخدم جديد",
+      "addTitle": "إضافة مستخدم جديد",
+      "addDescription": "قم بإدخال بيانات المستخدم",
+      "linkedEmployee": "الموظف المرتبط",
+      "linkedEmployeeEn": "Linked Employee (Employees Table)",
+      "selectEmployee": "اختر الموظف",
+      "linkedEmployeeNote": "ربط حساب المستخدم بسجل الموظف",
+      "username": "اسم المستخدم",
+      "usernameEn": "Username",
+      "usernamePlaceholder": "ahmed.mohamed",
+      "email": "البريد الإلكتروني",
+      "emailPlaceholder": "user@company.com",
+      "password": "كلمة المرور",
+      "passwordEn": "Password",
+      "passwordPlaceholder": "••••••••",
+      "role": "الدور",
+      "roleEn": "User Role",
+      "userPermissions": "الصلاحيات",
+      "userPermissionsEn": "User Permissions",
+      "status": "حالة المستخدم",
+      "statusEn": "User Status",
+      "statusActive": "نشط",
+      "statusActiveEn": "Active",
+      "statusSuspended": "معلق",
+      "statusSuspendedEn": "Suspended",
+      "saveUser": "حفظ المستخدم",
+      "userCreated": "تم إضافة المستخدم بنجاح",
+      "tableHeaders": {
+        "name": "الاسم",
+        "email": "البريد الإلكتروني",
+        "role": "الدور",
+        "status": "الحالة",
+        "actions": "إجراءات"
+      },
+      "edit": "تعديل",
+      "disable": "تعطيل"
+    },
+    "permissionsList": {
+      "dashboard": "لوحة التحكم",
+      "accounting": "المحاسبة",
+      "invoices": "الفواتير",
+      "sales": "المبيعات",
+      "purchases": "المشتريات",
+      "pos": "نقاط البيع",
+      "customers": "العملاء",
+      "suppliers": "الموردين",
+      "warehouses": "المستودعات",
+      "products": "المنتجات",
+      "inventory": "المخزون",
+      "hr": "الموارد البشرية",
+      "employees": "الموظفين",
+      "payroll": "الرواتب",
+      "companies": "الشركات",
+      "branches": "الفروع",
+      "reports": "التقارير",
+      "settings": "الإعدادات"
+    }
+  },
+  "systemSetup": {
+    "title": "إعداد النظام",
+    "subtitle": "تكوين وإدارة إعدادات النظام الأساسية",
+    "settingsUpdated": "تم تحديث الإعدادات",
+    "settingsSaved": "تم حفظ الإعدادات",
+    "tabs": {
+      "features": "الميزات",
+      "general": "الإعدادات العامة",
+      "integrations": "التكاملات",
+      "backup": "النسخ الاحتياطي"
+    },
+    "features": {
+      "title": "تفعيل الميزات الإضافية",
+      "subtitle": "قم بتفعيل أو تعطيل الميزات حسب احتياجات عملك",
+      "pos": {
+        "name": "نقاط البيع (POS)",
+        "description": "نظام نقاط البيع السريع"
+      },
+      "inventory": {
+        "name": "إدارة المخزون",
+        "description": "متابعة المستودعات والمنتجات"
+      },
+      "hr": {
+        "name": "الموارد البشرية",
+        "description": "إدارة الموظفين والرواتب"
+      },
+      "accounting": {
+        "name": "المحاسبة المالية",
+        "description": "القيود المحاسبية والتقارير المالية"
+      },
+      "multiCurrency": {
+        "name": "دعم العملات المتعددة",
+        "description": "التعامل بأكثر من عملة"
+      },
+      "barcode": {
+        "name": "نظام الباركود",
+        "description": "تفعيل الباركود التلقائي واليدوي"
+      },
+      "reports": {
+        "name": "التقارير المتقدمة",
+        "description": "تقارير وتحليلات شاملة"
+      }
+    },
+    "general": {
+      "title": "الإعدادات العامة",
+      "systemName": "اسم النظام",
+      "systemNamePlaceholder": "نظام ERP المتكامل",
+      "defaultCurrency": "العملة الافتراضية",
+      "currencies": {
+        "SAR": "ريال سعودي (ر.س)",
+        "USD": "دولار أمريكي ($)",
+        "EUR": "يورو (€)"
+      },
+      "defaultTaxRate": "نسبة الضريبة الافتراضية (%)",
+      "timezone": "المنطقة الزمنية",
+      "timezones": {
+        "riyadh": "الرياض (GMT+3)",
+        "dubai": "دبي (GMT+4)"
+      },
+      "dateFormat": "تنسيق التاريخ",
+      "dateFormats": {
+        "ddmmyyyy": "يوم/شهر/سنة",
+        "mmddyyyy": "شهر/يوم/سنة",
+        "yyyymmdd": "سنة/شهر/يوم"
+      },
+      "saveChanges": "حفظ التغييرات"
+    },
+    "integrations": {
+      "title": "التكاملات الخارجية",
+      "subtitle": "ربط النظام بالخدمات الخارجية",
+      "zatca": {
+        "name": "التكامل مع هيئة الزكاة والدخل",
+        "description": "ربط الفواتير مع منصة فاتورة",
+        "settingsTitle": "إعدادات هيئة الزكاة والدخل",
+        "apiKey": "API Key",
+        "apiKeyPlaceholder": "أدخل API Key",
+        "environment": "Environment",
+        "environmentPlaceholder": "اختر البيئة",
+        "sandbox": "بيئة تجريبية (Sandbox)",
+        "production": "بيئة إنتاجية (Production)",
+        "testConnection": "اختبار الاتصال"
+      },
+      "paymentGateways": {
+        "name": "البوابات الدفع الإلكتروني",
+        "description": "تفعيل الدفع عبر الإنترنت"
+      },
+      "emailNotifications": {
+        "name": "الإشعارات عبر البريد الإلكتروني",
+        "description": "إرسال إشعارات آلية"
+      },
+      "sms": {
+        "name": "الرسائل النصية SMS",
+        "description": "إرسال رسائل نصية للعملاء"
+      }
+    },
+    "backup": {
+      "title": "النسخ الاحتياطي والبيانات",
+      "subtitle": "إدارة النسخ الاحتياطي واستعادة البيانات",
+      "autoBackup": "النسخ الاحتياطي التلقائي",
+      "autoBackupOptions": {
+        "disabled": "معطل",
+        "daily": "يومياً",
+        "weekly": "أسبوعياً",
+        "monthly": "شهرياً"
+      },
+      "backupTime": "وقت النسخ الاحتياطي",
+      "createBackup": "إنشاء نسخة احتياطية الآن",
+      "restoreBackup": "استعادة من نسخة احتياطية",
+      "purgeData": {
+        "title": "تفريغ البيانات",
+        "warning": "تحذير: هذا الإجراء سيحذف جميع البيانات التجريبية والمعاملات القديمة",
+        "button": "تفريغ البيانات التجريبية"
+      },
+      "systemReset": {
+        "title": "إعادة تهيئة النظام",
+        "titleEn": "System Initialization",
+        "warning": "⚠️ تحذير شديد: سيتم حذف جميع البيانات والإبقاء فقط على:",
+        "warningEn": "Warning: This will delete ALL data and keep only:",
+        "keepItems": {
+          "mainBranch": "الفرع الرئيسي",
+          "mainBranchEn": "Main Branch",
+          "mainWarehouse": "المستودع الرئيسي",
+          "mainWarehouseEn": "Main Warehouse",
+          "mainSafe": "الخزينة الرئيسية",
+          "mainSafeEn": "Main Safe",
+          "defaultVat": "ضريبة القيمة المضافة الافتراضية",
+          "defaultVatEn": "Default VAT",
+          "basicData": "بيانات المؤسسة الأساسية",
+          "basicDataEn": "Basic Institution Data"
+        },
+        "button": "إعادة تهيئة قاعدة البيانات",
+        "buttonEn": "Reset Database",
+        "dialogTitle": "تأكيد إعادة التهيئة",
+        "dialogTitleEn": "Confirm Reset",
+        "dialogWarning": "هذا الإجراء لا يمكن التراجع عنه! سيتم حذف جميع البيانات.",
+        "dialogWarningEn": "This action cannot be undone! All data will be deleted.",
+        "confirmLabel": "للتأكيد، اكتب \"RESET\"",
+        "confirmLabelEn": "Type \"RESET\" to confirm",
+        "confirmPlaceholder": "RESET",
+        "confirmButton": "تأكيد الحذف",
+        "confirmButtonEn": "Confirm Reset",
+        "cancelButton": "إلغاء",
+        "cancelButtonEn": "Cancel",
+        "successMessage": "تم إعادة تهيئة النظام بنجاح",
+        "successMessageEn": "System has been reset successfully"
+      }
+    }
+  },
+  "dashboard": {
+    "title": "لوحة التحكم الرئيسية",
+    "subtitle": "نظرة شاملة على أداء جميع الشركات والفروع",
+    "stats": {
+      "totalRevenue": {
+        "title": "إجمالي الإيرادات",
+        "description": "من جميع الشركات"
+      },
+      "totalSales": {
+        "title": "إجمالي المبيعات",
+        "description": "هذا الشهر"
+      },
+      "activeCustomers": {
+        "title": "العملاء النشطين",
+        "description": "في جميع الفروع"
+      },
+      "products": {
+        "title": "المنتجات",
+        "description": "في المستودعات"
+      },
+      "companies": {
+        "title": "الشركات",
+        "description": "شركة نشطة"
+      },
+      "branches": {
+        "title": "الفروع",
+        "description": "فرع في المملكة"
+      },
+      "employees": {
+        "title": "الموظفين",
+        "description": "موظف نشط"
+      },
+      "invoices": {
+        "title": "الفواتير",
+        "description": "هذا الشهر"
+      }
+    },
+    "charts": {
+      "salesPurchases": {
+        "title": "المبيعات والمشتريات والأرباح",
+        "subtitle": "المقارنة الشهرية"
+      },
+      "companyPerformance": {
+        "title": "أداء الشركات",
+        "subtitle": "الإيرادات ومعدل النمو"
+      },
+      "sales": "المبيعات",
+      "purchases": "المشتريات",
+      "profit": "الأرباح",
+      "revenue": "الإيرادات"
+    },
+    "inventory": {
+      "title": "حالة المخزون",
+      "subtitle": "ملخص المخزون حسب الفئات",
+      "unit": "وحدة",
+      "status": {
+        "excellent": "ممتاز",
+        "good": "جيد",
+        "low": "منخفض"
+      }
+    },
+    "activities": {
+      "title": "النشاطات الأخيرة",
+      "subtitle": "آخر العمليات في النظام"
+    },
+    "months": {
+      "january": "يناير",
+      "february": "فبراير",
+      "march": "مارس",
+      "april": "إبريل",
+      "may": "مايو",
+      "june": "يونيو"
+    }
+  },
+  "sidebar": {
+    "systemTitle": "نظام ERP المتكامل",
+    "systemSubtitle": "إدارة موارد المؤسسة",
+    "currentCompany": "الشركة الحالية",
+    "companies": {
+      "alamal": "شركة الأمل للتجارة",
+      "alnajah": "شركة النجاح التقنية",
+      "alreyada": "مؤسسة الريادة للخدمات",
+      "altamayoz": "شركة التميز للاستثمار"
+    },
+    "sections": {
+      "main": "الرئيسية",
+      "accounting": "المحاسبة والمالية",
+      "sales": "المشتريات والمبيعات",
+      "hr": "الموارد البشرية",
+      "warehouses": "المستودعات والمخزون",
+      "financialAccounts": "الحسابات المالية",
+      "companies": "الفروع والشركات",
+      "customers": "العملاء والموردين",
+      "reports": "التقارير والتحليلات",
+      "settings": "الإعدادات"
+    },
+    "menu": {
+      "dashboard": "لوحة التحكم",
+      "accounting": "القيود اليومية",
+      "invoices": "الفواتير",
+      "sales": "المبيعات",
+      "purchases": "المشتريات",
+      "pos": "نقاط البيع (POS)",
+      "hr": "إدارة الموارد البشرية",
+      "employees": "الموظفين",
+      "shifts": "جداول الورديات",
+      "warehouses": "المستودعات",
+      "products": "المنتجات",
+      "services": "الخدمات",
+      "safes": "الخزائن",
+      "banks": "البنوك والصرافات",
+      "companies": "الشركات",
+      "branches": "الفروع",
+      "customers": "العملاء",
+      "suppliers": "الموردين",
+      "reports": "التقارير",
+      "financialReports": "التقارير المالية",
+      "profitLoss": "الأرباح والخسائر",
+      "balanceSheet": "الميزانية العمومية",
+      "cashFlow": "التدفق النقدي",
+      "salesReports": "تقارير المبيعات",
+      "purchaseReports": "تقارير المشتريات",
+      "inventoryReports": "تقارير المخزون",
+      "customerReports": "تقارير العملاء",
+      "supplierReports": "تقارير الموردين",
+      "taxReports": "التقارير الضريبية",
+      "settingsGeneral": "الإعدادات العامة",
+      "systemSetup": "إعداد النظام",
+      "permissions": "الصلاحيات"
+    }
+  },
+  "settings": {
+    "title": "الإعدادات العامة",
+    "subtitle": "إدارة جميع إعدادات النظام",
+    "saveSuccess": "تم حفظ الإعدادات بنجاح",
+    "saveChanges": "حفظ التغييرات",
+    "tabs": {
+      "company": "الشركة",
+      "financial": "المالية",
+      "taxes": "الضرائب",
+      "notifications": "الإشعارات",
+      "security": "الأمان",
+      "appearance": "المظهر"
+    },
+    "company": {
+      "title": "بيانات المؤسسة",
+      "titleEn": "Institution Data",
+      "subtitle": "تحديث البيانات الأساسية للمؤسسة (Branches Table)",
+      "nameAr": "اسم المؤسسة (عربي)",
+      "nameArPlaceholder": "أدخل اسم المؤسسة",
+      "nameEn": "Institution Name (English)",
+      "nameEnPlaceholder": "Enter institution name",
+      "activityAr": "نشاط المؤسسة (عربي)",
+      "activityArPlaceholder": "أدخل نشاط المؤسسة",
+      "activityEn": "Institution Activity (English)",
+      "activityEnPlaceholder": "Enter institution activity",
+      "mobile": "رقم الجوال",
+      "mobilePlaceholder": "05xxxxxxxx",
+      "phone": "رقم الهاتف (اختياري)",
+      "phonePlaceholder": "011 xxx xxxx",
+      "email": "البريد الإلكتروني",
+      "emailPlaceholder": "info@company.com",
+      "website": "الموقع الإلكتروني",
+      "websitePlaceholder": "www.company.com",
+      "address": "العنوان",
+      "addressPlaceholder": "أدخل العنوان الكامل",
+      "commercialReg": "السجل التجاري",
+      "commercialRegPlaceholder": "1010xxxxxx",
+      "vatNumber": "الرقم الضريبي",
+      "vatNumberPlaceholder": "300xxxxxx",
+      "notes": "ملاحظات",
+      "notesPlaceholder": "أدخل أي ملاحظات إضافية...",
+      "logo": "شعار المؤسسة",
+      "logoUpload": "اضغط لرفع الشعار",
+      "logoFormat": "PNG, JPG حتى 2MB",
+      "currency": "العملة الافتراضية",
+      "currencyOptions": {
+        "SAR": "ريال سعودي (ر.س)",
+        "USD": "دولار أمريكي ($)",
+        "EUR": "يورو (€)",
+        "AED": "درهم إماراتي (د.إ)"
+      }
+    },
+    "financial": {
+      "title": "الإعدادات المالية",
+      "subtitle": "إعدادات الحسابات المالية والمحاسبة",
+      "fiscalYear": "السنة المالية",
+      "fiscalYearOptions": {
+        "gregorian": "ميلادي",
+        "hijri": "هجري"
+      },
+      "costingMethod": "طريقة حساب التكلفة",
+      "costingMethodOptions": {
+        "fifo": "الوارد أولاً صادر أولاً (FIFO)",
+        "lifo": "الوارد أخيراً صادر أولاً (LIFO)",
+        "average": "المتوسط المرجح"
+      },
+      "autoEntries": "القيود المحاسبية التلقائية",
+      "autoEntriesDesc": "إنشاء قيود محاسبية تلقائياً للعمليات",
+      "approveEntries": "اعتماد القيود قبل الحفظ",
+      "approveEntriesDesc": "يتطلب الموافقة قبل حفظ القيود"
+    },
+    "taxes": {
+      "title": "تعريف الضرائب",
+      "titleEn": "Tax Definitions",
+      "subtitle": "تعريف أنواع الضرائب المختلفة",
+      "taxName": "اسم الضريبة",
+      "taxNamePlaceholder": "أدخل اسم الضريبة",
+      "taxRate": "النسبة %",
+      "taxRatePlaceholder": "0",
+      "delete": "حذف",
+      "addNew": "إضافة ضريبة جديدة",
+      "vatSettings": "الإعدادات الافتراضية لضريبة القيمة المضافة",
+      "vatSettingsDesc": "إعدادات VAT الافتراضية",
+      "defaultVatRate": "نسبة ضريبة القيمة المضافة الافتراضية (%)",
+      "defaultVatRateEn": "Default VAT Value",
+      "institutionTaxNumber": "الرقم الضريبي للمؤسسة",
+      "institutionTaxNumberEn": "Institution Tax Number",
+      "enableVat": "تفعيل/تعطيل ضريبة القيمة المضافة",
+      "enableVatEn": "Enable/Disable VAT",
+      "enableVatDesc": "تفعيل أو إيقاف الضريبة بشكل كامل",
+      "showPricesWithVat": "إظهار الأسعار شاملة الضريبة",
+      "showPricesWithVatEn": "Show prices including VAT",
+      "showPricesWithVatDesc": "عرض الأسعار مع الضريبة مضمنة",
+      "showVatDetails": "إظهار تفاصيل الضريبة في الفاتورة",
+      "showVatDetailsEn": "Show VAT details on invoice",
+      "showVatDetailsDesc": "عرض تفصيل الضريبة في الفاتورة",
+      "discountTiming": "تطبيق الخصم قبل أو بعد الضريبة",
+      "discountTimingEn": "Apply discount before or after VAT",
+      "discountOptions": {
+        "before": "قبل الضريبة",
+        "beforeEn": "Before VAT",
+        "after": "بعد الضريبة",
+        "afterEn": "After VAT"
+      },
+      "tobaccoTax": "ضريبة التبغ الخاصة",
+      "tobaccoTaxEn": "Special Tobacco Tax",
+      "tobaccoTaxDesc": "تفعيل ضريبة انتقائية إضافية على منتجات التبغ",
+      "eInvoicing": "تفعيل الفواتير الإلكترونية",
+      "eInvoicingDesc": "التوافق مع منظومة الفاتورة الإلكترونية"
+    },
+    "notifications": {
+      "title": "إعدادات الإشعارات",
+      "subtitle": "التحكم في الإشعارات والتنبيهات",
+      "lowStock": "تنبيهات المخزون المنخفض",
+      "lowStockDesc": "تنبيه عندما ينخفض المخزون عن الحد الأدنى",
+      "payments": "إشعارات الدفع",
+      "paymentsDesc": "تلقي إشعار عند اكتمال عملية دفع",
+      "dailyReports": "التقارير اليومية",
+      "dailyReportsDesc": "استلام تقرير يومي عن أداء المبيعات",
+      "emailNotifications": "إشعارات البريد الإلكتروني",
+      "emailNotificationsDesc": "إرسال الإشعارات عبر البريد الإلكتروني",
+      "smsNotifications": "الرسائل النصية SMS",
+      "smsNotificationsDesc": "إرسال إشعارات عبر الرسائل النصية"
+    },
+    "security": {
+      "title": "الأمان وكلمة المرور",
+      "subtitle": "إعدادات الأمان والحماية",
+      "currentPassword": "كلمة المرور الحالية",
+      "currentPasswordPlaceholder": "أدخل كلمة المرور الحالية",
+      "newPassword": "كلمة المرور الجديدة",
+      "newPasswordPlaceholder": "أدخل كلمة المرور الجديدة",
+      "confirmPassword": "تأكيد كلمة المرور",
+      "confirmPasswordPlaceholder": "أعد إدخال كلمة المرور الجديدة",
+      "twoFactor": "المصادقة الثنائية",
+      "twoFactorDesc": "تفعيل المصادقة الثنائية لمزيد من الأمان",
+      "autoLogout": "تسجيل الخروج التلقائي",
+      "autoLogoutDesc": "تسجيل الخروج تلقائياً بعد فترة من عدم النشاط",
+      "updatePassword": "تحديث كلمة المرور"
+    },
+    "appearance": {
+      "title": "المظهر والواجهة",
+      "subtitle": "تخصيص مظهر النظام",
+      "theme": "المظهر",
+      "themeOptions": {
+        "light": "فاتح",
+        "dark": "داكن",
+        "auto": "تلقائي"
+      },
+      "language": "اللغة",
+      "languageOptions": {
+        "ar": "العربية",
+        "en": "English"
+      },
+      "fontSize": "حجم الخط",
+      "fontSizeOptions": {
+        "small": "صغير",
+        "medium": "متوسط",
+        "large": "كبير"
+      },
+      "dateFormat": "تنسيق التاريخ",
+      "dateFormatOptions": {
+        "ddmmyyyy": "يوم/شهر/سنة",
+        "mmddyyyy": "شهر/يوم/سنة",
+        "yyyymmdd": "سنة/شهر/يوم"
+      }
+    }
+  },
+  "branches": {
+    "title": "إدارة الفروع",
+    "subtitle": "إدارة فروع الشركات والحسابات البنكية",
+    "newBranch": "فرع جديد",
+    "addBranch": "إضافة فرع جديد",
+    "addBranchDescription": "قم بإدخال بيانات الفرع",
+    "saveBranch": "حفظ الفرع",
+    "branchAdded": "تم إضافة الفرع بنجاح",
+    "form": {
+      "branchName": "اسم الفرع",
+      "branchNamePlaceholder": "فرع الدمام",
+      "company": "الشركة",
+      "companyPlaceholder": "اختر الشركة",
+      "branchAddress": "عنوان الفرع",
+      "branchAddressPlaceholder": "المدينة، الحي، الشارع",
+      "branchPhone": "رقم هاتف الفرع",
+      "branchPhonePlaceholder": "0132345678",
+      "branchMobile": "رقم جوال الفرع",
+      "branchMobilePlaceholder": "0501234567",
+      "email": "البريد الإلكتروني",
+      "emailPlaceholder": "branch@company.com",
+      "commercialReg": "رقم السجل التجاري",
+      "commercialRegPlaceholder": "1010123456",
+      "licenseNumber": "رقم ترخيص الفرع",
+      "licenseNumberPlaceholder": "LIC-001",
+      "notes": "ملاحظات",
+      "notesPlaceholder": "أدخل أي ملاحظات...",
+      "manager": "المدير المسؤول",
+      "managerPlaceholder": "اختر المدير",
+      "employees": "الموظفين المرتبطين",
+      "employeesHelp": "حدد الموظفين التابعين لهذا الفرع",
+      "status": "حالة الفرع",
+      "statusHelp": "تفعيل أو تعطيل الفرع",
+      "active": "نشط",
+      "inactive": "غير نشط"
+    },
+    "stats": {
+      "totalBranches": "إجمالي الفروع",
+      "activeBranches": "فرع نشط",
+      "totalEmployees": "إجمالي الموظفين",
+      "inAllBranches": "في جميع الفروع",
+      "totalWarehouses": "إجمالي المستودعات",
+      "linkedWarehouse": "مستودع تابع",
+      "bankBalances": "الأرصدة البنكية",
+      "totalBalance": "الرصيد الإجمالي"
+    },
+    "list": {
+      "title": "قائمة الفروع",
+      "subtitle": "عرض وإدارة جميع الفروع"
+    },
+    "table": {
+      "branchName": "اسم الفرع",
+      "company": "الشركة",
+      "city": "المدينة",
+      "address": "العنوان",
+      "phone": "الهاتف",
+      "manager": "المدير",
+      "employees": "الموظفين",
+      "warehouses": "المستودعات",
+      "status": "الحالة",
+      "actions": "إجراءات",
+      "edit": "تعديل"
+    },
+    "cashRegisters": {
+      "title": "أدراج النقد",
+      "subtitle": "إدارة أدراج النقد في الفروع",
+      "newRegister": "درج نقد جديد",
+      "branch": "الفرع",
+      "name": "اسم درج النقد",
+      "balance": "الرصيد",
+      "status": "الحالة",
+      "manage": "إدارة"
+    },
+    "bankAccounts": {
+      "title": "الحسابات البنكية",
+      "subtitle": "إدارة الحسابات البنكية للفروع",
+      "newAccount": "حساب بنكي جديد",
+      "branch": "الفرع",
+      "bank": "البنك",
+      "accountNumber": "رقم الحساب",
+      "iban": "الآيبان",
+      "balance": "الرصيد",
+      "edit": "تعديل"
+    }
+  },
+  "banks": {
+    "title": "إدارة البنوك وأجهزة الصراف",
+    "subtitle": "إدارة الحسابات البنكية وأجهزة الصراف الآلي ونقاط البيع"
+  }
+}

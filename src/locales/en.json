@@ -1,0 +1,661 @@
+{
+  "permissions": {
+    "title": "Permissions and Roles",
+    "subtitle": "Manage user permissions and roles",
+    "stats": {
+      "totalUsers": "Total Users",
+      "activeUsers": "active users",
+      "definedRoles": "Defined Roles",
+      "differentRoles": "different roles",
+      "suspendedUsers": "Suspended Users",
+      "pendingActivation": "pending activation"
+    },
+    "roles": {
+      "title": "Roles and Permissions",
+      "subtitle": "Define roles and permissions for each role",
+      "addNew": "New Role",
+      "createTitle": "Create New Role",
+      "createDescription": "Define the role name and permissions",
+      "name": "Role Name",
+      "namePlaceholder": "e.g., Branch Manager",
+      "description": "Description",
+      "descriptionPlaceholder": "Brief description of the role",
+      "permissions": "Permissions",
+      "saveRole": "Save Role",
+      "roleCreated": "Role created successfully",
+      "tableHeaders": {
+        "roleName": "Role Name",
+        "description": "Description",
+        "userCount": "User Count",
+        "permissionCount": "Permission Count",
+        "actions": "Actions"
+      },
+      "userCount": "user",
+      "allPermissions": "All Permissions",
+      "permissionCount": "permission",
+      "edit": "Edit",
+      "view": "View",
+      "predefined": {
+        "systemAdmin": {
+          "name": "System Administrator",
+          "description": "Full permissions on all sections"
+        },
+        "accountant": {
+          "name": "Accountant",
+          "description": "Accounting and invoicing permissions"
+        },
+        "salesManager": {
+          "name": "Sales Manager",
+          "description": "Manage sales and customers"
+        },
+        "warehouseManager": {
+          "name": "Warehouse Manager",
+          "description": "Manage warehouses and inventory"
+        },
+        "hrEmployee": {
+          "name": "HR Employee",
+          "description": "Manage employees and payroll"
+        },
+        "salesEmployee": {
+          "name": "Sales Employee",
+          "description": "Sales entry only"
+        }
+      }
+    },
+    "users": {
+      "title": "Users",
+      "subtitle": "Manage system users",
+      "addNew": "New User",
+      "addTitle": "Add New User",
+      "addDescription": "Enter user information",
+      "linkedEmployee": "Linked Employee",
+      "linkedEmployeeEn": "Linked Employee (Employees Table)",
+      "selectEmployee": "Select Employee",
+      "linkedEmployeeNote": "Link user account to employee record",
+      "username": "Username",
+      "usernameEn": "Username",
+      "usernamePlaceholder": "ahmed.mohamed",
+      "email": "Email Address",
+      "emailPlaceholder": "user@company.com",
+      "password": "Password",
+      "passwordEn": "Password",
+      "passwordPlaceholder": "••••••••",
+      "role": "Role",
+      "roleEn": "User Role",
+      "userPermissions": "Permissions",
+      "userPermissionsEn": "User Permissions",
+      "status": "User Status",
+      "statusEn": "User Status",
+      "statusActive": "Active",
+      "statusActiveEn": "Active",
+      "statusSuspended": "Suspended",
+      "statusSuspendedEn": "Suspended",
+      "saveUser": "Save User",
+      "userCreated": "User added successfully",
+      "tableHeaders": {
+        "name": "Name",
+        "email": "Email",
+        "role": "Role",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "edit": "Edit",
+      "disable": "Disable"
+    },
+    "permissionsList": {
+      "dashboard": "Dashboard",
+      "accounting": "Accounting",
+      "invoices": "Invoices",
+      "sales": "Sales",
+      "purchases": "Purchases",
+      "pos": "Point of Sale",
+      "customers": "Customers",
+      "suppliers": "Suppliers",
+      "warehouses": "Warehouses",
+      "products": "Products",
+      "inventory": "Inventory",
+      "hr": "Human Resources",
+      "employees": "Employees",
+      "payroll": "Payroll",
+      "companies": "Companies",
+      "branches": "Branches",
+      "reports": "Reports",
+      "settings": "Settings"
+    }
+  },
+  "systemSetup": {
+    "title": "System Setup",
+    "subtitle": "Configure and manage core system settings",
+    "settingsUpdated": "Settings updated successfully",
+    "settingsSaved": "Settings saved successfully",
+    "tabs": {
+      "features": "Features",
+      "general": "General Settings",
+      "integrations": "Integrations",
+      "backup": "Backup"
+    },
+    "features": {
+      "title": "Enable Additional Features",
+      "subtitle": "Activate or deactivate features based on your business needs",
+      "pos": {
+        "name": "Point of Sale (POS)",
+        "description": "Fast point of sale system"
+      },
+      "inventory": {
+        "name": "Inventory Management",
+        "description": "Track warehouses and products"
+      },
+      "hr": {
+        "name": "Human Resources",
+        "description": "Manage employees and payroll"
+      },
+      "accounting": {
+        "name": "Financial Accounting",
+        "description": "Journal entries and financial reports"
+      },
+      "multiCurrency": {
+        "name": "Multi-Currency Support",
+        "description": "Deal with multiple currencies"
+      },
+      "barcode": {
+        "name": "Barcode System",
+        "description": "Enable automatic and manual barcode"
+      },
+      "reports": {
+        "name": "Advanced Reports",
+        "description": "Comprehensive reports and analytics"
+      }
+    },
+    "general": {
+      "title": "General Settings",
+      "systemName": "System Name",
+      "systemNamePlaceholder": "Integrated ERP System",
+      "defaultCurrency": "Default Currency",
+      "currencies": {
+        "SAR": "Saudi Riyal (SAR)",
+        "USD": "US Dollar ($)",
+        "EUR": "Euro (€)"
+      },
+      "defaultTaxRate": "Default Tax Rate (%)",
+      "timezone": "Time Zone",
+      "timezones": {
+        "riyadh": "Riyadh (GMT+3)",
+        "dubai": "Dubai (GMT+4)"
+      },
+      "dateFormat": "Date Format",
+      "dateFormats": {
+        "ddmmyyyy": "DD/MM/YYYY",
+        "mmddyyyy": "MM/DD/YYYY",
+        "yyyymmdd": "YYYY/MM/DD"
+      },
+      "saveChanges": "Save Changes"
+    },
+    "integrations": {
+      "title": "External Integrations",
+      "subtitle": "Connect the system with external services",
+      "zatca": {
+        "name": "ZATCA Integration",
+        "description": "Connect invoices with Fatoora platform",
+        "settingsTitle": "ZATCA Settings",
+        "apiKey": "API Key",
+        "apiKeyPlaceholder": "Enter API Key",
+        "environment": "Environment",
+        "environmentPlaceholder": "Select environment",
+        "sandbox": "Sandbox Environment",
+        "production": "Production Environment",
+        "testConnection": "Test Connection"
+      },
+      "paymentGateways": {
+        "name": "Payment Gateways",
+        "description": "Enable online payment"
+      },
+      "emailNotifications": {
+        "name": "Email Notifications",
+        "description": "Send automatic notifications"
+      },
+      "sms": {
+        "name": "SMS Messages",
+        "description": "Send text messages to customers"
+      }
+    },
+    "backup": {
+      "title": "Backup and Data",
+      "subtitle": "Manage backups and data restoration",
+      "autoBackup": "Automatic Backup",
+      "autoBackupOptions": {
+        "disabled": "Disabled",
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "monthly": "Monthly"
+      },
+      "backupTime": "Backup Time",
+      "createBackup": "Create Backup Now",
+      "restoreBackup": "Restore from Backup",
+      "purgeData": {
+        "title": "Purge Data",
+        "warning": "Warning: This action will delete all demo data and old transactions",
+        "button": "Purge Demo Data"
+      },
+      "systemReset": {
+        "title": "System Initialization",
+        "titleEn": "System Initialization",
+        "warning": "⚠️ Severe Warning: ALL data will be deleted and only keep:",
+        "warningEn": "Warning: This will delete ALL data and keep only:",
+        "keepItems": {
+          "mainBranch": "Main Branch",
+          "mainBranchEn": "Main Branch",
+          "mainWarehouse": "Main Warehouse",
+          "mainWarehouseEn": "Main Warehouse",
+          "mainSafe": "Main Safe",
+          "mainSafeEn": "Main Safe",
+          "defaultVat": "Default VAT",
+          "defaultVatEn": "Default VAT",
+          "basicData": "Basic Institution Data",
+          "basicDataEn": "Basic Institution Data"
+        },
+        "button": "Reset Database",
+        "buttonEn": "Reset Database",
+        "dialogTitle": "Confirm Reset",
+        "dialogTitleEn": "Confirm Reset",
+        "dialogWarning": "This action cannot be undone! All data will be deleted.",
+        "dialogWarningEn": "This action cannot be undone! All data will be deleted.",
+        "confirmLabel": "Type \"RESET\" to confirm",
+        "confirmLabelEn": "Type \"RESET\" to confirm",
+        "confirmPlaceholder": "RESET",
+        "confirmButton": "Confirm Reset",
+        "confirmButtonEn": "Confirm Reset",
+        "cancelButton": "Cancel",
+        "cancelButtonEn": "Cancel",
+        "successMessage": "System has been reset successfully",
+        "successMessageEn": "System has been reset successfully"
+      }
+    }
+  },
+  "dashboard": {
+    "title": "Main Dashboard",
+    "subtitle": "Comprehensive overview of all companies and branches performance",
+    "stats": {
+      "totalRevenue": {
+        "title": "Total Revenue",
+        "description": "From all companies"
+      },
+      "totalSales": {
+        "title": "Total Sales",
+        "description": "This month"
+      },
+      "activeCustomers": {
+        "title": "Active Customers",
+        "description": "In all branches"
+      },
+      "products": {
+        "title": "Products",
+        "description": "In warehouses"
+      },
+      "companies": {
+        "title": "Companies",
+        "description": "Active company"
+      },
+      "branches": {
+        "title": "Branches",
+        "description": "Branches in the kingdom"
+      },
+      "employees": {
+        "title": "Employees",
+        "description": "Active employee"
+      },
+      "invoices": {
+        "title": "Invoices",
+        "description": "This month"
+      }
+    },
+    "charts": {
+      "salesPurchases": {
+        "title": "Sales, Purchases and Profits",
+        "subtitle": "Monthly comparison"
+      },
+      "companyPerformance": {
+        "title": "Company Performance",
+        "subtitle": "Revenue and growth rate"
+      },
+      "sales": "Sales",
+      "purchases": "Purchases",
+      "profit": "Profits",
+      "revenue": "Revenue"
+    },
+    "inventory": {
+      "title": "Inventory Status",
+      "subtitle": "Inventory summary by categories",
+      "unit": "unit",
+      "status": {
+        "excellent": "Excellent",
+        "good": "Good",
+        "low": "Low"
+      }
+    },
+    "activities": {
+      "title": "Recent Activities",
+      "subtitle": "Latest operations in the system"
+    },
+    "months": {
+      "january": "January",
+      "february": "February",
+      "march": "March",
+      "april": "April",
+      "may": "May",
+      "june": "June"
+    }
+  },
+  "sidebar": {
+    "systemTitle": "Integrated ERP System",
+    "systemSubtitle": "Enterprise Resource Planning",
+    "currentCompany": "Current Company",
+    "companies": {
+      "alamal": "Al-Amal Trading Company",
+      "alnajah": "Al-Najah Technology Company",
+      "alreyada": "Al-Reyada Services Corporation",
+      "altamayoz": "Al-Tamayoz Investment Company"
+    },
+    "sections": {
+      "main": "Main",
+      "accounting": "Accounting & Finance",
+      "sales": "Purchases & Sales",
+      "hr": "Human Resources",
+      "warehouses": "Warehouses & Inventory",
+      "financialAccounts": "Financial Accounts",
+      "companies": "Branches & Companies",
+      "customers": "Customers & Suppliers",
+      "reports": "Reports & Analytics",
+      "settings": "Settings"
+    },
+    "menu": {
+      "dashboard": "Dashboard",
+      "accounting": "Journal Entries",
+      "invoices": "Invoices",
+      "sales": "Sales",
+      "purchases": "Purchases",
+      "pos": "Point of Sale (POS)",
+      "hr": "HR Management",
+      "employees": "Employees",
+      "shifts": "Shift Scheduling",
+      "warehouses": "Warehouses",
+      "products": "Products",
+      "services": "Services",
+      "safes": "Safes",
+      "banks": "Banks & Exchanges",
+      "companies": "Companies",
+      "branches": "Branches",
+      "customers": "Customers",
+      "suppliers": "Suppliers",
+      "reports": "Reports",
+      "financialReports": "Financial Reports",
+      "profitLoss": "Profit & Loss",
+      "balanceSheet": "Balance Sheet",
+      "cashFlow": "Cash Flow",
+      "salesReports": "Sales Reports",
+      "purchaseReports": "Purchase Reports",
+      "inventoryReports": "Inventory Reports",
+      "customerReports": "Customer Reports",
+      "supplierReports": "Supplier Reports",
+      "taxReports": "Tax Reports",
+      "settingsGeneral": "General Settings",
+      "systemSetup": "System Setup",
+      "permissions": "Permissions"
+    }
+  },
+  "settings": {
+    "title": "General Settings",
+    "subtitle": "Manage all system settings",
+    "saveSuccess": "Settings saved successfully",
+    "saveChanges": "Save Changes",
+    "tabs": {
+      "company": "Company",
+      "financial": "Financial",
+      "taxes": "Taxes",
+      "notifications": "Notifications",
+      "security": "Security",
+      "appearance": "Appearance"
+    },
+    "company": {
+      "title": "Institution Data",
+      "titleEn": "Institution Data",
+      "subtitle": "Update basic institution information (Branches Table)",
+      "nameAr": "Institution Name (Arabic)",
+      "nameArPlaceholder": "Enter institution name in Arabic",
+      "nameEn": "Institution Name (English)",
+      "nameEnPlaceholder": "Enter institution name",
+      "activityAr": "Institution Activity (Arabic)",
+      "activityArPlaceholder": "Enter institution activity in Arabic",
+      "activityEn": "Institution Activity (English)",
+      "activityEnPlaceholder": "Enter institution activity",
+      "mobile": "Mobile Number",
+      "mobilePlaceholder": "05xxxxxxxx",
+      "phone": "Phone Number (Optional)",
+      "phonePlaceholder": "011 xxx xxxx",
+      "email": "Email Address",
+      "emailPlaceholder": "info@company.com",
+      "website": "Website",
+      "websitePlaceholder": "www.company.com",
+      "address": "Address",
+      "addressPlaceholder": "Enter full address",
+      "commercialReg": "Commercial Registration",
+      "commercialRegPlaceholder": "1010xxxxxx",
+      "vatNumber": "VAT Number",
+      "vatNumberPlaceholder": "300xxxxxx",
+      "notes": "Notes",
+      "notesPlaceholder": "Enter any additional notes...",
+      "logo": "Institution Logo",
+      "logoUpload": "Click to upload logo",
+      "logoFormat": "PNG, JPG up to 2MB",
+      "currency": "Default Currency",
+      "currencyOptions": {
+        "SAR": "Saudi Riyal (SAR)",
+        "USD": "US Dollar ($)",
+        "EUR": "Euro (€)",
+        "AED": "UAE Dirham (AED)"
+      }
+    },
+    "financial": {
+      "title": "Financial Settings",
+      "subtitle": "Financial accounts and accounting settings",
+      "fiscalYear": "Fiscal Year",
+      "fiscalYearOptions": {
+        "gregorian": "Gregorian",
+        "hijri": "Hijri"
+      },
+      "costingMethod": "Costing Method",
+      "costingMethodOptions": {
+        "fifo": "First In First Out (FIFO)",
+        "lifo": "Last In First Out (LIFO)",
+        "average": "Weighted Average"
+      },
+      "autoEntries": "Automatic Journal Entries",
+      "autoEntriesDesc": "Automatically create journal entries for transactions",
+      "approveEntries": "Approve Entries Before Saving",
+      "approveEntriesDesc": "Requires approval before saving entries"
+    },
+    "taxes": {
+      "title": "Tax Definitions",
+      "titleEn": "Tax Definitions",
+      "subtitle": "Define different types of taxes",
+      "taxName": "Tax Name",
+      "taxNamePlaceholder": "Enter tax name",
+      "taxRate": "Rate %",
+      "taxRatePlaceholder": "0",
+      "delete": "Delete",
+      "addNew": "Add New Tax",
+      "vatSettings": "Default VAT Settings",
+      "vatSettingsDesc": "Default VAT configuration",
+      "defaultVatRate": "Default VAT Rate (%)",
+      "defaultVatRateEn": "Default VAT Value",
+      "institutionTaxNumber": "Institution Tax Number",
+      "institutionTaxNumberEn": "Institution Tax Number",
+      "enableVat": "Enable/Disable VAT",
+      "enableVatEn": "Enable/Disable VAT",
+      "enableVatDesc": "Enable or disable tax completely",
+      "showPricesWithVat": "Show Prices Including VAT",
+      "showPricesWithVatEn": "Show prices including VAT",
+      "showPricesWithVatDesc": "Display prices with tax included",
+      "showVatDetails": "Show VAT Details on Invoice",
+      "showVatDetailsEn": "Show VAT details on invoice",
+      "showVatDetailsDesc": "Display tax breakdown on invoice",
+      "discountTiming": "Apply Discount Before or After VAT",
+      "discountTimingEn": "Apply discount before or after VAT",
+      "discountOptions": {
+        "before": "Before Tax",
+        "beforeEn": "Before VAT",
+        "after": "After Tax",
+        "afterEn": "After VAT"
+      },
+      "tobaccoTax": "Special Tobacco Tax",
+      "tobaccoTaxEn": "Special Tobacco Tax",
+      "tobaccoTaxDesc": "Enable additional excise tax on tobacco products",
+      "eInvoicing": "Enable E-Invoicing",
+      "eInvoicingDesc": "Compliance with electronic invoicing system"
+    },
+    "notifications": {
+      "title": "Notification Settings",
+      "subtitle": "Control notifications and alerts",
+      "lowStock": "Low Stock Alerts",
+      "lowStockDesc": "Alert when stock falls below minimum level",
+      "payments": "Payment Notifications",
+      "paymentsDesc": "Receive notification when payment is completed",
+      "dailyReports": "Daily Reports",
+      "dailyReportsDesc": "Receive daily sales performance report",
+      "emailNotifications": "Email Notifications",
+      "emailNotificationsDesc": "Send notifications via email",
+      "smsNotifications": "SMS Messages",
+      "smsNotificationsDesc": "Send notifications via text messages"
+    },
+    "security": {
+      "title": "Security and Password",
+      "subtitle": "Security and protection settings",
+      "currentPassword": "Current Password",
+      "currentPasswordPlaceholder": "Enter current password",
+      "newPassword": "New Password",
+      "newPasswordPlaceholder": "Enter new password",
+      "confirmPassword": "Confirm Password",
+      "confirmPasswordPlaceholder": "Re-enter new password",
+      "twoFactor": "Two-Factor Authentication",
+      "twoFactorDesc": "Enable two-factor authentication for more security",
+      "autoLogout": "Auto Logout",
+      "autoLogoutDesc": "Automatically logout after period of inactivity",
+      "updatePassword": "Update Password"
+    },
+    "appearance": {
+      "title": "Appearance and Interface",
+      "subtitle": "Customize system appearance",
+      "theme": "Theme",
+      "themeOptions": {
+        "light": "Light",
+        "dark": "Dark",
+        "auto": "Auto"
+      },
+      "language": "Language",
+      "languageOptions": {
+        "ar": "Arabic",
+        "en": "English"
+      },
+      "fontSize": "Font Size",
+      "fontSizeOptions": {
+        "small": "Small",
+        "medium": "Medium",
+        "large": "Large"
+      },
+      "dateFormat": "Date Format",
+      "dateFormatOptions": {
+        "ddmmyyyy": "DD/MM/YYYY",
+        "mmddyyyy": "MM/DD/YYYY",
+        "yyyymmdd": "YYYY/MM/DD"
+      }
+    }
+  },
+  "branches": {
+    "title": "Branch Management",
+    "subtitle": "Manage company branches and bank accounts",
+    "newBranch": "New Branch",
+    "addBranch": "Add New Branch",
+    "addBranchDescription": "Enter branch information",
+    "saveBranch": "Save Branch",
+    "branchAdded": "Branch added successfully",
+    "form": {
+      "branchName": "Branch Name",
+      "branchNamePlaceholder": "Dammam Branch",
+      "company": "Company",
+      "companyPlaceholder": "Select Company",
+      "branchAddress": "Branch Address",
+      "branchAddressPlaceholder": "City, District, Street",
+      "branchPhone": "Branch Phone",
+      "branchPhonePlaceholder": "0132345678",
+      "branchMobile": "Branch Mobile",
+      "branchMobilePlaceholder": "0501234567",
+      "email": "Email",
+      "emailPlaceholder": "branch@company.com",
+      "commercialReg": "Commercial Registration Number",
+      "commercialRegPlaceholder": "1010123456",
+      "licenseNumber": "Branch License Number",
+      "licenseNumberPlaceholder": "LIC-001",
+      "notes": "Notes",
+      "notesPlaceholder": "Enter any notes...",
+      "manager": "Branch Manager",
+      "managerPlaceholder": "Select Manager",
+      "employees": "Linked Employees",
+      "employeesHelp": "Select employees assigned to this branch",
+      "status": "Branch Status",
+      "statusHelp": "Activate or deactivate the branch",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "stats": {
+      "totalBranches": "Total Branches",
+      "activeBranches": "Active Branches",
+      "totalEmployees": "Total Employees",
+      "inAllBranches": "In All Branches",
+      "totalWarehouses": "Total Warehouses",
+      "linkedWarehouse": "Linked Warehouses",
+      "bankBalances": "Bank Balances",
+      "totalBalance": "Total Balance"
+    },
+    "list": {
+      "title": "Branch List",
+      "subtitle": "View and manage all branches"
+    },
+    "table": {
+      "branchName": "Branch Name",
+      "company": "Company",
+      "city": "City",
+      "address": "Address",
+      "phone": "Phone",
+      "manager": "Manager",
+      "employees": "Employees",
+      "warehouses": "Warehouses",
+      "status": "Status",
+      "actions": "Actions",
+      "edit": "Edit"
+    },
+    "cashRegisters": {
+      "title": "Cash Registers",
+      "subtitle": "Manage cash registers in branches",
+      "newRegister": "New Cash Register",
+      "branch": "Branch",
+      "name": "Register Name",
+      "balance": "Balance",
+      "status": "Status",
+      "manage": "Manage"
+    },
+    "bankAccounts": {
+      "title": "Bank Accounts",
+      "subtitle": "Manage bank accounts for branches",
+      "newAccount": "New Bank Account",
+      "branch": "Branch",
+      "bank": "Bank",
+      "accountNumber": "Account Number",
+      "iban": "IBAN",
+      "balance": "Balance",
+      "edit": "Edit"
+    }
+  },
+  "banks": {
+    "title": "Banks & ATM Management",
+    "subtitle": "Manage bank accounts, ATMs, and point of sale devices"
+  }
+}
