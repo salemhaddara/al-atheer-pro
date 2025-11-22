@@ -492,7 +492,8 @@ export function POS() {
       creditLimit: 0,
       currentBalance: 0,
       graceDays: 0,
-      status: 'ممتاز'
+      status: 'ممتاز',
+      accountNumber: `ACC-${id.slice(-6)}`
     };
     setCreditCustomers(prev => [...prev, newCustomer]);
     setSelectedCustomerId(id);

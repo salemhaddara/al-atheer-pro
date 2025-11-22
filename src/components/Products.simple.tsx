@@ -1392,7 +1392,7 @@ export function Products() {
         </Dialog>
 
     </div>
-        </CardHeader >
+        </CardHeader>
 
     <CardContent className="space-y-4">
       {/* Search */}
@@ -1688,12 +1688,12 @@ export function Products() {
         )}
       </div>
     </CardContent>
-      </Card >
-        </TabsContent >
-      </Tabs >
+      </Card>
+        </TabsContent>
+      </Tabs>
 
-    {/* Category Dialog */ }
-    < Dialog open = { isCategoryDialogOpen } onOpenChange = { setIsCategoryDialogOpen } >
+    {/* Category Dialog */}
+    <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
       <DialogContent className="max-w-md" dir="rtl">
         <DialogHeader className="text-right">
           <DialogTitle>
@@ -1728,7 +1728,7 @@ export function Products() {
           </Button>
         </div>
       </DialogContent>
-      </Dialog >
-    </div >
+    </Dialog>
+    </div>
   );
 }

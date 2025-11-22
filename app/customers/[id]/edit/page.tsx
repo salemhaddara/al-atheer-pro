@@ -1,6 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { useParams } from 'next/navigation';
 import { Loading } from '@/components/Loading';
 
 const CreateCustomer = dynamic(() => import('@/components/CreateCustomer').then(mod => ({ default: mod.CreateCustomer })), {
@@ -8,7 +9,9 @@ const CreateCustomer = dynamic(() => import('@/components/CreateCustomer').then(
     ssr: false
 });
 
-export default function EditCustomerPage({ params }: { params: { id: string } }) {
-    return <CreateCustomer customerId={params.id} />;
+export default function EditCustomerPage() {
+    const params = useParams();
+    const id = params?.id as string;
+    return <CreateCustomer customerId={id} />;
 }
 
