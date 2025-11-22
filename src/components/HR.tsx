@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, memo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -39,16 +39,38 @@ export function HR() {
   const [shifts] = useState(defaultShiftTemplates);
   const [shiftAssignments] = useState(defaultShiftAssignments);
 
-  // Load attendance records for selected date
+  // Load attendance records for selected date - optimized with requestIdleCallback
   useEffect(() => {
+    const loadData = () => {
     const records = getAttendanceByDateRange(selectedDate, selectedDate);
     setAttendanceRecords(records);
+    };
+
+    // Use requestIdleCallback if available, otherwise setTimeout
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      const id = requestIdleCallback(loadData, { timeout: 100 });
+      return () => cancelIdleCallback(id);
+    } else {
+      const timer = setTimeout(loadData, 0);
+      return () => clearTimeout(timer);
+    }
   }, [selectedDate]);
 
-  // Load payroll records
+  // Load payroll records - load once on mount, optimized
   useEffect(() => {
+    const loadData = () => {
     const records = loadPayrollRecords();
     setPayrollRecords(records);
+    };
+
+    // Use requestIdleCallback if available, otherwise setTimeout
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      const id = requestIdleCallback(loadData, { timeout: 100 });
+      return () => cancelIdleCallback(id);
+    } else {
+      const timer = setTimeout(loadData, 0);
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   const shiftCoverage = useMemo(() => {
@@ -62,25 +84,51 @@ export function HR() {
     });
   }, [shiftAssignments, shifts]);
 
-  const contracts = [
+  // Memoize contracts to avoid recreation on every render
+  const contracts = useMemo(() => [
     { id: '1', employee: 'أحمد محمد', type: 'دوام كامل', startDate: '2024-01-01', endDate: '2025-12-31', salary: 8000, status: 'نشط' },
     { id: '2', employee: 'فاطمة علي', type: 'دوام كامل', startDate: '2024-03-15', endDate: '2025-12-31', salary: 7500, status: 'نشط' },
     { id: '3', employee: 'سعيد خالد', type: 'دوام جزئي', startDate: '2024-06-01', endDate: '2025-05-31', salary: 4000, status: 'نشط' }
-  ];
+  ], []);
 
-  // Statistics calculations
-  const todayAttendance = useMemo(() => {
+  // Statistics calculations - optimized with lazy loading
+  const [todayAttendance, setTodayAttendance] = useState({ present: 0, total: employees.length });
+  const [pendingLeaves, setPendingLeaves] = useState(0);
+
+  useEffect(() => {
+    // Load today's attendance stats asynchronously to avoid blocking render
+    const loadData = () => {
     const today = new Date().toISOString().split('T')[0];
     const todayRecords = getAttendanceByDateRange(today, today);
-    return {
+      setTodayAttendance({
       present: todayRecords.filter(r => r.status === 'حاضر').length,
       total: employees.length
+      });
     };
-  }, [selectedDate, employees]);
 
-  const pendingLeaves = useMemo(() => {
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      const id = requestIdleCallback(loadData, { timeout: 200 });
+      return () => cancelIdleCallback(id);
+    } else {
+      const timer = setTimeout(loadData, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [employees]);
+
+  useEffect(() => {
+    // Load pending leaves asynchronously
+    const loadData = () => {
     const leaves = loadLeaveRequests();
-    return leaves.filter(l => l.status === 'معلق').length;
+      setPendingLeaves(leaves.filter(l => l.status === 'معلق').length);
+    };
+
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      const id = requestIdleCallback(loadData, { timeout: 200 });
+      return () => cancelIdleCallback(id);
+    } else {
+      const timer = setTimeout(loadData, 50);
+      return () => clearTimeout(timer);
+    }
   }, []);
 
   const monthlyPayrollTotal = useMemo(() => {

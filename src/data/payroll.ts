@@ -3,6 +3,7 @@
  * This file manages employee payroll processing and records
  */
 
+import { dataCache } from '../utils/dataCache';
 import { getAttendanceStats } from './attendance';
 import { addJournalEntry, generateEntryId } from './journalEntries';
 
@@ -45,31 +46,14 @@ export interface PayrollDeduction {
 // Storage key for localStorage
 const STORAGE_KEY = 'employee_payroll';
 
-// Load payroll records from localStorage
+// Load payroll records from cache/localStorage
 export const loadPayrollRecords = (): PayrollRecord[] => {
-    if (typeof window === 'undefined') return [];
-
-    try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            return JSON.parse(stored);
-        }
-    } catch (error) {
-        console.error('Error loading payroll records:', error);
-    }
-
-    return [];
+    return dataCache.getFromLocalStorage(STORAGE_KEY, []);
 };
 
-// Save payroll records to localStorage
+// Save payroll records to localStorage and update cache
 export const savePayrollRecords = (records: PayrollRecord[]): void => {
-    if (typeof window === 'undefined') return;
-
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-    } catch (error) {
-        console.error('Error saving payroll records:', error);
-    }
+    dataCache.saveToLocalStorage(STORAGE_KEY, records);
 };
 
 /**

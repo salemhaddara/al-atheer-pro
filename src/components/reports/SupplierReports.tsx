@@ -1,14 +1,19 @@
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Badge } from '../ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { Download, Users2, DollarSign, TrendingUp, Clock } from 'lucide-react';
+import { Download, Users2, DollarSign, TrendingUp, Clock, X, Building2 } from 'lucide-react';
 import { BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { SearchableSelect } from '../ui/searchable-select';
 
 export function SupplierReports() {
   const { t, direction } = useLanguage();
+  const [viewMode, setViewMode] = useState<'all' | 'single'>('all');
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string>('');
 
   const supplierCategories = [
     { name: 'أجهزة إلكترونية', count: 15, spending: 1250000, color: '#3b82f6' },
@@ -17,13 +22,23 @@ export function SupplierReports() {
     { name: 'خدمات', count: 10, spending: 290000, color: '#f59e0b' }
   ];
 
-  const topSuppliers = [
-    { supplier: 'شركة التوريدات المتقدمة', orders: 65, spending: 975000, avgOrder: 15000, onTimeRate: 95, quality: 4.8 },
-    { supplier: 'مؤسسة الإمدادات الذكية', orders: 52, spending: 780000, avgOrder: 15000, onTimeRate: 92, quality: 4.6 },
-    { supplier: 'شركة التجهيزات الحديثة', orders: 71, spending: 1065000, avgOrder: 15000, onTimeRate: 88, quality: 4.5 },
-    { supplier: 'مجموعة التوريد المتكامل', orders: 48, spending: 720000, avgOrder: 15000, onTimeRate: 94, quality: 4.7 },
-    { supplier: 'شركة المواد الأولية', orders: 55, spending: 825000, avgOrder: 15000, onTimeRate: 90, quality: 4.6 }
+  // All suppliers data
+  const allSuppliers = [
+    { id: '1', name: 'شركة التوريدات المتقدمة', phone: '0501234567', orders: 65, spending: 975000, avgOrder: 15000, onTimeRate: 95, quality: 4.8, category: 'أجهزة إلكترونية', totalPurchases: 1250000, outstandingBalance: 15000, joinDate: '2022-05-10' },
+    { id: '2', name: 'مؤسسة الإمدادات الذكية', phone: '0502222222', orders: 52, spending: 780000, avgOrder: 15000, onTimeRate: 92, quality: 4.6, category: 'مستلزمات مكتبية', totalPurchases: 980000, outstandingBalance: 8000, joinDate: '2022-08-15' },
+    { id: '3', name: 'شركة التجهيزات الحديثة', phone: '0503333333', orders: 71, spending: 1065000, avgOrder: 15000, onTimeRate: 88, quality: 4.5, category: 'قطع غيار', totalPurchases: 2100000, outstandingBalance: 25000, joinDate: '2021-12-20' },
+    { id: '4', name: 'مجموعة التوريد المتكامل', phone: '0504444444', orders: 48, spending: 720000, avgOrder: 15000, onTimeRate: 94, quality: 4.7, category: 'خدمات', totalPurchases: 720000, outstandingBalance: 12000, joinDate: '2023-01-05' },
+    { id: '5', name: 'شركة المواد الأولية', phone: '0505555555', orders: 55, spending: 825000, avgOrder: 15000, onTimeRate: 90, quality: 4.6, category: 'أجهزة إلكترونية', totalPurchases: 825000, outstandingBalance: 18000, joinDate: '2022-11-12' }
   ];
+
+  const topSuppliers = allSuppliers.slice(0, 5).map(s => ({
+    supplier: s.name,
+    orders: s.orders,
+    spending: s.spending,
+    avgOrder: s.avgOrder,
+    onTimeRate: s.onTimeRate,
+    quality: s.quality
+  }));
 
   const supplierPerformance = [
     { supplier: 'التوريدات المتقدمة', onTime: 95, quality: 96, price: 88, overall: 93 },
@@ -108,6 +123,51 @@ export function SupplierReports() {
     return 'text-red-600';
   };
 
+  // Selected supplier data
+  const selectedSupplier = useMemo(() => {
+    if (!selectedSupplierId) return null;
+    return allSuppliers.find(s => s.id === selectedSupplierId);
+  }, [selectedSupplierId]);
+
+  // Supplier options for SearchableSelect
+  const supplierOptions = useMemo(() => {
+    return allSuppliers.map(s => ({
+      id: s.id,
+      name: s.name,
+      phone: s.phone,
+      accountNumber: s.id
+    }));
+  }, []);
+
+  // Single supplier report data
+  const singleSupplierData = useMemo(() => {
+    if (!selectedSupplier) return null;
+
+    // Mock monthly data for selected supplier
+    const monthlyData = [
+      { month: 'يناير', orders: 12, spending: 180000 },
+      { month: 'فبراير', orders: 10, spending: 150000 },
+      { month: 'مارس', orders: 14, spending: 210000 },
+      { month: 'أبريل', orders: 11, spending: 165000 },
+      { month: 'مايو', orders: 13, spending: 195000 },
+      { month: 'يونيو', orders: 15, spending: 225000 }
+    ];
+
+    return {
+      ...selectedSupplier,
+      monthlyData,
+      purchaseOrders: [
+        { id: '1', number: 'PO-2025-001', date: '2025-06-10', amount: 45000, status: 'مستلم', items: 15 },
+        { id: '2', number: 'PO-2025-002', date: '2025-06-18', amount: 38000, status: 'قيد التوريد', items: 12 },
+        { id: '3', number: 'PO-2025-003', date: '2025-06-25', amount: 52000, status: 'مستلم', items: 18 }
+      ],
+      payments: [
+        { id: '1', date: '2025-06-05', amount: 45000, method: 'نقدي' },
+        { id: '2', date: '2025-06-20', amount: 38000, method: 'تحويل بنكي' }
+      ]
+    };
+  }, [selectedSupplier]);
+
   return (
     <div dir={direction}>
       {/* Header */}
@@ -117,17 +177,6 @@ export function SupplierReports() {
           <p className="text-gray-600">تحليل شامل لأداء الموردين والمشتريات والجودة</p>
         </div>
         <div className="flex gap-3">
-          <Select defaultValue="all">
-            <SelectTrigger className="w-[180px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">جميع الموردين</SelectItem>
-              <SelectItem value="electronics">أجهزة إلكترونية</SelectItem>
-              <SelectItem value="office">مستلزمات مكتبية</SelectItem>
-              <SelectItem value="parts">قطع غيار</SelectItem>
-            </SelectContent>
-          </Select>
           <Button className="gap-2">
             <Download className="w-4 h-4" />
             تصدير التقرير
@@ -135,7 +184,195 @@ export function SupplierReports() {
         </div>
       </div>
 
-      {/* Stats */}
+      {/* View Mode Tabs */}
+      <Card className="mb-6">
+        <CardContent className="pt-6">
+          <Tabs value={viewMode} onValueChange={(value: 'all' | 'single') => {
+            setViewMode(value);
+            if (value === 'all') {
+              setSelectedSupplierId('');
+            }
+          }}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="all">عرض جماعي</TabsTrigger>
+              <TabsTrigger value="single">تقرير مورد واحد</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Single Supplier Selection */}
+      {viewMode === 'single' && (
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <label className="text-sm font-semibold mb-2 block">اختر المورد</label>
+                <SearchableSelect
+                  options={supplierOptions}
+                  value={selectedSupplierId}
+                  onValueChange={setSelectedSupplierId}
+                  placeholder="ابحث عن المورد..."
+                  searchPlaceholder="ابحث بالاسم أو رقم الهاتف..."
+                  emptyMessage="لا يوجد موردين"
+                  displayKey="name"
+                  searchKeys={['name', 'phone']}
+                />
+              </div>
+              {selectedSupplierId && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedSupplierId('');
+                  }}
+                  className="gap-2"
+                >
+                  <X className="w-4 h-4" />
+                  إلغاء الاختيار
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Single Supplier Report */}
+      {viewMode === 'single' && selectedSupplier && singleSupplierData && (
+        <div className="space-y-6">
+          {/* Supplier Info Card */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Building2 className="w-5 h-5" />
+                    {singleSupplierData.name}
+                  </CardTitle>
+                  <CardDescription>
+                    رقم الهاتف: {singleSupplierData.phone} | الفئة: {singleSupplierData.category} | تاريخ التعاقد: {singleSupplierData.joinDate}
+                  </CardDescription>
+                </div>
+                <Badge className={getQualityBadge(singleSupplierData.quality).className}>
+                  {singleSupplierData.quality}/5.0 - {getQualityBadge(singleSupplierData.quality).label}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center p-4 bg-blue-50 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">إجمالي الطلبات</p>
+                  <p className="text-2xl font-bold text-blue-600">{singleSupplierData.orders}</p>
+                </div>
+                <div className="text-center p-4 bg-green-50 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">إجمالي الإنفاق</p>
+                  <p className="text-2xl font-bold text-green-600">{formatCurrency(singleSupplierData.spending)}</p>
+                </div>
+                <div className="text-center p-4 bg-purple-50 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">التسليم في الموعد</p>
+                  <p className={`text-2xl font-bold ${getOnTimeColor(singleSupplierData.onTimeRate)}`}>
+                    {singleSupplierData.onTimeRate}%
+                  </p>
+                </div>
+                <div className="text-center p-4 bg-amber-50 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">الرصيد المستحق</p>
+                  <p className="text-2xl font-bold text-amber-600">{formatCurrency(singleSupplierData.outstandingBalance)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Monthly Spending Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>الإنفاق الشهري</CardTitle>
+              <CardDescription>الطلبات والإنفاق الشهري</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={singleSupplierData.monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                  <Legend />
+                  <Bar dataKey="spending" name="الإنفاق" fill="#3b82f6" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Purchase Orders Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>أوامر الشراء</CardTitle>
+              <CardDescription>قائمة أوامر الشراء من المورد</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right">رقم الأمر</TableHead>
+                    <TableHead className="text-right">التاريخ</TableHead>
+                    <TableHead className="text-right">المبلغ</TableHead>
+                    <TableHead className="text-right">عدد الأصناف</TableHead>
+                    <TableHead className="text-right">الحالة</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {singleSupplierData.purchaseOrders.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-mono">{order.number}</TableCell>
+                      <TableCell>{order.date}</TableCell>
+                      <TableCell className="font-semibold">{formatCurrency(order.amount)}</TableCell>
+                      <TableCell>{order.items}</TableCell>
+                      <TableCell>
+                        <Badge variant={order.status === 'مستلم' ? 'default' : 'secondary'}>
+                          {order.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Payments Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>المدفوعات</CardTitle>
+              <CardDescription>سجل مدفوعات المورد</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right">التاريخ</TableHead>
+                    <TableHead className="text-right">المبلغ</TableHead>
+                    <TableHead className="text-right">طريقة الدفع</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {singleSupplierData.payments.map((payment) => (
+                    <TableRow key={payment.id}>
+                      <TableCell>{payment.date}</TableCell>
+                      <TableCell className="font-semibold text-red-600">{formatCurrency(payment.amount)}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{payment.method}</Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* All Suppliers Report */}
+      {viewMode === 'all' && (
+        <>
+          {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
@@ -305,6 +542,18 @@ export function SupplierReports() {
           </div>
         </CardContent>
       </Card>
+        </>
+      )}
+
+      {/* Show message if single mode but no supplier selected */}
+      {viewMode === 'single' && !selectedSupplier && (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Building2 className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+            <p className="text-gray-500">يرجى اختيار مورد لعرض تقريره</p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

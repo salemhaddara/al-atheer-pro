@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Plus, Search, Edit, Trash2, Mail, Phone, Briefcase, CalendarClock, Eye } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import { defaultShiftTemplates } from '../data/shifts';
 
 export interface Employee {
@@ -29,6 +29,9 @@ export interface Employee {
   status?: 'نشط' | 'غير نشط';
   shiftIds?: string[]; // Multiple shifts support
   branchIds?: string[]; // Multiple branches support
+  // Permissions & Access
+  role?: 'admin' | 'employee'; // دور الموظف: إدارة أو موظف عادي
+  assignedWarehouseId?: string; // المستودع المخصص للموظف
 }
 
 interface EmployeesProps {
@@ -38,12 +41,14 @@ interface EmployeesProps {
 export function Employees({ onViewEmployee }: EmployeesProps) {
   const [shiftTemplates] = useState(defaultShiftTemplates);
   const [employees, setEmployees] = useState<Employee[]>([
-    { id: '1', name: 'خالد أحمد', position: 'مدير عام', department: 'الإدارة', email: 'khaled@example.com', phone: '0501234567', salary: 15000, joinDate: '2020-01-15', shiftId: 'shift-1', status: 'نشط', nationality: 'سعودي', maritalStatus: 'متزوج', birthDate: '1985-05-10', gender: 'ذكر', branchIds: ['1'] },
-    { id: '2', name: 'سارة محمد', position: 'مديرة مبيعات', department: 'المبيعات', email: 'sara@example.com', phone: '0502345678', salary: 12000, joinDate: '2021-03-20', shiftId: 'shift-4', status: 'نشط', nationality: 'سعودي', maritalStatus: 'متزوج', birthDate: '1990-08-15', gender: 'أنثى', branchIds: ['1', '2'] },
-    { id: '3', name: 'عبدالله حسن', position: 'محاسب', department: 'المحاسبة', email: 'abdullah@example.com', phone: '0503456789', salary: 8000, joinDate: '2021-06-10', shiftId: 'shift-2', status: 'نشط', nationality: 'سعودي', maritalStatus: 'أعزب', birthDate: '1995-12-20', gender: 'ذكر', branchIds: ['1'] },
-    { id: '4', name: 'هند علي', position: 'مديرة موارد بشرية', department: 'الموارد البشرية', email: 'hind@example.com', phone: '0504567890', salary: 10000, joinDate: '2020-09-05', shiftId: 'shift-1', status: 'نشط', nationality: 'سعودي', maritalStatus: 'متزوج', birthDate: '1988-03-25', gender: 'أنثى', branchIds: ['1'] },
-    { id: '5', name: 'يوسف عمر', position: 'مطور برمجيات', department: 'تقنية المعلومات', email: 'youssef@example.com', phone: '0505678901', salary: 11000, joinDate: '2022-02-14', shiftId: 'shift-2', status: 'نشط', nationality: 'سعودي', maritalStatus: 'أعزب', birthDate: '1993-07-08', gender: 'ذكر', branchIds: ['1'] },
-    { id: '6', name: 'ريم سعيد', position: 'مسؤولة تسويق', department: 'التسويق', email: 'reem@example.com', phone: '0506789012', salary: 9000, joinDate: '2022-05-22', shiftId: 'shift-3', status: 'نشط', nationality: 'سعودي', maritalStatus: 'أعزب', birthDate: '1996-11-12', gender: 'أنثى', branchIds: ['2'] },
+    { id: '1', name: 'خالد أحمد', position: 'مدير عام', department: 'الإدارة', email: 'khaled@example.com', phone: '0501234567', salary: 15000, joinDate: '2020-01-15', shiftId: 'shift-1', status: 'نشط', nationality: 'سعودي', maritalStatus: 'متزوج', birthDate: '1985-05-10', gender: 'ذكر', branchIds: ['1'], role: 'admin' },
+    { id: '2', name: 'سارة محمد', position: 'مديرة مبيعات', department: 'المبيعات', email: 'sara@example.com', phone: '0502345678', salary: 12000, joinDate: '2021-03-20', shiftId: 'shift-4', status: 'نشط', nationality: 'سعودي', maritalStatus: 'متزوج', birthDate: '1990-08-15', gender: 'أنثى', branchIds: ['1', '2'], role: 'admin' },
+    { id: '3', name: 'عبدالله حسن', position: 'محاسب', department: 'المحاسبة', email: 'abdullah@example.com', phone: '0503456789', salary: 8000, joinDate: '2021-06-10', shiftId: 'shift-2', status: 'نشط', nationality: 'سعودي', maritalStatus: 'أعزب', birthDate: '1995-12-20', gender: 'ذكر', branchIds: ['1'], role: 'admin' },
+    { id: '4', name: 'هند علي', position: 'مديرة موارد بشرية', department: 'الموارد البشرية', email: 'hind@example.com', phone: '0504567890', salary: 10000, joinDate: '2020-09-05', shiftId: 'shift-1', status: 'نشط', nationality: 'سعودي', maritalStatus: 'متزوج', birthDate: '1988-03-25', gender: 'أنثى', branchIds: ['1'], role: 'admin' },
+    { id: '5', name: 'يوسف عمر', position: 'مطور برمجيات', department: 'تقنية المعلومات', email: 'youssef@example.com', phone: '0505678901', salary: 11000, joinDate: '2022-02-14', shiftId: 'shift-2', status: 'نشط', nationality: 'سعودي', maritalStatus: 'أعزب', birthDate: '1993-07-08', gender: 'ذكر', branchIds: ['1'], role: 'admin' },
+    { id: '6', name: 'ريم سعيد', position: 'مسؤولة تسويق', department: 'التسويق', email: 'reem@example.com', phone: '0506789012', salary: 9000, joinDate: '2022-05-22', shiftId: 'shift-3', status: 'نشط', nationality: 'سعودي', maritalStatus: 'أعزب', birthDate: '1996-11-12', gender: 'أنثى', branchIds: ['2'], role: 'admin' },
+    { id: '7', name: 'محمد الكاشير', position: 'كاشير', department: 'المبيعات', email: 'cashier1@example.com', phone: '0501111111', salary: 5000, joinDate: '2023-01-01', shiftId: 'shift-1', status: 'نشط', nationality: 'سعودي', maritalStatus: 'أعزب', birthDate: '1998-01-01', gender: 'ذكر', branchIds: ['1'], role: 'employee', assignedWarehouseId: '1' },
+    { id: '8', name: 'فاطمة الكاشيرة', position: 'كاشيرة', department: 'المبيعات', email: 'cashier2@example.com', phone: '0502222222', salary: 5000, joinDate: '2023-02-01', shiftId: 'shift-2', status: 'نشط', nationality: 'سعودي', maritalStatus: 'أعزب', birthDate: '1999-01-01', gender: 'أنثى', branchIds: ['2'], role: 'employee', assignedWarehouseId: '2' },
   ]);
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -159,6 +164,34 @@ export function Employees({ onViewEmployee }: EmployeesProps) {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>الدور / الصلاحيات</Label>
+                  <Select defaultValue={editingEmployee?.role || 'employee'}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر الدور" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">إدارة (صلاحيات كاملة)</SelectItem>
+                      <SelectItem value="employee">موظف (صلاحيات محدودة)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>المستودع المخصص (للموظفين فقط)</Label>
+                  <Select defaultValue={editingEmployee?.assignedWarehouseId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر المستودع" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">لا يوجد</SelectItem>
+                      <SelectItem value="1">المستودع الرئيسي</SelectItem>
+                      <SelectItem value="2">مستودع الفرع الشمالي</SelectItem>
+                      <SelectItem value="3">مستودع الفرع الجنوبي</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="flex gap-2 pt-4">
                 <Button className="flex-1" onClick={() => {

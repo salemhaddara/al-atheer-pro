@@ -8,9 +8,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Building2, Bell, Lock, Palette, DollarSign, Percent, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useState, useEffect } from 'react';
 
 export function Settings() {
   const { t, direction, language, setLanguage } = useLanguage();
+  const [systemType, setSystemType] = useState<'restaurant' | 'retail'>('retail');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedType = localStorage.getItem('system_type') as 'restaurant' | 'retail' | null;
+      if (savedType) {
+        setSystemType(savedType);
+      }
+    }
+  }, []);
 
   const handleSave = () => {
     toast.success(t('settings.saveSuccess'));
@@ -153,6 +164,33 @@ export function Settings() {
                     <SelectItem value="AED">{t('settings.company.currencyOptions.AED')}</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div>
+                <Label>نوع النظام</Label>
+                <Select 
+                  value={systemType}
+                  onValueChange={(value: 'restaurant' | 'retail') => {
+                    setSystemType(value);
+                    if (typeof window !== 'undefined') {
+                      localStorage.setItem('system_type', value);
+                      // Dispatch custom event to update POS page immediately
+                      window.dispatchEvent(new Event('systemTypeChanged'));
+                      toast.success('تم حفظ نوع النظام بنجاح');
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="restaurant">مطعم</SelectItem>
+                    <SelectItem value="retail">محل تجاري</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-sm text-gray-500 mt-1">
+                  المطاعم: المنتجات تظهر في شكل مربعات في صفحة POS | المحلات التجارية: المنتجات تظهر في جدول في صفحة POS
+                </p>
               </div>
 
               <Button onClick={handleSave}>{t('settings.saveChanges')}</Button>

@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -19,17 +21,25 @@ export function Accounting() {
 
   useEffect(() => {
     // Load entries on component mount
-    const entries = getAllJournalEntries();
-    setAllEntries(entries);
+    const loadEntries = () => {
+      const entries = getAllJournalEntries();
+      setAllEntries(prevEntries => {
+        // Only update if entries actually changed
+        if (JSON.stringify(entries) !== JSON.stringify(prevEntries)) {
+          return entries;
+        }
+        return prevEntries;
+      });
+    };
 
-    // Set up interval to refresh entries (in case they're updated from other components)
-    const interval = setInterval(() => {
-      const updatedEntries = getAllJournalEntries();
-      setAllEntries(updatedEntries);
-    }, 2000); // Refresh every 2 seconds
+    loadEntries();
+
+    // Use a longer interval instead of frequent polling for better performance
+    // Refresh every 10 seconds instead of 2 seconds
+    const interval = setInterval(loadEntries, 10000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, []); // Empty dependency array - only run on mount
 
   // Separate auto and manual entries
   const autoEntries = useMemo(() => allEntries.filter(e => e.type === 'auto'), [allEntries]);

@@ -3,12 +3,25 @@
  * This file manages all journal entries (both manual and automatic) across the entire system
  */
 
+import { dataCache } from '../utils/dataCache';
+
+// Lazy import chartOfAccounts functions to avoid circular dependencies and improve load time
+const getAccountCodeByName = (name: string): string => {
+  const { getAccountCodeByName } = require('./chartOfAccounts');
+  return getAccountCodeByName(name);
+};
+
+const getAccountNameByCode = (code: string): string => {
+  const { getAccountNameByCode } = require('./chartOfAccounts');
+  return getAccountNameByCode(code);
+};
+
 export interface JournalEntry {
   id: string;
   date: string;
   description: string;
-  debitAccount: string;
-  creditAccount: string;
+  debitAccount: string; // Can be account code or name (for backward compatibility)
+  creditAccount: string; // Can be account code or name (for backward compatibility)
   amount: number;
   reference: string;
   status: 'مُعتمد' | 'قيد المراجعة' | 'ملغي';
@@ -17,6 +30,27 @@ export interface JournalEntry {
   sourceReference?: string; // رابط للعملية الأصلية
   createdAt: string;
 }
+
+// Helper function to normalize account reference (convert name to code if needed)
+export const normalizeAccountReference = (accountRef: string): string => {
+  // If it's already a code (numeric), return as is
+  if (/^\d+$/.test(accountRef)) {
+    return accountRef;
+  }
+  // Try to convert name to code
+  const code = getAccountCodeByName(accountRef);
+  return code !== accountRef ? code : accountRef;
+};
+
+// Helper function to get account display name (code or name)
+export const getAccountDisplayName = (accountRef: string): string => {
+  // If it's a code, get the name
+  if (/^\d+$/.test(accountRef)) {
+    const name = getAccountNameByCode(accountRef);
+    return name !== accountRef ? name : accountRef;
+  }
+  return accountRef;
+};
 
 // Storage key for localStorage
 const STORAGE_KEY = 'journal_entries';
@@ -50,31 +84,14 @@ const defaultEntries: JournalEntry[] = [
   }
 ];
 
-// Load entries from localStorage or use defaults
+// Load entries from cache/localStorage or use defaults
 export const loadJournalEntries = (): JournalEntry[] => {
-  if (typeof window === 'undefined') return defaultEntries;
-  
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (error) {
-    console.error('Error loading journal entries:', error);
-  }
-  
-  return defaultEntries;
+  return dataCache.getFromLocalStorage(STORAGE_KEY, defaultEntries);
 };
 
-// Save entries to localStorage
+// Save entries to localStorage and update cache
 export const saveJournalEntries = (entries: JournalEntry[]): void => {
-  if (typeof window === 'undefined') return;
-  
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
-  } catch (error) {
-    console.error('Error saving journal entries:', error);
-  }
+  dataCache.saveToLocalStorage(STORAGE_KEY, entries);
 };
 
 // Generate unique ID for new entries
@@ -97,24 +114,24 @@ export const createSalesJournalEntry = (
 ): JournalEntry => {
   const today = new Date().toISOString().split('T')[0];
   const now = new Date().toISOString();
-  
-  let debitAccount = 'الصندوق';
+
+  let debitAccount = getAccountCodeByName('الصندوق'); // '1010'
   if (paymentMethod === 'card') {
-    debitAccount = 'البنك';
+    debitAccount = getAccountCodeByName('البنك'); // '1020'
   } else if (paymentMethod === 'credit') {
-    debitAccount = 'العملاء';
+    debitAccount = getAccountCodeByName('العملاء'); // '1030'
   }
-  
-  const description = customerName 
+
+  const description = customerName
     ? `بيع ${paymentMethod === 'credit' ? 'على الحساب' : paymentMethod === 'card' ? 'بطاقة' : 'نقدي'} - ${customerName}`
     : `بيع ${paymentMethod === 'credit' ? 'على الحساب' : paymentMethod === 'card' ? 'بطاقة' : 'نقدي'}`;
-  
+
   return {
     id: generateEntryId('auto'),
     date: today,
     description,
     debitAccount,
-    creditAccount: 'إيرادات المبيعات',
+    creditAccount: getAccountCodeByName('إيرادات المبيعات'), // '4010'
     amount,
     reference: invoiceNumber,
     status: 'مُعتمد',
@@ -137,18 +154,20 @@ export const createPurchaseJournalEntry = (
 ): JournalEntry => {
   const today = new Date().toISOString().split('T')[0];
   const now = new Date().toISOString();
-  
-  const creditAccount = paymentMethod === 'cash' ? 'الصندوق' : 'الموردين';
-  
-  const description = supplierName 
+
+  const creditAccount = paymentMethod === 'cash'
+    ? getAccountCodeByName('الصندوق') // '1010'
+    : getAccountCodeByName('الموردين'); // '2010'
+
+  const description = supplierName
     ? `شراء بضاعة ${paymentMethod === 'cash' ? 'نقداً' : 'على الحساب'} - ${supplierName}`
     : `شراء بضاعة ${paymentMethod === 'cash' ? 'نقداً' : 'على الحساب'}`;
-  
+
   return {
     id: generateEntryId('auto'),
     date: today,
     description,
-    debitAccount: 'المخزون',
+    debitAccount: getAccountCodeByName('المخزون'), // '1040'
     creditAccount,
     amount,
     reference: purchaseOrderNumber,
@@ -171,11 +190,11 @@ export const createInventoryReceiptEntry = (
 ): JournalEntry => {
   const today = new Date().toISOString().split('T')[0];
   const now = new Date().toISOString();
-  
+
   const description = fromWarehouse && toWarehouse
     ? `توريد مخزون من ${fromWarehouse} إلى ${toWarehouse}`
     : `توريد مخزون - ${toWarehouse || 'مستودع'}`;
-  
+
   return {
     id: generateEntryId('auto'),
     date: today,
@@ -207,10 +226,10 @@ export const createInventoryReceiptFromAccountEntry = (
 ): JournalEntry => {
   const today = new Date().toISOString().split('T')[0];
   const now = new Date().toISOString();
-  
+
   const totalAmount = includeTax ? amount + taxAmount : amount;
   const desc = description || `توريد مخزون${warehouse ? ` إلى ${warehouse}` : ''}${includeTax ? ' (شامل الضريبة)' : ' (بدون ضريبة)'}`;
-  
+
   return {
     id: generateEntryId('auto'),
     date: today,
@@ -238,7 +257,7 @@ export const createInventoryIssueEntry = (
 ): JournalEntry => {
   const today = new Date().toISOString().split('T')[0];
   const now = new Date().toISOString();
-  
+
   return {
     id: generateEntryId('auto'),
     date: today,
@@ -269,9 +288,9 @@ export const createInventoryIssueToAccountEntry = (
 ): JournalEntry => {
   const today = new Date().toISOString().split('T')[0];
   const now = new Date().toISOString();
-  
+
   const desc = description || `صرف مخزون${warehouse ? ` من ${warehouse}` : ''}${reason ? ` - ${reason}` : ''}`;
-  
+
   return {
     id: generateEntryId('auto'),
     date: today,
@@ -300,7 +319,7 @@ export const createInventoryAdjustmentEntry = (
 ): JournalEntry => {
   const today = new Date().toISOString().split('T')[0];
   const now = new Date().toISOString();
-  
+
   if (adjustmentType === 'increase') {
     return {
       id: generateEntryId('auto'),
@@ -344,7 +363,7 @@ export const createOpeningInventoryEntry = (
 ): JournalEntry => {
   const today = new Date().toISOString().split('T')[0];
   const now = new Date().toISOString();
-  
+
   return {
     id: generateEntryId('auto'),
     date: today,
@@ -374,15 +393,17 @@ export const createCashReceiptEntry = (
 ): JournalEntry => {
   const today = new Date().toISOString().split('T')[0];
   const now = new Date().toISOString();
-  
-  const debitAccount = paymentMethod === 'cash' ? 'الصندوق' : 'البنك';
-  
+
+  const debitAccount = paymentMethod === 'cash'
+    ? getAccountCodeByName('الصندوق') // '1010'
+    : getAccountCodeByName('البنك'); // '1020'
+
   return {
     id: generateEntryId('auto'),
     date: today,
     description: description || `سند قبض ${paymentMethod === 'cash' ? 'نقدي' : 'بطاقة'}${customerName ? ` من ${customerName}` : ''}`,
     debitAccount,
-    creditAccount: 'العملاء',
+    creditAccount: getAccountCodeByName('العملاء'), // '1030'
     amount,
     reference: receiptNumber,
     status: 'مُعتمد',
@@ -406,14 +427,16 @@ export const createPaymentVoucherEntry = (
 ): JournalEntry => {
   const today = new Date().toISOString().split('T')[0];
   const now = new Date().toISOString();
-  
-  const creditAccount = paymentMethod === 'cash' ? 'الصندوق' : 'البنك';
-  
+
+  const creditAccount = paymentMethod === 'cash'
+    ? getAccountCodeByName('الصندوق') // '1010'
+    : getAccountCodeByName('البنك'); // '1020'
+
   return {
     id: generateEntryId('auto'),
     date: today,
     description: description || `سند صرف ${paymentMethod === 'cash' ? 'نقدي' : 'بطاقة'}${supplierName ? ` إلى ${supplierName}` : ''}`,
-    debitAccount: 'الموردين',
+    debitAccount: getAccountCodeByName('الموردين'), // '2010'
     creditAccount,
     amount,
     reference: voucherNumber,
@@ -439,25 +462,25 @@ export const createCompleteSalesJournalEntries = (
 ): JournalEntry[] => {
   const today = new Date().toISOString().split('T')[0];
   const now = new Date().toISOString();
-  
-  let debitAccount = 'الصندوق';
+
+  let debitAccount = getAccountCodeByName('الصندوق'); // '1010'
   if (paymentMethod === 'card') {
-    debitAccount = 'البنك';
+    debitAccount = getAccountCodeByName('البنك'); // '1020'
   } else if (paymentMethod === 'credit') {
-    debitAccount = 'العملاء';
+    debitAccount = getAccountCodeByName('العملاء'); // '1030'
   }
-  
-  const description = customerName 
+
+  const description = customerName
     ? `بيع ${paymentMethod === 'credit' ? 'على الحساب' : paymentMethod === 'card' ? 'بطاقة' : 'نقدي'} - ${customerName}`
     : `بيع ${paymentMethod === 'credit' ? 'على الحساب' : paymentMethod === 'card' ? 'بطاقة' : 'نقدي'}`;
-  
+
   // Revenue entry
   const revenueEntry: JournalEntry = {
     id: generateEntryId('auto'),
     date: today,
     description,
     debitAccount,
-    creditAccount: 'إيرادات المبيعات',
+    creditAccount: getAccountCodeByName('إيرادات المبيعات'), // '4010'
     amount: revenueAmount,
     reference: invoiceNumber,
     status: 'مُعتمد',
@@ -466,14 +489,14 @@ export const createCompleteSalesJournalEntries = (
     sourceReference: invoiceNumber,
     createdAt: now
   };
-  
+
   // COGS entry (only for products, not services)
   const cogsEntry: JournalEntry = {
     id: generateEntryId('auto'),
     date: today,
     description: `تكلفة البضاعة المباعة - ${invoiceNumber}`,
-    debitAccount: 'تكلفة البضاعة المباعة',
-    creditAccount: 'المخزون',
+    debitAccount: getAccountCodeByName('تكلفة البضاعة المباعة'), // '5010'
+    creditAccount: getAccountCodeByName('المخزون'), // '1040'
     amount: cogsAmount,
     reference: `${invoiceNumber}-COGS`,
     status: 'مُعتمد',
@@ -482,8 +505,109 @@ export const createCompleteSalesJournalEntries = (
     sourceReference: invoiceNumber,
     createdAt: now
   };
-  
+
   return cogsAmount > 0 ? [revenueEntry, cogsEntry] : [revenueEntry];
+};
+
+/**
+ * Create complete sales journal entries with mixed payment methods
+ * Supports cash, card, and credit payments in any combination
+ * Returns array of entries: [revenue entries for each payment method, COGS entry]
+ */
+export const createMixedPaymentSalesJournalEntries = (
+  invoiceNumber: string,
+  revenueAmount: number,
+  cogsAmount: number,
+  paymentBreakdown: { cash: number; card: number; credit: number },
+  customerId?: string,
+  customerName?: string,
+  cashierName?: string
+): JournalEntry[] => {
+  const today = new Date().toISOString().split('T')[0];
+  const now = new Date().toISOString();
+  const entries: JournalEntry[] = [];
+
+  const cashierInfo = cashierName ? ` - كاشير: ${cashierName}` : '';
+
+  // Create revenue entry for cash payment
+  if (paymentBreakdown.cash > 0) {
+    entries.push({
+      id: generateEntryId('auto'),
+      date: today,
+      description: customerName
+        ? `بيع نقدي - ${customerName}${cashierInfo}`
+        : `بيع نقدي${cashierInfo}`,
+      debitAccount: getAccountCodeByName('الصندوق'), // '1010'
+      creditAccount: getAccountCodeByName('إيرادات المبيعات'), // '4010'
+      amount: paymentBreakdown.cash,
+      reference: invoiceNumber,
+      status: 'مُعتمد',
+      type: 'auto',
+      operationType: 'بيع',
+      sourceReference: invoiceNumber,
+      createdAt: now
+    });
+  }
+
+  // Create revenue entry for card payment
+  if (paymentBreakdown.card > 0) {
+    entries.push({
+      id: generateEntryId('auto'),
+      date: today,
+      description: customerName
+        ? `بيع بطاقة - ${customerName}${cashierInfo}`
+        : `بيع بطاقة${cashierInfo}`,
+      debitAccount: getAccountCodeByName('البنك'), // '1020'
+      creditAccount: getAccountCodeByName('إيرادات المبيعات'), // '4010'
+      amount: paymentBreakdown.card,
+      reference: invoiceNumber,
+      status: 'مُعتمد',
+      type: 'auto',
+      operationType: 'بيع',
+      sourceReference: invoiceNumber,
+      createdAt: now
+    });
+  }
+
+  // Create revenue entry for credit payment
+  if (paymentBreakdown.credit > 0) {
+    entries.push({
+      id: generateEntryId('auto'),
+      date: today,
+      description: customerName
+        ? `بيع على الحساب - ${customerName}${cashierInfo}`
+        : `بيع على الحساب${cashierInfo}`,
+      debitAccount: getAccountCodeByName('العملاء'), // '1030'
+      creditAccount: getAccountCodeByName('إيرادات المبيعات'), // '4010'
+      amount: paymentBreakdown.credit,
+      reference: invoiceNumber,
+      status: 'مُعتمد',
+      type: 'auto',
+      operationType: 'بيع',
+      sourceReference: invoiceNumber,
+      createdAt: now
+    });
+  }
+
+  // COGS entry (only for products, not services)
+  if (cogsAmount > 0) {
+    entries.push({
+      id: generateEntryId('auto'),
+      date: today,
+      description: `تكلفة البضاعة المباعة - ${invoiceNumber}${cashierInfo}`,
+      debitAccount: getAccountCodeByName('تكلفة البضاعة المباعة'), // '5010'
+      creditAccount: getAccountCodeByName('المخزون'), // '1040'
+      amount: cogsAmount,
+      reference: `${invoiceNumber}-COGS`,
+      status: 'مُعتمد',
+      type: 'auto',
+      operationType: 'بيع',
+      sourceReference: invoiceNumber,
+      createdAt: now
+    });
+  }
+
+  return entries;
 };
 
 /**
@@ -501,26 +625,26 @@ export const createSalesReturnJournalEntries = (
 ): JournalEntry[] => {
   const today = new Date().toISOString().split('T')[0];
   const now = new Date().toISOString();
-  
-  let creditAccount = 'الصندوق';
+
+  let creditAccount = getAccountCodeByName('الصندوق'); // '1010'
   if (refundMethod === 'card') {
-    creditAccount = 'البنك';
+    creditAccount = getAccountCodeByName('البنك'); // '1020'
   } else if (refundMethod === 'credit') {
-    creditAccount = 'العملاء';
+    creditAccount = getAccountCodeByName('العملاء'); // '1030'
   }
-  
-  const description = customerName 
+
+  const description = customerName
     ? `مرتجع مبيعات ${refundMethod === 'credit' ? 'على الحساب' : refundMethod === 'card' ? 'بطاقة' : 'نقدي'} - ${customerName}`
     : `مرتجع مبيعات ${refundMethod === 'credit' ? 'على الحساب' : refundMethod === 'card' ? 'بطاقة' : 'نقدي'}`;
-  
+
   const entries: JournalEntry[] = [];
-  
+
   // Revenue reversal entry
   entries.push({
     id: generateEntryId('auto'),
     date: today,
     description: `إلغاء إيرادات - ${description}`,
-    debitAccount: 'إيرادات المبيعات',
+    debitAccount: getAccountCodeByName('إيرادات المبيعات'), // '4010'
     creditAccount,
     amount: revenueAmount,
     reference: returnNumber,
@@ -530,15 +654,15 @@ export const createSalesReturnJournalEntries = (
     sourceReference: originalInvoiceNumber,
     createdAt: now
   });
-  
+
   // COGS reversal entry (restore inventory value)
   if (cogsAmount > 0) {
     entries.push({
       id: generateEntryId('auto'),
       date: today,
       description: `إعادة تكلفة البضاعة المرجعة - ${returnNumber}`,
-      debitAccount: 'المخزون',
-      creditAccount: 'تكلفة البضاعة المباعة',
+      debitAccount: getAccountCodeByName('المخزون'), // '1040'
+      creditAccount: getAccountCodeByName('تكلفة البضاعة المباعة'), // '5010'
       amount: cogsAmount,
       reference: `${returnNumber}-COGS`,
       status: 'مُعتمد',
@@ -548,7 +672,7 @@ export const createSalesReturnJournalEntries = (
       createdAt: now
     });
   }
-  
+
   return entries;
 };
 

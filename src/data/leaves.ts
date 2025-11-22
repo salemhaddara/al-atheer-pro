@@ -3,6 +3,7 @@
  * This file manages employee leave requests and balances
  */
 
+import { dataCache } from '../utils/dataCache';
 import { markOnLeave } from './attendance';
 
 export interface LeaveRequest {
@@ -35,58 +36,24 @@ export interface LeaveBalance {
 const LEAVES_STORAGE_KEY = 'employee_leaves';
 const BALANCE_STORAGE_KEY = 'employee_leave_balances';
 
-// Load leave requests from localStorage
+// Load leave requests from cache/localStorage
 export const loadLeaveRequests = (): LeaveRequest[] => {
-  if (typeof window === 'undefined') return [];
-  
-  try {
-    const stored = localStorage.getItem(LEAVES_STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (error) {
-    console.error('Error loading leave requests:', error);
-  }
-  
-  return [];
+  return dataCache.getFromLocalStorage(LEAVES_STORAGE_KEY, []);
 };
 
-// Save leave requests to localStorage
+// Save leave requests to localStorage and update cache
 export const saveLeaveRequests = (requests: LeaveRequest[]): void => {
-  if (typeof window === 'undefined') return;
-  
-  try {
-    localStorage.setItem(LEAVES_STORAGE_KEY, JSON.stringify(requests));
-  } catch (error) {
-    console.error('Error saving leave requests:', error);
-  }
+  dataCache.saveToLocalStorage(LEAVES_STORAGE_KEY, requests);
 };
 
-// Load leave balances from localStorage
+// Load leave balances from cache/localStorage
 export const loadLeaveBalances = (): LeaveBalance[] => {
-  if (typeof window === 'undefined') return [];
-  
-  try {
-    const stored = localStorage.getItem(BALANCE_STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (error) {
-    console.error('Error loading leave balances:', error);
-  }
-  
-  return [];
+  return dataCache.getFromLocalStorage(BALANCE_STORAGE_KEY, []);
 };
 
-// Save leave balances to localStorage
+// Save leave balances to localStorage and update cache
 export const saveLeaveBalances = (balances: LeaveBalance[]): void => {
-  if (typeof window === 'undefined') return;
-  
-  try {
-    localStorage.setItem(BALANCE_STORAGE_KEY, JSON.stringify(balances));
-  } catch (error) {
-    console.error('Error saving leave balances:', error);
-  }
+  dataCache.saveToLocalStorage(BALANCE_STORAGE_KEY, balances);
 };
 
 /**

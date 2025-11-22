@@ -3,6 +3,8 @@
  * This file manages employee accounts and links them to accounting system
  */
 
+import { dataCache } from '../utils/dataCache';
+
 export interface AccountIndex {
   id: string;
   accountNumber: string; // رقم الحساب
@@ -16,31 +18,14 @@ export interface AccountIndex {
 // Storage key for localStorage
 const STORAGE_KEY = 'account_index';
 
-// Load accounts from localStorage or use defaults
+// Load accounts from cache/localStorage or use defaults
 export const loadAccountIndex = (): AccountIndex[] => {
-  if (typeof window === 'undefined') return [];
-  
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (error) {
-    console.error('Error loading account index:', error);
-  }
-  
-  return [];
+  return dataCache.getFromLocalStorage(STORAGE_KEY, []);
 };
 
-// Save accounts to localStorage
+// Save accounts to localStorage and update cache
 export const saveAccountIndex = (accounts: AccountIndex[]): void => {
-  if (typeof window === 'undefined') return;
-  
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts));
-  } catch (error) {
-    console.error('Error saving account index:', error);
-  }
+  dataCache.saveToLocalStorage(STORAGE_KEY, accounts);
 };
 
 /**

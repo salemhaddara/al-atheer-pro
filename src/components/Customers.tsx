@@ -1,9 +1,11 @@
-import { useState, useMemo } from 'react';
+'use client';
+
+import { useState, useMemo, useEffect, useTransition } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Label } from './ui/label';
+import { useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Badge } from './ui/badge';
@@ -19,6 +21,21 @@ interface Customer {
   email: string;
   phone: string;
   address: string;
+  // نوع العميل
+  customerType: 'فرد' | 'مؤسسة' | 'محل تجاري';
+  // البيانات الضريبية (للمؤسسات والمحلات التجارية)
+  taxNumber?: string; // الرقم الضريبي
+  // العنوان الوطني (للربط مع هيئة الزكاة والدخل)
+  nationalAddress?: {
+    buildingNumber?: string; // رقم المبنى
+    streetName?: string; // اسم الشارع
+    district?: string; // اسم الحي
+    city?: string; // اسم المدينة
+    postalCode?: string; // الرمز البريدي
+    unitNumber?: string; // رقم الوحدة (اختياري)
+    additionalNumber?: string; // رقم إضافي (اختياري)
+  };
+  // بيانات إضافية
   totalOrders: number;
   totalSpent: number;
   creditLimit: number;
@@ -106,18 +123,125 @@ const customerTransactions: Record<string, Transaction[]> = {
   '5': [],
 };
 
-export function Customers() {
-  const [customers, setCustomers] = useState<Customer[]>([
-    { id: '1', name: 'أحمد محمد', email: 'ahmed@example.com', phone: '0501234567', address: 'الرياض، المملكة العربية السعودية', totalOrders: 24, totalSpent: 12500, creditLimit: 20000, currentBalance: 6800, graceDays: 30, creditStatus: 'ممتاز' },
-    { id: '2', name: 'فاطمة علي', email: 'fatima@example.com', phone: '0502345678', address: 'جدة، المملكة العربية السعودية', totalOrders: 18, totalSpent: 8900, creditLimit: 15000, currentBalance: 12000, graceDays: 20, creditStatus: 'تحذير' },
-    { id: '3', name: 'محمد حسن', email: 'mohammed@example.com', phone: '0503456789', address: 'الدمام، المملكة العربية السعودية', totalOrders: 32, totalSpent: 18700, creditLimit: 25000, currentBalance: 4000, graceDays: 35, creditStatus: 'ممتاز' },
-    { id: '4', name: 'نورة خالد', email: 'noura@example.com', phone: '0504567890', address: 'مكة المكرمة، المملكة العربية السعودية', totalOrders: 15, totalSpent: 6400, creditLimit: 12000, currentBalance: 11800, graceDays: 15, creditStatus: 'موقوف' },
-    { id: '5', name: 'سعد عبدالله', email: 'saad@example.com', phone: '0505678901', address: 'المدينة المنورة، المملكة العربية السعودية', totalOrders: 27, totalSpent: 15200, creditLimit: 18000, currentBalance: 5000, graceDays: 25, creditStatus: 'ممتاز' },
-  ]);
+const STORAGE_KEY = 'customers_data';
 
+// Load customers from localStorage
+const loadCustomers = (): Customer[] => {
+  if (typeof window === 'undefined') return [];
+
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (error) {
+    console.error('Error loading customers:', error);
+  }
+
+  // Return default customers if nothing stored
+  return [
+    {
+      id: '1',
+      name: 'أحمد محمد',
+      email: 'ahmed@example.com',
+      phone: '0501234567',
+      address: 'الرياض، المملكة العربية السعودية',
+      customerType: 'فرد',
+      totalOrders: 24,
+      totalSpent: 12500,
+      creditLimit: 20000,
+      currentBalance: 6800,
+      graceDays: 30,
+      creditStatus: 'ممتاز'
+    },
+    {
+      id: '2',
+      name: 'فاطمة علي',
+      email: 'fatima@example.com',
+      phone: '0502345678',
+      address: 'جدة، المملكة العربية السعودية',
+      customerType: 'فرد',
+      totalOrders: 18,
+      totalSpent: 8900,
+      creditLimit: 15000,
+      currentBalance: 12000,
+      graceDays: 20,
+      creditStatus: 'تحذير'
+    },
+    {
+      id: '3',
+      name: 'شركة النجاح التقنية',
+      email: 'info@alnajah.com',
+      phone: '0503456789',
+      address: 'الدمام، المملكة العربية السعودية',
+      customerType: 'مؤسسة',
+      taxNumber: '300123456700003',
+      nationalAddress: {
+        buildingNumber: '1234',
+        streetName: 'شارع الملك فهد',
+        district: 'حي العليا',
+        city: 'الدمام',
+        postalCode: '32245',
+        unitNumber: '5',
+        additionalNumber: '1234'
+      },
+      totalOrders: 32,
+      totalSpent: 18700,
+      creditLimit: 25000,
+      currentBalance: 4000,
+      graceDays: 35,
+      creditStatus: 'ممتاز'
+    },
+    {
+      id: '4',
+      name: 'محل الأمل للتجارة',
+      email: 'info@alamal.com',
+      phone: '0504567890',
+      address: 'مكة المكرمة، المملكة العربية السعودية',
+      customerType: 'محل تجاري',
+      taxNumber: '300234567800003',
+      nationalAddress: {
+        buildingNumber: '5678',
+        streetName: 'طريق الحرم',
+        district: 'حي العزيزية',
+        city: 'مكة المكرمة',
+        postalCode: '24231',
+        unitNumber: '10'
+      },
+      totalOrders: 15,
+      totalSpent: 6400,
+      creditLimit: 12000,
+      currentBalance: 11800,
+      graceDays: 15,
+      creditStatus: 'موقوف'
+    },
+    {
+      id: '5',
+      name: 'سعد عبدالله',
+      email: 'saad@example.com',
+      phone: '0505678901',
+      address: 'المدينة المنورة، المملكة العربية السعودية',
+      customerType: 'فرد',
+      totalOrders: 27,
+      totalSpent: 15200,
+      creditLimit: 18000,
+      currentBalance: 5000,
+      graceDays: 25,
+      creditStatus: 'ممتاز'
+    },
+  ];
+};
+
+export function Customers() {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [customers, setCustomers] = useState<Customer[]>(loadCustomers);
+
+  // Prefetch common routes on mount
+  useEffect(() => {
+    router.prefetch('/customers/new');
+  }, [router]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [invoices, setInvoices] = useState<Record<string, Invoice[]>>(customerInvoices);
   const [payments, setPayments] = useState<Record<string, PaymentLog[]>>(customerPayments);
@@ -128,7 +252,8 @@ export function Customers() {
   const filteredCustomers = customers.filter(customer =>
     customer.name.includes(searchTerm) ||
     customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.phone.includes(searchTerm)
+    customer.phone.includes(searchTerm) ||
+    (customer.taxNumber && customer.taxNumber.includes(searchTerm))
   );
 
   const selectedCustomer = useMemo(
@@ -183,14 +308,45 @@ export function Customers() {
   };
 
   const handleEdit = (customer: Customer) => {
-    setEditingCustomer(customer);
-    setIsDialogOpen(true);
+    // Prefetch the edit page for faster navigation
+    router.prefetch(`/customers/${customer.id}/edit`);
+    startTransition(() => {
+      router.push(`/customers/${customer.id}/edit`);
+    });
   };
 
   const handleAddNew = () => {
-    setEditingCustomer(null);
-    setIsDialogOpen(true);
+    // Prefetch the new page for faster navigation
+    router.prefetch('/customers/new');
+    startTransition(() => {
+      router.push('/customers/new');
+    });
   };
+
+  // Save customers to localStorage whenever they change
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(customers));
+      } catch (error) {
+        console.error('Error saving customers:', error);
+      }
+    }
+  }, [customers]);
+
+  // Reload customers when window regains focus (e.g., returning from add page)
+  useEffect(() => {
+    const handleFocus = () => {
+      const loadedCustomers = loadCustomers();
+      if (loadedCustomers.length !== customers.length ||
+        JSON.stringify(loadedCustomers) !== JSON.stringify(customers)) {
+        setCustomers(loadedCustomers);
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [customers]);
 
   const handlePayment = () => {
     if (!selectedCustomerId) {
@@ -224,17 +380,17 @@ export function Customers() {
 
     // Generate receipt number
     const receiptNumber = `RCP-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
-    
+
     // Create automatic journal entry for cash receipt
     const journalEntry = createCashReceiptEntry(
       receiptNumber,
       paymentAmount,
       paymentMethod,
       selectedCustomerId,
-      selectedCustomer.name,
+      selectedCustomer?.name ?? '',
       paymentNote || undefined
     );
-    
+
     // Add journal entry
     addJournalEntry(journalEntry);
 
@@ -265,75 +421,10 @@ export function Customers() {
           <h1 className="text-3xl font-bold">إدارة العملاء</h1>
           <p className="text-gray-600">عرض وإدارة جميع العملاء</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={handleAddNew} className="gap-2 shrink-0">
-              <Plus className="w-4 h-4" />
-              إضافة عميل جديد
-            </Button>
-          </DialogTrigger>
-          <DialogContent dir="rtl" className="max-w-2xl">
-            <DialogHeader className="text-right">
-              <DialogTitle>{editingCustomer ? 'تعديل العميل' : 'إضافة عميل جديد'}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div>
-                <Label>الاسم الكامل</Label>
-                <Input placeholder="أدخل الاسم الكامل" defaultValue={editingCustomer?.name} />
-              </div>
-              <div>
-                <Label>البريد الإلكتروني</Label>
-                <Input type="email" placeholder="example@domain.com" defaultValue={editingCustomer?.email} />
-              </div>
-              <div>
-                <Label>رقم الهاتف</Label>
-                <Input placeholder="05xxxxxxxx" defaultValue={editingCustomer?.phone} />
-              </div>
-              <div>
-                <Label>العنوان</Label>
-                <Input placeholder="أدخل العنوان الكامل" defaultValue={editingCustomer?.address} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>حد الائتمان (ر.س)</Label>
-                  <Input type="number" placeholder="0" defaultValue={editingCustomer?.creditLimit ?? 0} />
-                </div>
-                <div>
-                  <Label>الرصيد الحالي (ر.س)</Label>
-                  <Input type="number" placeholder="0" defaultValue={editingCustomer?.currentBalance ?? 0} />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>أيام السماح</Label>
-                  <Input type="number" placeholder="30" defaultValue={editingCustomer?.graceDays ?? 30} />
-                </div>
-                <div>
-                  <Label>حالة الائتمان</Label>
-                  <select
-                    defaultValue={editingCustomer?.creditStatus ?? 'ممتاز'}
-                    className="w-full border rounded-md px-3 py-2"
-                  >
-                    <option value="ممتاز">ممتاز</option>
-                    <option value="تحذير">تحذير</option>
-                    <option value="موقوف">موقوف</option>
-                  </select>
-                </div>
-              </div>
-              <div className="flex gap-2 pt-4">
-                <Button className="flex-1" onClick={() => {
-                  toast.success(editingCustomer ? 'تم تحديث العميل بنجاح' : 'تم إضافة العميل بنجاح');
-                  setIsDialogOpen(false);
-                }}>
-                  {editingCustomer ? 'تحديث' : 'إضافة'}
-                </Button>
-                <Button variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>
-                  إلغاء
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={handleAddNew} className="gap-2 shrink-0">
+          <Plus className="w-4 h-4" />
+          إضافة عميل جديد
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -420,6 +511,14 @@ export function Customers() {
                                 <Mail className="w-3 h-3" />
                                 {customer.email}
                               </div>
+                              <div className="flex items-center gap-1 mt-1">
+                                <Badge variant="outline" className="text-xs">
+                                  {customer.customerType}
+                                </Badge>
+                                {customer.taxNumber && (
+                                  <span className="text-xs">الضريبي: {customer.taxNumber}</span>
+                                )}
+                              </div>
                             </div>
                           </div>
                           <Badge variant={customer.creditStatus === 'موقوف' ? 'destructive' : customer.creditStatus === 'تحذير' ? 'secondary' : 'default'}>
@@ -492,6 +591,12 @@ export function Customers() {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       <div className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm">
+                          <Badge variant="outline" className="mr-2">{selectedCustomer.customerType}</Badge>
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
                         <Mail className="w-4 h-4 text-gray-400" />
                         <span className="text-sm">{selectedCustomer.email}</span>
                       </div>
@@ -503,6 +608,40 @@ export function Customers() {
                         <MapPin className="w-4 h-4 text-gray-400" />
                         <span className="text-sm">{selectedCustomer.address}</span>
                       </div>
+                      {selectedCustomer.taxNumber && (
+                        <div className="flex items-center gap-2 pt-2 border-t">
+                          <span className="text-sm font-semibold text-gray-700">الرقم الضريبي:</span>
+                          <span className="text-sm">{selectedCustomer.taxNumber}</span>
+                        </div>
+                      )}
+                      {selectedCustomer.nationalAddress && (
+                        <div className="pt-2 border-t space-y-2">
+                          <span className="text-sm font-semibold text-gray-700 block mb-2">العنوان الوطني:</span>
+                          <div className="text-xs text-gray-600 space-y-1 pr-4">
+                            {selectedCustomer.nationalAddress.buildingNumber && (
+                              <div>رقم المبنى: {selectedCustomer.nationalAddress.buildingNumber}</div>
+                            )}
+                            {selectedCustomer.nationalAddress.streetName && (
+                              <div>الشارع: {selectedCustomer.nationalAddress.streetName}</div>
+                            )}
+                            {selectedCustomer.nationalAddress.district && (
+                              <div>الحي: {selectedCustomer.nationalAddress.district}</div>
+                            )}
+                            {selectedCustomer.nationalAddress.city && (
+                              <div>المدينة: {selectedCustomer.nationalAddress.city}</div>
+                            )}
+                            {selectedCustomer.nationalAddress.postalCode && (
+                              <div>الرمز البريدي: {selectedCustomer.nationalAddress.postalCode}</div>
+                            )}
+                            {selectedCustomer.nationalAddress.unitNumber && (
+                              <div>رقم الوحدة: {selectedCustomer.nationalAddress.unitNumber}</div>
+                            )}
+                            {selectedCustomer.nationalAddress.additionalNumber && (
+                              <div>رقم إضافي: {selectedCustomer.nationalAddress.additionalNumber}</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
 

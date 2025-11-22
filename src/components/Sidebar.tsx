@@ -1,3 +1,5 @@
+'use client';
+
 import {
   LayoutDashboard,
   Package,
@@ -11,6 +13,7 @@ import {
   Calculator,
   Receipt,
   TrendingUp,
+  TrendingDown,
   ShoppingBag,
   Users2,
   Briefcase,
@@ -23,148 +26,230 @@ import {
   CreditCard,
   PackageCheck,
   Landmark,
-  CalendarClock
+  CalendarClock,
+  BookOpen
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo, useCallback, memo, useEffect } from 'react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useUser } from '../contexts/UserContext';
 
 interface SidebarProps {
-  currentPage: string;
-  onPageChange: (page: string) => void;
   currentCompany: string;
   onCompanyChange: (company: string) => void;
 }
 
-export function Sidebar({ currentPage, onPageChange, currentCompany, onCompanyChange }: SidebarProps) {
+// Route mapping for Next.js
+const routeMap: Record<string, string> = {
+  'dashboard': '/',
+  'accounting': '/accounting',
+  'chart-of-accounts': '/chart-of-accounts',
+  'account-statements': '/account-statements',
+  'receipt-vouchers': '/receipt-vouchers',
+  'payment-vouchers': '/payment-vouchers',
+  'trial-balance': '/trial-balance',
+  'invoices': '/invoices',
+  'purchases': '/purchases',
+  'pos': '/pos',
+  'hr': '/hr',
+  'employees': '/employees',
+  'shifts': '/shifts',
+  'warehouses': '/warehouses',
+  'products': '/products',
+  'services': '/services',
+  'safes': '/safes',
+  'banks-pos': '/banks-pos',
+  'companies': '/companies',
+  'branches': '/branches',
+  'customers': '/customers',
+  'customer-statements': '/customer-statements',
+  'suppliers': '/suppliers',
+  'reports': '/reports',
+  'financial-reports': '/reports/financial',
+  'profit-loss': '/reports/profit-loss',
+  'balance-sheet': '/reports/balance-sheet',
+  'cash-flow': '/reports/cash-flow',
+  'purchase-reports': '/reports/purchase',
+  'inventory-reports': '/reports/inventory',
+  'customer-reports': '/reports/customer',
+  'supplier-reports': '/reports/supplier',
+  'tax-reports': '/reports/tax',
+  'settings': '/settings',
+  'system-setup': '/settings/system-setup',
+  'permissions': '/settings/permissions',
+};
+
+export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange }: SidebarProps) {
   const { t, direction } = useLanguage();
+  const { isAdmin } = useUser();
+  const pathname = usePathname();
+  const router = useRouter();
   const [expandedSections, setExpandedSections] = useState<string[]>(['accounting', 'sales']);
 
-  const toggleSection = (section: string) => {
+  // Prefetch common routes on mount for faster navigation
+  useEffect(() => {
+    const commonRoutes = ['/', '/customers', '/products', '/pos', '/purchases', '/employees'];
+    commonRoutes.forEach(route => {
+      router.prefetch(route);
+    });
+  }, [router]);
+
+  const toggleSection = useCallback((section: string) => {
     setExpandedSections(prev =>
       prev.includes(section)
         ? prev.filter(s => s !== section)
         : [...prev, section]
     );
-  };
+  }, []);
 
-  const companies = [
+  const companies = useMemo(() => [
     { id: 'alamal', name: t('sidebar.companies.alamal') },
     { id: 'alnajah', name: t('sidebar.companies.alnajah') },
     { id: 'alreyada', name: t('sidebar.companies.alreyada') },
     { id: 'altamayoz', name: t('sidebar.companies.altamayoz') }
-  ];
+  ], [t]);
 
-  const menuSections = [
-    {
-      id: 'main',
-      label: t('sidebar.sections.main'),
-      items: [
-        { id: 'dashboard', label: t('sidebar.menu.dashboard'), icon: LayoutDashboard },
-      ]
-    },
-    {
-      id: 'accounting',
-      label: t('sidebar.sections.accounting'),
-      icon: Calculator,
-      expandable: true,
-      items: [
-        { id: 'accounting', label: t('sidebar.menu.accounting'), icon: Receipt },
-        { id: 'invoices', label: t('sidebar.menu.invoices'), icon: FileText },
-      ]
-    },
-    {
-      id: 'sales',
-      label: t('sidebar.sections.sales'),
-      icon: ShoppingCart,
-      expandable: true,
-      items: [
-        { id: 'purchases', label: t('sidebar.menu.purchases'), icon: ShoppingBag },
-        { id: 'pos', label: t('sidebar.menu.pos'), icon: Store },
-      ]
-    },
-    {
-      id: 'hr',
-      label: t('sidebar.sections.hr'),
-      icon: Users2,
-      expandable: true,
-      items: [
-        { id: 'hr', label: t('sidebar.menu.hr'), icon: Briefcase },
-        { id: 'employees', label: t('sidebar.menu.employees'), icon: UserCircle },
-        { id: 'shifts', label: t('sidebar.menu.shifts'), icon: CalendarClock },
-      ]
-    },
-    {
-      id: 'warehouses',
-      label: t('sidebar.sections.warehouses'),
-      icon: Warehouse,
-      expandable: true,
-      items: [
-        { id: 'warehouses', label: t('sidebar.menu.warehouses'), icon: Warehouse },
-        { id: 'products', label: t('sidebar.menu.products'), icon: Package },
-        { id: 'services', label: t('sidebar.menu.services'), icon: Briefcase },
-      ]
-    },
-    {
-      id: 'financial-accounts',
-      label: t('sidebar.sections.financialAccounts'),
-      icon: DollarSign,
-      expandable: true,
-      items: [
-        { id: 'safes', label: t('sidebar.menu.safes'), icon: DollarSign },
-        { id: 'banks-pos', label: 'إدارة البنوك والصرافات', icon: Landmark },
-      ]
-    },
-    {
-      id: 'companies',
-      label: t('sidebar.sections.companies'),
-      icon: Building2,
-      expandable: true,
-      items: [
-        { id: 'companies', label: t('sidebar.menu.companies'), icon: Building2 },
-        { id: 'branches', label: t('sidebar.menu.branches'), icon: MapPin },
-      ]
-    },
-    {
-      id: 'customers',
-      label: t('sidebar.sections.customers'),
-      icon: Users,
-      expandable: true,
-      items: [
-        { id: 'customers', label: t('sidebar.menu.customers'), icon: Users },
-        { id: 'customer-statements', label: 'كشوف العملاء', icon: FileText },
-        { id: 'suppliers', label: t('sidebar.menu.suppliers'), icon: Users2 },
-      ]
-    },
-    {
-      id: 'reports',
-      label: t('sidebar.sections.reports'),
-      icon: BarChart3,
-      expandable: true,
-      items: [
-        { id: 'financial-reports', label: t('sidebar.menu.financialReports'), icon: Calculator },
-        { id: 'profit-loss', label: t('sidebar.menu.profitLoss'), icon: TrendingUp },
-        { id: 'balance-sheet', label: t('sidebar.menu.balanceSheet'), icon: Receipt },
-        { id: 'cash-flow', label: t('sidebar.menu.cashFlow'), icon: Wallet },
-        { id: 'purchase-reports', label: t('sidebar.menu.purchaseReports'), icon: ShoppingBag },
-        { id: 'inventory-reports', label: t('sidebar.menu.inventoryReports'), icon: PackageCheck },
-        { id: 'customer-reports', label: t('sidebar.menu.customerReports'), icon: Users },
-        { id: 'supplier-reports', label: t('sidebar.menu.supplierReports'), icon: Users2 },
-        { id: 'tax-reports', label: t('sidebar.menu.taxReports'), icon: CreditCard },
-      ]
-    },
-    {
-      id: 'settings',
-      label: t('sidebar.sections.settings'),
-      icon: SettingsIcon,
-      expandable: true,
-      items: [
-        { id: 'settings', label: t('sidebar.menu.settingsGeneral'), icon: SettingsIcon },
-        { id: 'system-setup', label: t('sidebar.menu.systemSetup'), icon: SettingsIcon },
-        { id: 'permissions', label: t('sidebar.menu.permissions'), icon: UserCircle },
-      ]
+  const menuSections = useMemo(() => {
+    const allSections = [
+      {
+        id: 'main',
+        label: t('sidebar.sections.main'),
+        items: [
+          { id: 'dashboard', label: t('sidebar.menu.dashboard'), icon: LayoutDashboard, adminOnly: false },
+        ]
+      },
+      {
+        id: 'accounting',
+        label: t('sidebar.sections.accounting'),
+        icon: Calculator,
+        expandable: true,
+        adminOnly: true,
+        items: [
+          { id: 'accounting', label: t('sidebar.menu.accounting'), icon: Receipt, adminOnly: true },
+          { id: 'chart-of-accounts', label: 'شجرة الحسابات', icon: BookOpen, adminOnly: true },
+          { id: 'account-statements', label: 'كشوفات الحسابات', icon: FileText, adminOnly: true },
+          { id: 'receipt-vouchers', label: 'سندات القبض', icon: TrendingUp, adminOnly: true },
+          { id: 'payment-vouchers', label: 'سندات الصرف', icon: TrendingDown, adminOnly: true },
+          { id: 'trial-balance', label: 'ميزان المراجعة', icon: Calculator, adminOnly: true },
+        ]
+      },
+      {
+        id: 'sales',
+        label: t('sidebar.sections.sales'),
+        icon: ShoppingCart,
+        expandable: true,
+        items: [
+          { id: 'purchases', label: t('sidebar.menu.purchases'), icon: ShoppingBag, adminOnly: true },
+          { id: 'pos', label: t('sidebar.menu.pos'), icon: Store, adminOnly: false },
+        ]
+      },
+      {
+        id: 'hr',
+        label: t('sidebar.sections.hr'),
+        icon: Users2,
+        expandable: true,
+        adminOnly: true,
+        items: [
+          { id: 'hr', label: t('sidebar.menu.hr'), icon: Briefcase, adminOnly: true },
+          { id: 'employees', label: t('sidebar.menu.employees'), icon: UserCircle, adminOnly: true },
+          { id: 'shifts', label: t('sidebar.menu.shifts'), icon: CalendarClock, adminOnly: true },
+        ]
+      },
+      {
+        id: 'warehouses',
+        label: t('sidebar.sections.warehouses'),
+        icon: Warehouse,
+        expandable: true,
+        adminOnly: true,
+        items: [
+          { id: 'warehouses', label: t('sidebar.menu.warehouses'), icon: Warehouse, adminOnly: true },
+          { id: 'products', label: t('sidebar.menu.products'), icon: Package, adminOnly: true },
+          { id: 'services', label: t('sidebar.menu.services'), icon: Briefcase, adminOnly: true },
+        ]
+      },
+      {
+        id: 'financial-accounts',
+        label: t('sidebar.sections.financialAccounts'),
+        icon: DollarSign,
+        expandable: true,
+        adminOnly: true,
+        items: [
+          { id: 'safes', label: t('sidebar.menu.safes'), icon: DollarSign, adminOnly: true },
+          { id: 'banks-pos', label: 'إدارة البنوك والصرافات', icon: Landmark, adminOnly: true },
+        ]
+      },
+      {
+        id: 'companies',
+        label: t('sidebar.sections.companies'),
+        icon: Building2,
+        expandable: true,
+        adminOnly: true,
+        items: [
+          { id: 'companies', label: t('sidebar.menu.companies'), icon: Building2, adminOnly: true },
+          { id: 'branches', label: t('sidebar.menu.branches'), icon: MapPin, adminOnly: true },
+        ]
+      },
+      {
+        id: 'customers',
+        label: t('sidebar.sections.customers'),
+        icon: Users,
+        expandable: true,
+        adminOnly: false,
+        items: [
+          { id: 'customers', label: t('sidebar.menu.customers'), icon: Users, adminOnly: false },
+          { id: 'customer-statements', label: 'كشوف العملاء', icon: FileText, adminOnly: true },
+          { id: 'suppliers', label: t('sidebar.menu.suppliers'), icon: Users2, adminOnly: true },
+        ]
+      },
+      {
+        id: 'reports',
+        label: t('sidebar.sections.reports'),
+        icon: BarChart3,
+        expandable: true,
+        adminOnly: true,
+        items: [
+          { id: 'invoices', label: t('sidebar.menu.invoices'), icon: FileText, adminOnly: true },
+          { id: 'financial-reports', label: t('sidebar.menu.financialReports'), icon: Calculator, adminOnly: true },
+          { id: 'profit-loss', label: t('sidebar.menu.profitLoss'), icon: TrendingUp, adminOnly: true },
+          { id: 'balance-sheet', label: t('sidebar.menu.balanceSheet'), icon: Receipt, adminOnly: true },
+          { id: 'cash-flow', label: t('sidebar.menu.cashFlow'), icon: Wallet, adminOnly: true },
+          { id: 'purchase-reports', label: t('sidebar.menu.purchaseReports'), icon: ShoppingBag, adminOnly: true },
+          { id: 'inventory-reports', label: t('sidebar.menu.inventoryReports'), icon: PackageCheck, adminOnly: true },
+          { id: 'customer-reports', label: t('sidebar.menu.customerReports'), icon: Users, adminOnly: true },
+          { id: 'supplier-reports', label: t('sidebar.menu.supplierReports'), icon: Users2, adminOnly: true },
+          { id: 'tax-reports', label: t('sidebar.menu.taxReports'), icon: CreditCard, adminOnly: true },
+        ]
+      },
+      {
+        id: 'settings',
+        label: t('sidebar.sections.settings'),
+        icon: SettingsIcon,
+        expandable: true,
+        adminOnly: true,
+        items: [
+          { id: 'settings', label: t('sidebar.menu.settingsGeneral'), icon: SettingsIcon, adminOnly: true },
+          { id: 'system-setup', label: t('sidebar.menu.systemSetup'), icon: SettingsIcon, adminOnly: true },
+          { id: 'permissions', label: t('sidebar.menu.permissions'), icon: UserCircle, adminOnly: true },
+        ]
+      }
+    ];
+
+    // Filter sections based on user role
+    if (isAdmin()) {
+      return allSections;
     }
-  ];
+
+    // For employees, filter out admin-only sections and items
+    return allSections
+      .filter(section => !section.adminOnly)
+      .map(section => ({
+        ...section,
+        items: section.items?.filter(item => !item.adminOnly) || []
+      }))
+      .filter(section => section.items && section.items.length > 0);
+  }, [t, isAdmin]);
 
   return (
     <div
@@ -218,20 +303,22 @@ export function Sidebar({ currentPage, onPageChange, currentCompany, onCompanyCh
                 <div className={section.expandable ? (direction === 'rtl' ? 'mr-4 mt-1' : 'ml-4 mt-1') : ''}>
                   {section.items.map((item) => {
                     const Icon = item.icon;
-                    const isActive = currentPage === item.id;
+                    const route = routeMap[item.id] || `/${item.id}`;
+                    const isActive = pathname === route || (pathname === '/' && item.id === 'dashboard');
 
                     return (
-                      <button
+                      <Link
                         key={item.id}
-                        onClick={() => onPageChange(item.id)}
+                        href={route}
+                        prefetch={true}
                         className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg mb-1 transition-colors ${isActive
-                          ? 'bg-blue-50 text-blue-600'
+                          ? 'bg-blue-50 text-blue-600 font-medium'
                           : 'text-gray-700 hover:bg-gray-50'
                           }`}
                       >
                         <Icon className="w-5 h-5" />
                         <span className="text-sm">{item.label}</span>
-                      </button>
+                      </Link>
                     );
                   })}
                 </div>
@@ -242,4 +329,4 @@ export function Sidebar({ currentPage, onPageChange, currentCompany, onCompanyCh
       </nav>
     </div>
   );
-}
+});

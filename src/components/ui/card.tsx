@@ -1,10 +1,18 @@
+'use client';
 import * as React from "react";
 
 import { cn } from "./utils";
 import { useLanguage } from "../../contexts/LanguageContext";
 
-function Card({ className, ...props }: React.ComponentProps<"div">) {
-  const { direction } = useLanguage();
+type Direction = 'rtl' | 'ltr';
+
+interface CardProps extends React.ComponentProps<"div"> {
+  dir?: Direction;
+}
+
+function Card({ className, dir, ...props }: CardProps) {
+  const context = useLanguage();
+  const direction = dir ?? context.direction;
 
   return (
     <div
@@ -19,8 +27,13 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
-  const { direction } = useLanguage();
+interface CardHeaderProps extends React.ComponentProps<"div"> {
+  dir?: Direction;
+}
+
+function CardHeader({ className, dir, ...props }: CardHeaderProps) {
+  const context = useLanguage();
+  const direction = dir ?? context.direction;
 
   return (
     <div
@@ -35,8 +48,13 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
-  const { direction } = useLanguage();
+interface CardTitleProps extends React.ComponentProps<"div"> {
+  dir?: Direction;
+}
+
+function CardTitle({ className, dir, ...props }: CardTitleProps) {
+  const context = useLanguage();
+  const direction = dir ?? context.direction;
 
   return (
     <h4
@@ -47,8 +65,13 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-function CardDescription({ className, ...props }: React.ComponentProps<"div">) {
-  const { direction } = useLanguage();
+interface CardDescriptionProps extends React.ComponentProps<"div"> {
+  dir?: Direction;
+}
+
+function CardDescription({ className, dir, ...props }: CardDescriptionProps) {
+  const context = useLanguage();
+  const direction = dir ?? context.direction;
 
   return (
     <p
@@ -72,8 +95,13 @@ function CardAction({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-function CardContent({ className, ...props }: React.ComponentProps<"div">) {
-  const { direction } = useLanguage();
+interface CardContentProps extends React.ComponentProps<"div"> {
+  dir?: Direction;
+}
+
+function CardContent({ className, dir, ...props }: CardContentProps) {
+  const context = useLanguage();
+  const direction = dir ?? context.direction;
 
   return (
     <div

@@ -3,6 +3,8 @@
  * This file manages employee check-in/check-out records
  */
 
+import { dataCache } from '../utils/dataCache';
+
 export interface AttendanceRecord {
     id: string;
     employeeId: string;
@@ -19,31 +21,14 @@ export interface AttendanceRecord {
 // Storage key for localStorage
 const STORAGE_KEY = 'employee_attendance';
 
-// Load attendance records from localStorage
+// Load attendance records from cache/localStorage
 export const loadAttendanceRecords = (): AttendanceRecord[] => {
-    if (typeof window === 'undefined') return [];
-
-    try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            return JSON.parse(stored);
-        }
-    } catch (error) {
-        console.error('Error loading attendance records:', error);
-    }
-
-    return [];
+    return dataCache.getFromLocalStorage(STORAGE_KEY, []);
 };
 
-// Save attendance records to localStorage
+// Save attendance records to localStorage and update cache
 export const saveAttendanceRecords = (records: AttendanceRecord[]): void => {
-    if (typeof window === 'undefined') return;
-
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-    } catch (error) {
-        console.error('Error saving attendance records:', error);
-    }
+    dataCache.saveToLocalStorage(STORAGE_KEY, records);
 };
 
 /**

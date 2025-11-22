@@ -3,6 +3,8 @@
  * This file manages cash safes across the entire system
  */
 
+import { dataCache } from '../utils/dataCache';
+
 export interface Safe {
     id: string;
     name: string;
@@ -18,31 +20,14 @@ const defaultSafes: Record<string, Safe> = {
     'pos': { id: 'pos', name: 'خزينة نقاط البيع', balance: 5000 },
 };
 
-// Load safes from localStorage or use defaults
+// Load safes from cache/localStorage or use defaults
 export const loadSafes = (): Record<string, Safe> => {
-    if (typeof window === 'undefined') return defaultSafes;
-
-    try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            return JSON.parse(stored);
-        }
-    } catch (error) {
-        console.error('Error loading safes:', error);
-    }
-
-    return defaultSafes;
+    return dataCache.getFromLocalStorage(STORAGE_KEY, defaultSafes);
 };
 
-// Save safes to localStorage
+// Save safes to localStorage and update cache
 export const saveSafes = (safes: Record<string, Safe>): void => {
-    if (typeof window === 'undefined') return;
-
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(safes));
-    } catch (error) {
-        console.error('Error saving safes:', error);
-    }
+    dataCache.saveToLocalStorage(STORAGE_KEY, safes);
 };
 
 /**

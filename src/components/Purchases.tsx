@@ -7,11 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Plus, Search, ShoppingBag, Package, TrendingDown, Users2, Eye, Download, FileText } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
+import { CreatePurchaseOrder } from './CreatePurchaseOrder';
 
 export function Purchases() {
+  const [showCreateOrder, setShowCreateOrder] = useState(false);
   const [purchaseOrders, setPurchaseOrders] = useState([
     {
       id: 'PO-2025-001',
@@ -56,7 +57,8 @@ export function Purchases() {
       phone: '0501234567',
       email: 'info@supplier1.com',
       totalPurchases: 125000,
-      rating: 4.5
+      rating: 4.5,
+      accountNumber: 'SUP-001'
     },
     {
       id: '2',
@@ -65,7 +67,8 @@ export function Purchases() {
       phone: '0507654321',
       email: 'contact@supplier2.com',
       totalPurchases: 89000,
-      rating: 4.2
+      rating: 4.2,
+      accountNumber: 'SUP-002'
     },
     {
       id: '3',
@@ -74,9 +77,20 @@ export function Purchases() {
       phone: '0509876543',
       email: 'sales@supplier3.com',
       totalPurchases: 210000,
-      rating: 4.8
+      rating: 4.8,
+      accountNumber: 'SUP-003'
     }
   ]);
+
+  // Sample products for purchase
+  const products = [
+    { id: '1', name: 'كمبيوتر محمول HP', price: 3000, costPrice: 2500, barcode: '1234567890', category: 'إلكترونيات', stock: 15 },
+    { id: '2', name: 'طابعة Canon', price: 2000, costPrice: 1500, barcode: '1234567891', category: 'إلكترونيات', stock: 8 },
+    { id: '3', name: 'شاشة Samsung 27"', price: 1500, costPrice: 1000, barcode: '1234567892', category: 'إلكترونيات', stock: 12 },
+    { id: '4', name: 'لوحة مفاتيح Logitech', price: 300, costPrice: 200, barcode: '1234567893', category: 'ملحقات', stock: 25 },
+    { id: '5', name: 'ماوس Logitech', price: 150, costPrice: 100, barcode: '1234567894', category: 'ملحقات', stock: 30 },
+    { id: '6', name: 'كاميرا ويب HD', price: 500, costPrice: 350, barcode: '1234567895', category: 'ملحقات', stock: 10 }
+  ];
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('ar-SA', {
@@ -85,9 +99,37 @@ export function Purchases() {
     }).format(amount);
   };
 
-  const handleCreatePurchase = () => {
-    toast.success('تم إنشاء طلب الشراء بنجاح');
+  const handleCreatePurchase = (order: any) => {
+    // Generate purchase order ID
+    const orderId = `PO-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
+    
+    const newOrder = {
+      id: orderId,
+      date: order.date,
+      supplier: order.supplierName,
+      items: order.items.length,
+      amount: order.subtotal,
+      tax: order.tax,
+      total: order.total,
+      status: 'قيد الانتظار',
+      dueDate: order.dueDate || order.date
+    };
+
+    setPurchaseOrders([newOrder, ...purchaseOrders]);
+    toast.success(`تم إنشاء طلب الشراء ${orderId} بنجاح`);
   };
+
+  // Show create order screen
+  if (showCreateOrder) {
+    return (
+      <CreatePurchaseOrder
+        suppliers={suppliers}
+        products={products}
+        onBack={() => setShowCreateOrder(false)}
+        onSave={handleCreatePurchase}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -97,111 +139,10 @@ export function Purchases() {
           <h1>إدارة المشتريات</h1>
           <p className="text-gray-600">متابعة وإدارة طلبات الشراء والموردين</p>
         </div>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button className="gap-2 shrink-0">
-              <Plus className="w-4 h-4" />
-              طلب شراء جديد
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" dir="rtl">
-            <DialogHeader className="text-right">
-              <DialogTitle>إنشاء طلب شراء جديد</DialogTitle>
-              <DialogDescription>قم بإدخال تفاصيل طلب الشراء</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>المورد</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="اختر المورد" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {suppliers.map((supplier) => (
-                        <SelectItem key={supplier.id} value={supplier.id}>
-                          {supplier.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>التاريخ</Label>
-                  <Input type="date" defaultValue="2025-01-30" />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>تاريخ الاستحقاق</Label>
-                <Input type="date" />
-              </div>
-
-              <div className="border rounded-lg p-4 space-y-3">
-                <h4 className="text-right">المنتجات</h4>
-                <div className="space-y-2">
-                  <div className="grid grid-cols-4 gap-2">
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="المنتج" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">كمبيوتر محمول HP</SelectItem>
-                        <SelectItem value="2">طابعة Canon</SelectItem>
-                        <SelectItem value="3">شاشة Samsung</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Input type="number" placeholder="الكمية" defaultValue="1" />
-                    <Input type="number" placeholder="السعر" />
-                    <Input placeholder="المجموع" disabled />
-                  </div>
-                </div>
-                <Button variant="outline" size="sm" className="w-full gap-2">
-                  <Plus className="w-4 h-4" />
-                  إضافة منتج
-                </Button>
-              </div>
-
-              <div className="space-y-2">
-                <Label>المستودع المستهدف</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر المستودع" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">المستودع الرئيسي</SelectItem>
-                    <SelectItem value="2">مستودع الفرع الشمالي</SelectItem>
-                    <SelectItem value="3">مستودع الفرع الجنوبي</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="border rounded-lg p-4 bg-gray-50 space-y-2">
-                <div className="flex justify-between">
-                  <span>0.00 ر.س</span>
-                  <span>المجموع الفرعي:</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>0.00 ر.س</span>
-                  <span>الضريبة (15%):</span>
-                </div>
-                <div className="flex justify-between border-t pt-2">
-                  <span>0.00 ر.س</span>
-                  <span>المجموع الكلي:</span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>ملاحظات</Label>
-                <Input placeholder="ملاحظات إضافية (اختياري)" />
-              </div>
-
-              <Button onClick={handleCreatePurchase} className="w-full">
-                إنشاء طلب الشراء
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button className="gap-2 shrink-0" onClick={() => setShowCreateOrder(true)}>
+          <Plus className="w-4 h-4" />
+          طلب شراء جديد
+        </Button>
       </div>
 
       {/* Statistics */}

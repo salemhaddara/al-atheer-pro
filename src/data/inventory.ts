@@ -3,6 +3,8 @@
  * This file manages inventory stock across the entire system
  */
 
+import { dataCache } from '../utils/dataCache';
+
 export interface InventoryItem {
   productId: string;
   warehouseId: string;
@@ -23,31 +25,14 @@ const defaultInventory: Record<string, InventoryItem> = {
   '6-1': { productId: '6', warehouseId: '1', quantity: 10, costPrice: 350 }, // كاميرا ويب
 };
 
-// Load inventory from localStorage or use defaults
+// Load inventory from cache/localStorage or use defaults
 export const loadInventory = (): Record<string, InventoryItem> => {
-  if (typeof window === 'undefined') return defaultInventory;
-
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch (error) {
-    console.error('Error loading inventory:', error);
-  }
-
-  return defaultInventory;
+  return dataCache.getFromLocalStorage(STORAGE_KEY, defaultInventory);
 };
 
-// Save inventory to localStorage
+// Save inventory to localStorage and update cache
 export const saveInventory = (inventory: Record<string, InventoryItem>): void => {
-  if (typeof window === 'undefined') return;
-
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(inventory));
-  } catch (error) {
-    console.error('Error saving inventory:', error);
-  }
+  dataCache.saveToLocalStorage(STORAGE_KEY, inventory);
 };
 
 // Get inventory key

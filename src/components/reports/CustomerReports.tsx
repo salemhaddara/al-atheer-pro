@@ -1,14 +1,19 @@
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Badge } from '../ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { Download, Users, DollarSign, TrendingUp, UserCheck } from 'lucide-react';
+import { Download, Users, DollarSign, TrendingUp, UserCheck, X, User } from 'lucide-react';
 import { BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { SearchableSelect } from '../ui/searchable-select';
 
 export function CustomerReports() {
   const { t, direction } = useLanguage();
+  const [viewMode, setViewMode] = useState<'all' | 'single'>('all');
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
 
   const customerSegments = [
     { name: 'VIP', count: 28, revenue: 1250000, color: '#8b5cf6' },
@@ -89,6 +94,22 @@ export function CustomerReports() {
     }
   ];
 
+  // Selected customer data
+  const selectedCustomer = useMemo(() => {
+    if (!selectedCustomerId) return null;
+    return allCustomers.find(c => c.id === selectedCustomerId);
+  }, [selectedCustomerId]);
+
+  // Customer options for SearchableSelect
+  const customerOptions = useMemo(() => {
+    return allCustomers.map(c => ({
+      id: c.id,
+      name: c.name,
+      phone: c.phone,
+      accountNumber: c.id
+    }));
+  }, []);
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'VIP':
@@ -100,6 +121,35 @@ export function CustomerReports() {
     }
   };
 
+  // Single customer report data
+  const singleCustomerData = useMemo(() => {
+    if (!selectedCustomer) return null;
+
+    // Mock monthly data for selected customer
+    const monthlyData = [
+      { month: 'يناير', orders: 8, revenue: 120000 },
+      { month: 'فبراير', orders: 7, revenue: 105000 },
+      { month: 'مارس', orders: 9, revenue: 135000 },
+      { month: 'أبريل', orders: 6, revenue: 90000 },
+      { month: 'مايو', orders: 8, revenue: 120000 },
+      { month: 'يونيو', orders: 7, revenue: 105000 }
+    ];
+
+    return {
+      ...selectedCustomer,
+      monthlyData,
+      invoices: [
+        { id: '1', number: 'INV-2025-001', date: '2025-06-15', amount: 45000, paid: 30000, status: 'مدفوعة جزئياً' },
+        { id: '2', number: 'INV-2025-002', date: '2025-06-20', amount: 30000, paid: 0, status: 'غير مدفوعة' },
+        { id: '3', number: 'INV-2025-003', date: '2025-06-28', amount: 25000, paid: 25000, status: 'مدفوعة' }
+      ],
+      payments: [
+        { id: '1', date: '2025-06-10', amount: 30000, method: 'نقدي' },
+        { id: '2', date: '2025-06-25', amount: 25000, method: 'بطاقة' }
+      ]
+    };
+  }, [selectedCustomer]);
+
   return (
     <div dir={direction}>
       {/* Header */}
@@ -109,17 +159,6 @@ export function CustomerReports() {
           <p className="text-gray-600">تحليل شامل لقاعدة العملاء والمبيعات والنشاط</p>
         </div>
         <div className="flex gap-3">
-          <Select defaultValue="all">
-            <SelectTrigger className="w-[180px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">جميع العملاء</SelectItem>
-              <SelectItem value="vip">VIP فقط</SelectItem>
-              <SelectItem value="large">كبار العملاء</SelectItem>
-              <SelectItem value="new">العملاء الجدد</SelectItem>
-            </SelectContent>
-          </Select>
           <Button className="gap-2">
             <Download className="w-4 h-4" />
             تصدير التقرير
@@ -127,7 +166,195 @@ export function CustomerReports() {
         </div>
       </div>
 
-      {/* Stats */}
+      {/* View Mode Tabs */}
+      <Card className="mb-6">
+        <CardContent className="pt-6">
+          <Tabs value={viewMode} onValueChange={(value: 'all' | 'single') => {
+            setViewMode(value);
+            if (value === 'all') {
+              setSelectedCustomerId('');
+            }
+          }}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="all">عرض جماعي</TabsTrigger>
+              <TabsTrigger value="single">تقرير عميل واحد</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Single Customer Selection */}
+      {viewMode === 'single' && (
+        <Card className="mb-6">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <label className="text-sm font-semibold mb-2 block">اختر العميل</label>
+                <SearchableSelect
+                  options={customerOptions}
+                  value={selectedCustomerId}
+                  onValueChange={setSelectedCustomerId}
+                  placeholder="ابحث عن العميل..."
+                  searchPlaceholder="ابحث بالاسم أو رقم الهاتف..."
+                  emptyMessage="لا يوجد عملاء"
+                  displayKey="name"
+                  searchKeys={['name', 'phone']}
+                />
+              </div>
+              {selectedCustomerId && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedCustomerId('');
+                  }}
+                  className="gap-2"
+                >
+                  <X className="w-4 h-4" />
+                  إلغاء الاختيار
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Single Customer Report */}
+      {viewMode === 'single' && selectedCustomer && singleCustomerData && (
+        <div className="space-y-6">
+          {/* Customer Info Card */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="w-5 h-5" />
+                    {singleCustomerData.name}
+                  </CardTitle>
+                  <CardDescription>
+                    رقم الهاتف: {singleCustomerData.phone} | تاريخ الانضمام: {singleCustomerData.joinDate}
+                  </CardDescription>
+                </div>
+                <Badge className={getStatusBadge(singleCustomerData.status)}>
+                  {singleCustomerData.status}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center p-4 bg-blue-50 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">إجمالي الطلبات</p>
+                  <p className="text-2xl font-bold text-blue-600">{singleCustomerData.orders}</p>
+                </div>
+                <div className="text-center p-4 bg-green-50 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">إجمالي الإيرادات</p>
+                  <p className="text-2xl font-bold text-green-600">{formatCurrency(singleCustomerData.revenue)}</p>
+                </div>
+                <div className="text-center p-4 bg-purple-50 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">متوسط الطلب</p>
+                  <p className="text-2xl font-bold text-purple-600">{formatCurrency(singleCustomerData.avgOrder)}</p>
+                </div>
+                <div className="text-center p-4 bg-amber-50 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">الرصيد الحالي</p>
+                  <p className="text-2xl font-bold text-amber-600">{formatCurrency(singleCustomerData.currentBalance)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Monthly Activity Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle>النشاط الشهري</CardTitle>
+              <CardDescription>الطلبات والإيرادات الشهرية</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={singleCustomerData.monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                  <Legend />
+                  <Bar dataKey="revenue" name="الإيرادات" fill="#3b82f6" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Invoices Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>الفواتير</CardTitle>
+              <CardDescription>قائمة فواتير العميل</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right">رقم الفاتورة</TableHead>
+                    <TableHead className="text-right">التاريخ</TableHead>
+                    <TableHead className="text-right">المبلغ</TableHead>
+                    <TableHead className="text-right">المدفوع</TableHead>
+                    <TableHead className="text-right">المتبقي</TableHead>
+                    <TableHead className="text-right">الحالة</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {singleCustomerData.invoices.map((invoice) => (
+                    <TableRow key={invoice.id}>
+                      <TableCell className="font-mono">{invoice.number}</TableCell>
+                      <TableCell>{invoice.date}</TableCell>
+                      <TableCell className="font-semibold">{formatCurrency(invoice.amount)}</TableCell>
+                      <TableCell className="text-green-600">{formatCurrency(invoice.paid)}</TableCell>
+                      <TableCell className="text-red-600">{formatCurrency(invoice.amount - invoice.paid)}</TableCell>
+                      <TableCell>
+                        <Badge variant={invoice.status === 'مدفوعة' ? 'default' : invoice.status === 'مدفوعة جزئياً' ? 'secondary' : 'destructive'}>
+                          {invoice.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* Payments Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>المدفوعات</CardTitle>
+              <CardDescription>سجل مدفوعات العميل</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-right">التاريخ</TableHead>
+                    <TableHead className="text-right">المبلغ</TableHead>
+                    <TableHead className="text-right">طريقة الدفع</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {singleCustomerData.payments.map((payment) => (
+                    <TableRow key={payment.id}>
+                      <TableCell>{payment.date}</TableCell>
+                      <TableCell className="font-semibold text-green-600">{formatCurrency(payment.amount)}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{payment.method}</Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* All Customers Report */}
+      {viewMode === 'all' && (
+        <>
+          {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
@@ -278,6 +505,18 @@ export function CustomerReports() {
           </Table>
         </CardContent>
       </Card>
+        </>
+      )}
+
+      {/* Show message if single mode but no customer selected */}
+      {viewMode === 'single' && !selectedCustomer && (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <User className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+            <p className="text-gray-500">يرجى اختيار عميل لعرض تقريره</p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

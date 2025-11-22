@@ -1,11 +1,16 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Package, Users, ShoppingCart, DollarSign, TrendingUp, TrendingDown, Building2, Warehouse, Users2, Receipt } from 'lucide-react';
-import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { useLanguage } from '../contexts/LanguageContext';
+import { getTranslation, Language, Direction } from '../lib/translations';
+import { SalesChart } from './dashboard/SalesChart';
+import { CompanyPerformanceChart } from './dashboard/CompanyPerformanceChart';
 
-export function Dashboard() {
-  const { t, direction, language } = useLanguage();
+interface DashboardProps {
+  language: Language;
+  direction: Direction;
+}
+
+export function Dashboard({ language, direction }: DashboardProps) {
+  const t = (key: string) => getTranslation(language, key);
 
   const stats = [
     {
@@ -107,62 +112,62 @@ export function Dashboard() {
   ];
 
   const inventoryStatus = [
-    { 
-      category: language === 'ar' ? 'إلكترونيات' : 'Electronics', 
-      stock: 3200, 
-      value: 12500000, 
+    {
+      category: language === 'ar' ? 'إلكترونيات' : 'Electronics',
+      stock: 3200,
+      value: 12500000,
       status: t('dashboard.inventory.status.good')
     },
-    { 
-      category: language === 'ar' ? 'معدات مكتبية' : 'Office Equipment', 
-      stock: 1800, 
-      value: 4200000, 
+    {
+      category: language === 'ar' ? 'معدات مكتبية' : 'Office Equipment',
+      stock: 1800,
+      value: 4200000,
       status: t('dashboard.inventory.status.low')
     },
-    { 
-      category: language === 'ar' ? 'أثاث' : 'Furniture', 
-      stock: 950, 
-      value: 8900000, 
+    {
+      category: language === 'ar' ? 'أثاث' : 'Furniture',
+      stock: 950,
+      value: 8900000,
       status: t('dashboard.inventory.status.good')
     },
-    { 
-      category: language === 'ar' ? 'مستلزمات' : 'Supplies', 
-      stock: 4500, 
-      value: 2100000, 
+    {
+      category: language === 'ar' ? 'مستلزمات' : 'Supplies',
+      stock: 4500,
+      value: 2100000,
       status: t('dashboard.inventory.status.excellent')
     },
   ];
 
   const recentActivities = [
-    { 
-      action: language === 'ar' ? 'فاتورة مبيعات جديدة' : 'New sales invoice', 
-      user: language === 'ar' ? 'أحمد محمد' : 'Ahmed Mohammed', 
-      time: language === 'ar' ? 'منذ 5 دقائق' : '5 minutes ago', 
-      type: 'sale' 
+    {
+      action: language === 'ar' ? 'فاتورة مبيعات جديدة' : 'New sales invoice',
+      user: language === 'ar' ? 'أحمد محمد' : 'Ahmed Mohammed',
+      time: language === 'ar' ? 'منذ 5 دقائق' : '5 minutes ago',
+      type: 'sale'
     },
-    { 
-      action: language === 'ar' ? 'إضافة منتج جديد' : 'Add new product', 
-      user: language === 'ar' ? 'فاطمة علي' : 'Fatima Ali', 
-      time: language === 'ar' ? 'منذ 15 دقيقة' : '15 minutes ago', 
-      type: 'product' 
+    {
+      action: language === 'ar' ? 'إضافة منتج جديد' : 'Add new product',
+      user: language === 'ar' ? 'فاطمة علي' : 'Fatima Ali',
+      time: language === 'ar' ? 'منذ 15 دقيقة' : '15 minutes ago',
+      type: 'product'
     },
-    { 
-      action: language === 'ar' ? 'طلب شراء مُعتمد' : 'Purchase order approved', 
-      user: language === 'ar' ? 'سعيد خالد' : 'Saeed Khaled', 
-      time: language === 'ar' ? 'منذ 30 دقيقة' : '30 minutes ago', 
-      type: 'purchase' 
+    {
+      action: language === 'ar' ? 'طلب شراء مُعتمد' : 'Purchase order approved',
+      user: language === 'ar' ? 'سعيد خالد' : 'Saeed Khaled',
+      time: language === 'ar' ? 'منذ 30 دقيقة' : '30 minutes ago',
+      type: 'purchase'
     },
-    { 
-      action: language === 'ar' ? 'تحديث بيانات عميل' : 'Update customer data', 
-      user: language === 'ar' ? 'نورة عبدالله' : 'Noura Abdullah', 
-      time: language === 'ar' ? 'منذ ساعة' : '1 hour ago', 
-      type: 'customer' 
+    {
+      action: language === 'ar' ? 'تحديث بيانات عميل' : 'Update customer data',
+      user: language === 'ar' ? 'نورة عبدالله' : 'Noura Abdullah',
+      time: language === 'ar' ? 'منذ ساعة' : '1 hour ago',
+      type: 'customer'
     },
-    { 
-      action: language === 'ar' ? 'صرف راتب موظف' : 'Employee salary payment', 
-      user: language === 'ar' ? 'محمد أحمد' : 'Mohammed Ahmed', 
-      time: language === 'ar' ? 'منذ ساعتين' : '2 hours ago', 
-      type: 'payroll' 
+    {
+      action: language === 'ar' ? 'صرف راتب موظف' : 'Employee salary payment',
+      user: language === 'ar' ? 'محمد أحمد' : 'Mohammed Ahmed',
+      time: language === 'ar' ? 'منذ ساعتين' : '2 hours ago',
+      type: 'payroll'
     },
   ];
 
@@ -197,10 +202,10 @@ export function Dashboard() {
         {stats.map((stat, index) => {
           const Icon = stat.icon;
           const TrendIcon = stat.trend === 'up' ? TrendingUp : TrendingDown;
-          
+
           return (
-            <Card key={index}>
-              <CardContent className="p-6">
+            <Card key={index} dir={direction}>
+              <CardContent className="p-6" dir={direction}>
                 <div className="flex items-start justify-between gap-4">
                   <div className={`${stat.bgColor} ${stat.color} p-3 rounded-lg shrink-0`}>
                     <Icon className="w-6 h-6" />
@@ -210,9 +215,8 @@ export function Dashboard() {
                     <p className="text-2xl mb-2">{stat.value}</p>
                     <div className="flex items-center gap-2 justify-end flex-wrap">
                       <span className="text-xs text-gray-500">{stat.description}</span>
-                      <div className={`flex items-center gap-1 text-sm ${
-                        stat.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                      }`}>
+                      <div className={`flex items-center gap-1 text-sm ${stat.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                        }`}>
                         <span>{stat.change}</span>
                         <TrendIcon className="w-3.5 h-3.5" />
                       </div>
@@ -227,53 +231,37 @@ export function Dashboard() {
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('dashboard.charts.salesPurchases.title')}</CardTitle>
-            <CardDescription>{t('dashboard.charts.salesPurchases.subtitle')}</CardDescription>
+        <Card dir={direction}>
+          <CardHeader dir={direction}>
+            <CardTitle dir={direction}>{t('dashboard.charts.salesPurchases.title')}</CardTitle>
+            <CardDescription dir={direction}>{t('dashboard.charts.salesPurchases.subtitle')}</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="w-full" dir="ltr">
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={salesData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" reversed={direction === 'rtl'} />
-                  <YAxis orientation={direction === 'rtl' ? 'right' : 'left'} />
-                  <Tooltip 
-                    formatter={(value) => formatCurrency(Number(value))} 
-                    labelStyle={{ direction: direction }}
-                  />
-                  <Legend wrapperStyle={{ direction: direction, textAlign: direction === 'rtl' ? 'right' : 'left' }} />
-                  <Area type="monotone" dataKey="sales" stackId="1" stroke="#3b82f6" fill="#93c5fd" name={t('dashboard.charts.sales')} />
-                  <Area type="monotone" dataKey="purchases" stackId="2" stroke="#f59e0b" fill="#fcd34d" name={t('dashboard.charts.purchases')} />
-                  <Area type="monotone" dataKey="profit" stackId="3" stroke="#10b981" fill="#6ee7b7" name={t('dashboard.charts.profit')} />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+          <CardContent dir={direction}>
+            <SalesChart
+              data={salesData}
+              language={language}
+              direction={direction}
+              translations={{
+                sales: t('dashboard.charts.sales'),
+                purchases: t('dashboard.charts.purchases'),
+                profit: t('dashboard.charts.profit')
+              }}
+            />
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('dashboard.charts.companyPerformance.title')}</CardTitle>
-            <CardDescription>{t('dashboard.charts.companyPerformance.subtitle')}</CardDescription>
+        <Card dir={direction}>
+          <CardHeader dir={direction}>
+            <CardTitle dir={direction}>{t('dashboard.charts.companyPerformance.title')}</CardTitle>
+            <CardDescription dir={direction}>{t('dashboard.charts.companyPerformance.subtitle')}</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="w-full" dir="ltr">
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={companyPerformance} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis dataKey="company" type="category" width={150} orientation={direction === 'rtl' ? 'right' : 'left'} />
-                  <Tooltip 
-                    formatter={(value) => formatCurrency(Number(value))}
-                    labelStyle={{ direction: direction }}
-                  />
-                  <Legend wrapperStyle={{ direction: direction, textAlign: direction === 'rtl' ? 'right' : 'left' }} />
-                  <Bar dataKey="revenue" fill="#8b5cf6" name={t('dashboard.charts.revenue')} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+          <CardContent dir={direction}>
+            <CompanyPerformanceChart
+              data={companyPerformance}
+              language={language}
+              direction={direction}
+              revenueLabel={t('dashboard.charts.revenue')}
+            />
           </CardContent>
         </Card>
       </div>
@@ -281,12 +269,12 @@ export function Dashboard() {
       {/* Tables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Inventory Status */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('dashboard.inventory.title')}</CardTitle>
-            <CardDescription>{t('dashboard.inventory.subtitle')}</CardDescription>
+        <Card dir={direction}>
+          <CardHeader dir={direction}>
+            <CardTitle dir={direction}>{t('dashboard.inventory.title')}</CardTitle>
+            <CardDescription dir={direction}>{t('dashboard.inventory.subtitle')}</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent dir={direction}>
             <div className="space-y-3">
               {inventoryStatus.map((item, index) => (
                 <div key={index} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
@@ -304,12 +292,12 @@ export function Dashboard() {
         </Card>
 
         {/* Recent Activities */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('dashboard.activities.title')}</CardTitle>
-            <CardDescription>{t('dashboard.activities.subtitle')}</CardDescription>
+        <Card dir={direction}>
+          <CardHeader dir={direction}>
+            <CardTitle dir={direction}>{t('dashboard.activities.title')}</CardTitle>
+            <CardDescription dir={direction}>{t('dashboard.activities.subtitle')}</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent dir={direction}>
             <div className="space-y-4">
               {recentActivities.map((activity, index) => (
                 <div key={index} className="flex items-start gap-3">
@@ -317,13 +305,12 @@ export function Dashboard() {
                     <p className="text-sm mb-1">{activity.action}</p>
                     <p className="text-xs text-gray-600">{activity.user} • {activity.time}</p>
                   </div>
-                  <div className={`w-2 h-2 mt-2 rounded-full shrink-0 ${
-                    activity.type === 'sale' ? 'bg-green-600' :
+                  <div className={`w-2 h-2 mt-2 rounded-full shrink-0 ${activity.type === 'sale' ? 'bg-green-600' :
                     activity.type === 'product' ? 'bg-blue-600' :
-                    activity.type === 'purchase' ? 'bg-orange-600' :
-                    activity.type === 'customer' ? 'bg-purple-600' :
-                    'bg-pink-600'
-                  }`} />
+                      activity.type === 'purchase' ? 'bg-orange-600' :
+                        activity.type === 'customer' ? 'bg-purple-600' :
+                          'bg-pink-600'
+                    }`} />
                 </div>
               ))}
             </div>
