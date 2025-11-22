@@ -1691,6 +1691,7 @@ export function Products() {
       </Card>
         </TabsContent>
       </Tabs>
+      </Fragment>
 
     {/* Category Dialog */}
     <Dialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
