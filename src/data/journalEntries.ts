@@ -26,7 +26,7 @@ export interface JournalEntry {
   reference: string;
   status: 'مُعتمد' | 'قيد المراجعة' | 'ملغي';
   type: 'manual' | 'auto';
-  operationType?: 'بيع' | 'شراء' | 'مخزون_توريد' | 'مخزون_صرف' | 'مخزون_تسوية' | 'سند_قبض' | 'سند_صرف' | 'مخزون_أول_مدة' | 'افتتاحي' | 'مرتجع_مبيعات';
+  operationType?: 'بيع' | 'شراء' | 'مخزون_توريد' | 'مخزون_صرف' | 'مخزون_تسوية' | 'سند_قبض' | 'سند_صرف' | 'مخزون_أول_مدة' | 'افتتاحي' | 'مرتجع_مبيعات' | 'مرتجع_مشتريات';
   sourceReference?: string; // رابط للعملية الأصلية
   createdAt: string;
 }
@@ -674,6 +674,51 @@ export const createSalesReturnJournalEntries = (
   }
 
   return entries;
+};
+
+/**
+ * Create purchase return journal entries (reverse of purchases)
+ * Returns array of entries: [inventory reversal entry]
+ */
+export const createPurchaseReturnJournalEntries = (
+  returnNumber: string,
+  originalPurchaseOrderNumber: string,
+  amount: number,
+  refundMethod: 'cash' | 'credit',
+  supplierId?: string,
+  supplierName?: string
+): JournalEntry[] => {
+  const today = new Date().toISOString().split('T')[0];
+  const now = new Date().toISOString();
+
+  // For purchase return, we reduce inventory and either:
+  // - reduce liability to supplier (الموردين) if credit
+  // - increase cash (الصندوق) if cash refund
+  const debitAccount =
+    refundMethod === 'cash'
+      ? getAccountCodeByName('الصندوق') // '1010'
+      : getAccountCodeByName('الموردين'); // '2010'
+
+  const description = supplierName
+    ? `مرتجع مشتريات ${refundMethod === 'credit' ? 'على الحساب' : 'نقداً'} - ${supplierName}`
+    : `مرتجع مشتريات ${refundMethod === 'credit' ? 'على الحساب' : 'نقداً'}`;
+
+  const entry: JournalEntry = {
+    id: generateEntryId('auto'),
+    date: today,
+    description,
+    debitAccount,
+    creditAccount: getAccountCodeByName('المخزون'), // '1040'
+    amount,
+    reference: returnNumber,
+    status: 'مُعتمد',
+    type: 'auto',
+    operationType: 'مرتجع_مشتريات',
+    sourceReference: originalPurchaseOrderNumber,
+    createdAt: now
+  };
+
+  return [entry];
 };
 
 /**

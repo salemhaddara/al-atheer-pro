@@ -7,9 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
-import { Plus, Search, ShoppingBag, Package, TrendingDown, Users2, Eye, Download, FileText } from 'lucide-react';
+import { Plus, Search, ShoppingBag, Package, Users2, Eye, Download, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { CreatePurchaseOrder } from './CreatePurchaseOrder';
+import { reduceStock } from '../data/inventory';
+import { addJournalEntries, createPurchaseReturnJournalEntries } from '../data/journalEntries';
 
 export function Purchases() {
   const [showCreateOrder, setShowCreateOrder] = useState(false);
@@ -18,34 +20,54 @@ export function Purchases() {
       id: 'PO-2025-001',
       date: '2025-01-10',
       supplier: 'مورد المعدات المكتبية',
-      items: 25,
-      amount: 35000,
-      tax: 5250,
-      total: 40250,
+      supplierId: '1',
+      itemsCount: 2,
+      items: [
+        { id: '1', name: 'كمبيوتر محمول HP', quantity: 5, price: 2500 },
+        { id: '2', name: 'طابعة Canon', quantity: 3, price: 1500 }
+      ],
+      amount: 17000,
+      tax: 2550,
+      total: 19550,
       status: 'مستلم',
-      dueDate: '2025-02-10'
+      dueDate: '2025-02-10',
+      warehouse: '1',
+      paymentBreakdown: { cash: 19550, credit: 0 }
     },
     {
       id: 'PO-2025-002',
       date: '2025-01-18',
       supplier: 'مورد الأثاث',
-      items: 12,
-      amount: 18000,
-      tax: 2700,
-      total: 20700,
+      supplierId: '2',
+      itemsCount: 1,
+      items: [
+        { id: '4', name: 'لوحة مفاتيح Logitech', quantity: 10, price: 200 }
+      ],
+      amount: 2000,
+      tax: 300,
+      total: 2300,
       status: 'قيد الانتظار',
-      dueDate: '2025-02-18'
+      dueDate: '2025-02-18',
+      warehouse: '1',
+      paymentBreakdown: { cash: 0, credit: 2300 }
     },
     {
       id: 'PO-2025-003',
       date: '2025-01-25',
       supplier: 'مورد الأجهزة الإلكترونية',
-      items: 30,
-      amount: 52000,
-      tax: 7800,
-      total: 59800,
+      supplierId: '3',
+      itemsCount: 2,
+      items: [
+        { id: '3', name: 'شاشة Samsung 27\"', quantity: 4, price: 1000 },
+        { id: '6', name: 'كاميرا ويب HD', quantity: 6, price: 350 }
+      ],
+      amount: 1000 * 4 + 350 * 6,
+      tax: Math.round((1000 * 4 + 350 * 6) * 0.15),
+      total: Math.round((1000 * 4 + 350 * 6) * 1.15),
       status: 'مستلم جزئياً',
-      dueDate: '2025-02-25'
+      dueDate: '2025-02-25',
+      warehouse: '1',
+      paymentBreakdown: { cash: 0, credit: Math.round((1000 * 4 + 350 * 6) * 1.15) }
     }
   ]);
 
@@ -82,6 +104,19 @@ export function Purchases() {
     }
   ]);
 
+  // Purchase returns state
+  const [returnOrderId, setReturnOrderId] = useState('');
+  const [returnReason, setReturnReason] = useState('');
+  const [returnSupplierId, setReturnSupplierId] = useState<string | undefined>(undefined);
+  const [returnItems, setReturnItems] = useState<
+    Array<{ id: string; name: string; quantity: number; unitCost: number; returnQuantity: number }>
+  >([]);
+  const [refundMethod, setRefundMethod] = useState<'cash' | 'credit'>('cash');
+  const [purchaseReturns, setPurchaseReturns] = useState<
+    Array<{ id: string; date: string; supplier: string; orderId: string; total: number; method: string }>
+  >([]);
+  const [returnError, setReturnError] = useState<string | null>(null);
+
   // Sample products for purchase
   const products = [
     { id: '1', name: 'كمبيوتر محمول HP', price: 3000, costPrice: 2500, barcode: '1234567890', category: 'إلكترونيات', stock: 15 },
@@ -102,17 +137,21 @@ export function Purchases() {
   const handleCreatePurchase = (order: any) => {
     // Generate purchase order ID
     const orderId = `PO-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
-    
+
     const newOrder = {
       id: orderId,
       date: order.date,
       supplier: order.supplierName,
-      items: order.items.length,
+      supplierId: order.supplierId,
+      itemsCount: order.items.length,
+      items: order.items,
       amount: order.subtotal,
       tax: order.tax,
       total: order.total,
       status: 'قيد الانتظار',
-      dueDate: order.dueDate || order.date
+      dueDate: order.dueDate || order.date,
+      warehouse: order.warehouse,
+      paymentBreakdown: order.paymentBreakdown
     };
 
     setPurchaseOrders([newOrder, ...purchaseOrders]);
@@ -195,6 +234,7 @@ export function Purchases() {
           <TabsTrigger value="orders">طلبات الشراء</TabsTrigger>
           <TabsTrigger value="suppliers">الموردين</TabsTrigger>
           <TabsTrigger value="received">المستلمات</TabsTrigger>
+          <TabsTrigger value="returns">مرتجع المشتريات</TabsTrigger>
         </TabsList>
 
         {/* Purchase Orders */}
@@ -240,16 +280,16 @@ export function Purchases() {
                         <TableCell className="text-right">{order.id}</TableCell>
                         <TableCell className="text-right">{order.date}</TableCell>
                         <TableCell className="text-right">{order.supplier}</TableCell>
-                        <TableCell className="text-right">{order.items}</TableCell>
+                        <TableCell className="text-right">{(order as any).itemsCount ?? order.items}</TableCell>
                         <TableCell className="text-right">{formatCurrency(order.amount)}</TableCell>
                         <TableCell className="text-right">{formatCurrency(order.total)}</TableCell>
                         <TableCell className="text-right">{order.dueDate}</TableCell>
                         <TableCell className="text-right">
-                          <Badge 
+                          <Badge
                             variant={
-                              order.status === 'مستلم' ? 'default' : 
-                              order.status === 'قيد الانتظار' ? 'secondary' : 
-                              'outline'
+                              order.status === 'مستلم' ? 'default' :
+                                order.status === 'قيد الانتظار' ? 'secondary' :
+                                  'outline'
                             }
                           >
                             {order.status}
@@ -337,6 +377,312 @@ export function Purchases() {
                 <p>لا توجد مستلمات جديدة</p>
                 <p className="text-sm mt-2">سيتم عرض المستلمات هنا عند توفرها</p>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Purchase Returns */}
+        <TabsContent value="returns" className="space-y-4">
+          <Card>
+            <CardHeader className="text-right">
+              <CardTitle>مرتجع المشتريات</CardTitle>
+              <CardDescription>إدارة مرتجعات المشتريات وإرجاع البضاعة للموردين</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4" dir="rtl">
+                {/* Filters */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>رقم أمر الشراء الأصلي</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="PO-2025-001"
+                        value={returnOrderId}
+                        onChange={(e) => setReturnOrderId(e.target.value)}
+                      />
+                      <Button
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => {
+                          const order = purchaseOrders.find((o: any) => o.id === returnOrderId.trim());
+                          if (!order) {
+                            setReturnError('لم يتم العثور على أمر شراء بهذا الرقم');
+                            setReturnItems([]);
+                            return;
+                          }
+                          if (!order.items || !Array.isArray(order.items) || order.items.length === 0) {
+                            setReturnError('أمر الشراء لا يحتوي على تفاصيل عناصر لعمل مرتجع');
+                            setReturnItems([]);
+                            return;
+                          }
+
+                          setReturnSupplierId((order as any).supplierId);
+                          const mappedItems = order.items.map((item: any) => ({
+                            id: item.id,
+                            name: item.name,
+                            quantity: item.quantity,
+                            unitCost: item.price,
+                            returnQuantity: 0
+                          }));
+                          setReturnItems(mappedItems);
+                          setReturnError(null);
+                        }}
+                      >
+                        <Search className="w-4 h-4" />
+                        بحث
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>المورد</Label>
+                    <Select
+                      value={returnSupplierId}
+                      onValueChange={(v) => setReturnSupplierId(v)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="اختر المورد" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {suppliers.map((supplier) => (
+                          <SelectItem key={supplier.id} value={supplier.id}>
+                            {supplier.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>سبب الإرجاع</Label>
+                    <Input
+                      placeholder="مثال: بضائع تالفة، كمية زائدة..."
+                      value={returnReason}
+                      onChange={(e) => setReturnReason(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Inline validation error */}
+                {returnError && (
+                  <div className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm p-3 text-right">
+                    {returnError}
+                  </div>
+                )}
+
+                {/* Return Items Table */}
+                {returnItems.length > 0 ? (
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-right">الصنف</TableHead>
+                          <TableHead className="text-right">الكمية المشتراة</TableHead>
+                          <TableHead className="text-right">سعر التكلفة</TableHead>
+                          <TableHead className="text-right">الكمية المرتجعة</TableHead>
+                          <TableHead className="text-right">قيمة المرتجع</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {returnItems.map((item, index) => (
+                          <TableRow key={item.id}>
+                            <TableCell className="text-right">{item.name}</TableCell>
+                            <TableCell className="text-right">{item.quantity}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(item.unitCost)}</TableCell>
+                            <TableCell className="text-right">
+                              <Input
+                                type="number"
+                                min={0}
+                                max={item.quantity}
+                                value={item.returnQuantity}
+                                onChange={(e) => {
+                                  const value = Number(e.target.value) || 0;
+                                  const safeValue = Math.max(0, Math.min(value, item.quantity));
+                                  const updated = [...returnItems];
+                                  updated[index] = { ...item, returnQuantity: safeValue };
+                                  setReturnItems(updated);
+                                }}
+                                className="w-24 text-right"
+                              />
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {formatCurrency(item.unitCost * item.returnQuantity)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        <TableRow className="bg-gray-50 font-bold">
+                          <TableCell colSpan={4} className="text-right">
+                            إجمالي قيمة المرتجع
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatCurrency(
+                              returnItems.reduce(
+                                (sum, item) => sum + item.unitCost * item.returnQuantity,
+                                0
+                              )
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="border rounded-lg p-6 text-center text-gray-500 space-y-2">
+                    <Package className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                    <p>أدخل رقم أمر الشراء الأصلي ثم اضغط على زر البحث لعرض العناصر.</p>
+                    <p className="text-xs">بعد ذلك يمكنك تحديد الكميات المراد إرجاعها لكل صنف.</p>
+                  </div>
+                )}
+
+                {/* Refund Method & Submit */}
+                {returnItems.some((i) => i.returnQuantity > 0) && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                      <div className="space-y-2">
+                        <Label>طريقة التسوية مع المورد</Label>
+                        <Select
+                          value={refundMethod}
+                          onValueChange={(v) => setRefundMethod(v as 'cash' | 'credit')}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="cash">استرداد نقدي من المورد</SelectItem>
+                            <SelectItem value="credit">تخفيض من رصيد المورد (على الحساب)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1">
+                        <Label>إجمالي قيمة المرتجع</Label>
+                        <div className="text-xl text-blue-600">
+                          {formatCurrency(
+                            returnItems.reduce(
+                              (sum, item) => sum + item.unitCost * item.returnQuantity,
+                              0
+                            )
+                          )}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Button
+                          className="w-full"
+                          onClick={() => {
+                            const order = purchaseOrders.find((o: any) => o.id === returnOrderId.trim());
+                            if (!order) {
+                              setReturnError('لم يتم العثور على أمر الشراء');
+                              return;
+                            }
+
+                            const totalReturn = returnItems.reduce(
+                              (sum, item) => sum + item.unitCost * item.returnQuantity,
+                              0
+                            );
+                            if (totalReturn <= 0) {
+                              setReturnError('يرجى إدخال كميات مرتجعة');
+                              return;
+                            }
+
+                            const warehouse = (order as any).warehouse || '1';
+
+                            // Reduce stock for returned quantities
+                            for (const item of returnItems) {
+                              if (item.returnQuantity > 0) {
+                                const ok = reduceStock(item.id, warehouse, item.returnQuantity);
+                                if (!ok) {
+                                  setReturnError(`لا يمكن خصم الكمية من المخزون للصنف: ${item.name}`);
+                                  return;
+                                }
+                              }
+                            }
+
+                            const supplier = suppliers.find((s) => s.id === returnSupplierId);
+                            const supplierName = supplier?.name || order.supplier;
+
+                            const returnNumber = `PRET-${new Date().getFullYear()}-${String(
+                              Date.now()
+                            ).slice(-6)}`;
+
+                            // Create journal entries
+                            const entries = createPurchaseReturnJournalEntries(
+                              returnNumber,
+                              order.id,
+                              totalReturn,
+                              refundMethod,
+                              supplier?.id,
+                              supplierName
+                            );
+                            addJournalEntries(entries);
+
+                            // Save in local history
+                            setPurchaseReturns((prev) => [
+                              {
+                                id: returnNumber,
+                                date: new Date().toISOString().split('T')[0],
+                                supplier: supplierName,
+                                orderId: order.id,
+                                total: totalReturn,
+                                method: refundMethod === 'cash' ? 'استرداد نقدي' : 'تخفيض من الحساب'
+                              },
+                              ...prev
+                            ]);
+
+                            toast.success(`تم إنشاء مرتجع المشتريات بنجاح - ${returnNumber}`);
+                            setReturnItems([]);
+                            setReturnOrderId('');
+                            setReturnReason('');
+                            setReturnError(null);
+                          }}
+                        >
+                          إتمام عملية مرتجع المشتريات
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Purchase Returns History */}
+          <Card>
+            <CardHeader className="text-right">
+              <CardTitle>سجل مرتجعات المشتريات</CardTitle>
+              <CardDescription>عرض آخر عمليات مرتجع المشتريات</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {purchaseReturns.length === 0 ? (
+                <div className="text-center text-gray-500 py-6">
+                  <p>لا توجد عمليات مرتجع مشتريات مسجلة حتى الآن.</p>
+                </div>
+              ) : (
+                <div dir="rtl">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-right">رقم المرتجع</TableHead>
+                        <TableHead className="text-right">تاريخ المرتجع</TableHead>
+                        <TableHead className="text-right">المورد</TableHead>
+                        <TableHead className="text-right">أمر الشراء</TableHead>
+                        <TableHead className="text-right">إجمالي المرتجع</TableHead>
+                        <TableHead className="text-right">طريقة التسوية</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {purchaseReturns.map((ret) => (
+                        <TableRow key={ret.id}>
+                          <TableCell className="text-right">{ret.id}</TableCell>
+                          <TableCell className="text-right">{ret.date}</TableCell>
+                          <TableCell className="text-right">{ret.supplier}</TableCell>
+                          <TableCell className="text-right">{ret.orderId}</TableCell>
+                          <TableCell className="text-right">
+                            {formatCurrency(ret.total)}
+                          </TableCell>
+                          <TableCell className="text-right">{ret.method}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

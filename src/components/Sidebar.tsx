@@ -53,10 +53,13 @@ const routeMap: Record<string, string> = {
   'invoices': '/invoices',
   'purchases': '/purchases',
   'pos': '/pos',
+  'quotations': '/quotations',
+  'price-inquiry': '/price-inquiry',
   'hr': '/hr',
   'employees': '/employees',
   'shifts': '/shifts',
   'warehouses': '/warehouses',
+  'opening-inventory': '/opening-inventory',
   'products': '/products',
   'services': '/services',
   'safes': '/safes',
@@ -133,6 +136,7 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange }
           { id: 'receipt-vouchers', label: 'سندات القبض', icon: TrendingUp, adminOnly: true },
           { id: 'payment-vouchers', label: 'سندات الصرف', icon: TrendingDown, adminOnly: true },
           { id: 'trial-balance', label: 'ميزان المراجعة', icon: Calculator, adminOnly: true },
+          { id: 'balance-sheet', label: t('sidebar.menu.balanceSheet'), icon: Receipt, adminOnly: true },
         ]
       },
       {
@@ -143,6 +147,8 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange }
         items: [
           { id: 'purchases', label: t('sidebar.menu.purchases'), icon: ShoppingBag, adminOnly: true },
           { id: 'pos', label: t('sidebar.menu.pos'), icon: Store, adminOnly: false },
+          { id: 'quotations', label: 'عروض الأسعار', icon: FileText, adminOnly: false },
+          { id: 'price-inquiry', label: 'شاشة الأسعار (للعملاء)', icon: Package, adminOnly: false },
         ]
       },
       {
@@ -165,6 +171,7 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange }
         adminOnly: true,
         items: [
           { id: 'warehouses', label: t('sidebar.menu.warehouses'), icon: Warehouse, adminOnly: true },
+          { id: 'opening-inventory', label: 'مخزون أول المدة', icon: Package, adminOnly: true },
           { id: 'products', label: t('sidebar.menu.products'), icon: Package, adminOnly: true },
           { id: 'services', label: t('sidebar.menu.services'), icon: Briefcase, adminOnly: true },
         ]
@@ -213,7 +220,6 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange }
           { id: 'invoices', label: t('sidebar.menu.invoices'), icon: FileText, adminOnly: true },
           { id: 'financial-reports', label: t('sidebar.menu.financialReports'), icon: Calculator, adminOnly: true },
           { id: 'profit-loss', label: t('sidebar.menu.profitLoss'), icon: TrendingUp, adminOnly: true },
-          { id: 'balance-sheet', label: t('sidebar.menu.balanceSheet'), icon: Receipt, adminOnly: true },
           { id: 'cash-flow', label: t('sidebar.menu.cashFlow'), icon: Wallet, adminOnly: true },
           { id: 'purchase-reports', label: t('sidebar.menu.purchaseReports'), icon: ShoppingBag, adminOnly: true },
           { id: 'inventory-reports', label: t('sidebar.menu.inventoryReports'), icon: PackageCheck, adminOnly: true },
