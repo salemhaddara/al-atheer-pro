@@ -36,6 +36,11 @@ interface ProductUnit {
   isBase: boolean;
 }
 
+interface PricingTier {
+  minQuantity: number; // Minimum quantity for this tier (e.g., 1, 6, 24)
+  price: number; // Price per unit for this tier
+}
+
 interface Product {
   id: string;
   name: string;
@@ -48,15 +53,16 @@ interface Product {
   stock: number;
   minStock: number;
   costPrice: number;
-  sellPrice: number;
+  sellPrice: number; // Default/base price
   minSellPrice: number;
   allowedDiscount: number;
   taxRateId?: string;
   taxIncluded: boolean;
   returnPeriodDays: number;
   allowReturn: boolean;
-  minQuantity: number;
-  maxQuantity?: number;
+  minQuantity: number; // Minimum quantity per client
+  maxQuantity?: number; // Maximum quantity per client
+  pricingTiers?: PricingTier[]; // Quantity-based pricing tiers
   // Secondary Information
   length?: number;
   width?: number;
@@ -387,6 +393,7 @@ export function Products() {
     allowReturn: true,
     minQuantity: 1,
     maxQuantity: undefined as number | undefined,
+    pricingTiers: [] as PricingTier[],
     length: undefined as number | undefined,
     width: undefined as number | undefined,
     height: undefined as number | undefined,
@@ -610,6 +617,7 @@ export function Products() {
       allowReturn: true,
       minQuantity: 1,
       maxQuantity: undefined,
+      pricingTiers: [],
       length: undefined,
       width: undefined,
       height: undefined,
@@ -649,6 +657,7 @@ export function Products() {
       allowReturn: product.allowReturn,
       minQuantity: product.minQuantity,
       maxQuantity: product.maxQuantity,
+      pricingTiers: product.pricingTiers || [],
       length: product.length,
       width: product.width,
       height: product.height,
@@ -725,6 +734,11 @@ export function Products() {
       }))
     ];
 
+    // Sort pricing tiers by minQuantity
+    const sortedTiers = formData.pricingTiers
+      ? [...formData.pricingTiers].sort((a, b) => a.minQuantity - b.minQuantity)
+      : [];
+
     const productData: Product = {
       id: editingProduct?.id || String(Date.now()),
       name: formData.name,
@@ -746,6 +760,7 @@ export function Products() {
       allowReturn: formData.allowReturn,
       minQuantity: formData.minQuantity,
       maxQuantity: formData.maxQuantity,
+      pricingTiers: sortedTiers.length > 0 ? sortedTiers : undefined,
       length: formData.length,
       width: formData.width,
       height: formData.height,

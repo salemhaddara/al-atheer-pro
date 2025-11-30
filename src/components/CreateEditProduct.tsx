@@ -21,6 +21,11 @@ interface TaxRate {
   rate: number;
 }
 
+interface PricingTier {
+  minQuantity: number; // Minimum quantity for this tier (e.g., 1, 6, 24)
+  price: number; // Price per unit for this tier
+}
+
 interface Product {
   id: string;
   name: string;
@@ -40,6 +45,7 @@ interface Product {
   allowReturn: boolean;
   minQuantity: number;
   maxQuantity?: number;
+  pricingTiers?: PricingTier[]; // Quantity-based pricing tiers
   length?: number;
   width?: number;
   height?: number;
@@ -436,6 +442,121 @@ export function CreateEditProduct({
                           السعر بعد الخصم الأقصى ({formData.allowedDiscount}%): <strong>{formatCurrency(formData.sellPrice * (1 - formData.allowedDiscount / 100))}</strong>
                         </p>
                       )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="border-t my-6"></div>
+
+                {/* Quantity-Based Pricing Tiers */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-right text-gray-700">أسعار حسب الكمية</h3>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newTiers = formData.pricingTiers || [];
+                        const lastTier = newTiers.length > 0 ? newTiers[newTiers.length - 1] : null;
+                        const nextMinQuantity = lastTier ? lastTier.minQuantity + 1 : 1;
+                        setFormData({
+                          ...formData,
+                          pricingTiers: [
+                            ...newTiers,
+                            { minQuantity: nextMinQuantity, price: formData.sellPrice }
+                          ]
+                        });
+                      }}
+                    >
+                      <Plus className="w-4 h-4 ml-2" />
+                      إضافة سعر حسب الكمية
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-500 text-right">
+                    يمكنك تحديد أسعار مختلفة حسب الكمية المشتراة (مثال: 1-5 بسعر، 6-23 بسعر آخر، 24+ بسعر ثالث)
+                  </p>
+
+                  {formData.pricingTiers && formData.pricingTiers.length > 0 && (
+                    <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
+                      {formData.pricingTiers
+                        .sort((a, b) => a.minQuantity - b.minQuantity)
+                        .map((tier, index) => (
+                          <div key={index} className="grid grid-cols-3 gap-3 items-end bg-white p-3 rounded border">
+                            <div className="space-y-1">
+                              <Label className="text-xs">الحد الأدنى للكمية</Label>
+                              <Input
+                                type="number"
+                                value={tier.minQuantity}
+                                onChange={(e) => {
+                                  const newTiers = [...(formData.pricingTiers || [])];
+                                  newTiers[index] = { ...tier, minQuantity: Number(e.target.value) };
+                                  setFormData({ ...formData, pricingTiers: newTiers });
+                                }}
+                                min="1"
+                                placeholder="1"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">السعر للوحدة</Label>
+                              <Input
+                                type="number"
+                                value={tier.price}
+                                onChange={(e) => {
+                                  const newTiers = [...(formData.pricingTiers || [])];
+                                  newTiers[index] = { ...tier, price: Number(e.target.value) };
+                                  setFormData({ ...formData, pricingTiers: newTiers });
+                                }}
+                                step="0.01"
+                                placeholder="0.00"
+                              />
+                            </div>
+                            <div className="flex gap-2">
+                              <div className="flex-1 text-xs text-gray-600 text-right">
+                                {index < (formData.pricingTiers?.length || 0) - 1 ? (
+                                  <span>
+                                    من {tier.minQuantity} إلى{' '}
+                                    {(formData.pricingTiers?.[index + 1]?.minQuantity || 0) - 1}
+                                  </span>
+                                ) : (
+                                  <span>من {tier.minQuantity} فأكثر</span>
+                                )}
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const newTiers = (formData.pricingTiers || []).filter((_, i) => i !== index);
+                                  setFormData({ ...formData, pricingTiers: newTiers });
+                                }}
+                              >
+                                <X className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+
+                  {formData.pricingTiers && formData.pricingTiers.length > 0 && (
+                    <div className="text-xs bg-blue-50 p-3 rounded border text-right">
+                      <p className="text-gray-700 font-medium mb-2">ملخص الأسعار:</p>
+                      <div className="space-y-1">
+                        {formData.pricingTiers
+                          .sort((a, b) => a.minQuantity - b.minQuantity)
+                          .map((tier, index) => {
+                            const nextTier = formData.pricingTiers?.[index + 1];
+                            const range = nextTier
+                              ? `${tier.minQuantity} - ${nextTier.minQuantity - 1}`
+                              : `${tier.minQuantity}+`;
+                            return (
+                              <p key={index} className="text-gray-600">
+                                الكمية {range}: <strong>{formatCurrency(tier.price)}</strong> للوحدة
+                              </p>
+                            );
+                          })}
+                      </div>
                     </div>
                   )}
                 </div>

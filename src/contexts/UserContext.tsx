@@ -4,14 +4,22 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 
 export type UserRole = 'admin' | 'employee';
 
+export type Permission = 
+    | 'manage_drawers'           // Manage cash drawers (open, close, add money)
+    | 'view_drawers'              // View drawer status
+    | 'manage_pos'               // Manage POS terminals
+    | 'all';                     // All permissions (admin)
+
 export interface User {
     id: string;
     name: string;
     email: string;
     role: UserRole;
     assignedWarehouseId?: string; // المستودع المخصص للموظف
+    assignedPosId?: string;       // POS terminal assigned to employee
     position?: string;
     department?: string;
+    permissions?: Permission[];  // User permissions
 }
 
 interface UserContextType {
@@ -22,6 +30,7 @@ interface UserContextType {
     isAdmin: () => boolean;
     isEmployee: () => boolean;
     hasAccessToWarehouse: (warehouseId: string) => boolean;
+    hasPermission: (permission: Permission) => boolean;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -47,7 +56,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
                         email: 'khaled@example.com',
                         role: 'admin',
                         position: 'مدير عام',
-                        department: 'الإدارة'
+                        department: 'الإدارة',
+                        permissions: ['all'] // Admin has all permissions
                     };
                     setCurrentUserState(defaultUser);
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultUser));
@@ -91,6 +101,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
         return currentUser.assignedWarehouseId === warehouseId;
     };
 
+    const hasPermission = (permission: Permission): boolean => {
+        if (!currentUser) return false;
+        // Admin has all permissions
+        if (currentUser.role === 'admin' || currentUser.permissions?.includes('all')) return true;
+        // Check if user has specific permission
+        return currentUser.permissions?.includes(permission) || false;
+    };
+
     return (
         <UserContext.Provider
             value={{
@@ -100,7 +118,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 logout,
                 isAdmin,
                 isEmployee,
-                hasAccessToWarehouse
+                hasAccessToWarehouse,
+                hasPermission
             }}
         >
             {children}

@@ -53,6 +53,7 @@ const routeMap: Record<string, string> = {
   'invoices': '/invoices',
   'purchases': '/purchases',
   'pos': '/pos',
+  'pos-management': '/pos-management',
   'quotations': '/quotations',
   'price-inquiry': '/price-inquiry',
   'hr': '/hr',
@@ -147,6 +148,7 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange }
         items: [
           { id: 'purchases', label: t('sidebar.menu.purchases'), icon: ShoppingBag, adminOnly: true },
           { id: 'pos', label: t('sidebar.menu.pos'), icon: Store, adminOnly: false },
+          { id: 'pos-management', label: 'إدارة نقاط البيع والدرج', icon: Wallet, adminOnly: false },
           { id: 'quotations', label: 'عروض الأسعار', icon: FileText, adminOnly: false },
           { id: 'price-inquiry', label: 'شاشة الأسعار (للعملاء)', icon: Package, adminOnly: false },
         ]
