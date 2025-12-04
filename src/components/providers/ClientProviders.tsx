@@ -3,6 +3,7 @@
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { UserProvider } from '@/contexts/UserContext';
 import { Toaster } from '@/components/ui/sonner';
+import { FullscreenToggle } from '@/components/FullscreenToggle';
 import { ReactNode } from 'react';
 import { AppLayout } from '../AppLayout';
 
@@ -19,6 +20,7 @@ export function ClientProviders({ children, initialLanguage = 'ar' }: ClientProv
           {children}
         </AppLayout>
         <Toaster position="top-center" richColors />
+        <FullscreenToggle />
       </UserProvider>
     </LanguageProvider>
   );

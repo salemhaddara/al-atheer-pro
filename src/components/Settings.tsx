@@ -13,12 +13,21 @@ import { useState, useEffect } from 'react';
 export function Settings() {
   const { t, direction, language, setLanguage } = useLanguage();
   const [systemType, setSystemType] = useState<'restaurant' | 'retail'>('retail');
+  const [pricesIncludeTax, setPricesIncludeTax] = useState(true);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedType = localStorage.getItem('system_type') as 'restaurant' | 'retail' | null;
       if (savedType) {
         setSystemType(savedType);
+      }
+
+      const savedPricesIncludeTax = localStorage.getItem('prices_include_tax');
+      if (savedPricesIncludeTax !== null) {
+        setPricesIncludeTax(savedPricesIncludeTax === 'true');
+      } else {
+        // Default to true (prices include tax)
+        localStorage.setItem('prices_include_tax', 'true');
       }
     }
   }, []);
@@ -168,7 +177,7 @@ export function Settings() {
 
               <div>
                 <Label>نوع النظام</Label>
-                <Select 
+                <Select
                   value={systemType}
                   onValueChange={(value: 'restaurant' | 'retail') => {
                     setSystemType(value);
@@ -324,6 +333,21 @@ export function Settings() {
                     <p className="text-sm text-gray-600">{t('settings.taxes.enableVatDesc')}</p>
                   </div>
                   <Switch defaultChecked />
+                </div>
+
+                <div className="flex items-center justify-between p-3 border rounded-lg bg-blue-50">
+                  <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                    <Label>الأسعار شاملة الضريبة</Label>
+                    <p className="text-sm text-gray-600">عند التفعيل، ستكون جميع الأسعار المدخلة في النظام شاملة للضريبة</p>
+                  </div>
+                  <Switch
+                    checked={pricesIncludeTax}
+                    onCheckedChange={(checked) => {
+                      setPricesIncludeTax(checked);
+                      localStorage.setItem('prices_include_tax', String(checked));
+                      toast.success(checked ? 'تم تفعيل: الأسعار شاملة الضريبة' : 'تم إلغاء: الأسعار غير شاملة للضريبة');
+                    }}
+                  />
                 </div>
 
                 <div className="flex items-center justify-between p-3 border rounded-lg">

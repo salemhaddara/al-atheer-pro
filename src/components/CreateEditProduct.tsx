@@ -451,7 +451,7 @@ export function CreateEditProduct({
                 {/* Quantity-Based Pricing Tiers */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-right text-gray-700">أسعار حسب الكمية</h3>
+                    <h3 className="text-sm font-semibold text-right text-gray-700">أسعار حسب الكمية (البيع بالجملة)</h3>
                     <Button
                       type="button"
                       variant="outline"
@@ -470,7 +470,7 @@ export function CreateEditProduct({
                       }}
                     >
                       <Plus className="w-4 h-4 ml-2" />
-                      إضافة سعر حسب الكمية
+                      إضافة أسعار الجملة
                     </Button>
                   </div>
                   <p className="text-xs text-gray-500 text-right">
@@ -584,35 +584,30 @@ export function CreateEditProduct({
                       </Select>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label>السعر شامل الضريبة؟</Label>
-                      <Select value={formData.taxIncluded ? 'yes' : 'no'} onValueChange={(value) => setFormData({ ...formData, taxIncluded: value === 'yes' })}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="yes">نعم، شامل</SelectItem>
-                          <SelectItem value="no">لا، يضاف على السعر</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
                   </div>
 
                   {formData.sellPrice > 0 && formData.taxRateId && (
-                    <div className="text-xs bg-gray-50 p-3 rounded border text-right space-y-1">
+                    <div className="text-xs bg-blue-50 p-3 rounded border text-right space-y-1">
+                      <p className="text-blue-600 text-xs mb-2 font-semibold">
+                        ⚙️ ملاحظة: الأسعار {typeof window !== 'undefined' && localStorage.getItem('prices_include_tax') !== 'false' ? 'شاملة' : 'غير شاملة'} للضريبة (حسب إعدادات النظام)
+                      </p>
                       {(() => {
                         const tax = taxRates.find(t => t.id === formData.taxRateId);
                         if (!tax) return null;
-                        const taxAmount = formData.taxIncluded
+                        // Read system setting for tax inclusion
+                        const pricesIncludeTax = typeof window !== 'undefined' 
+                          ? localStorage.getItem('prices_include_tax') !== 'false'
+                          : true;
+                        const taxAmount = pricesIncludeTax
                           ? formData.sellPrice * (tax.rate / (100 + tax.rate))
                           : formData.sellPrice * (tax.rate / 100);
-                        const finalPrice = formData.taxIncluded
+                        const finalPrice = pricesIncludeTax
                           ? formData.sellPrice
                           : formData.sellPrice + taxAmount;
                         return (
                           <>
                             <p className="text-gray-700">
-                              السعر قبل الضريبة: <strong>{formatCurrency(formData.taxIncluded ? formData.sellPrice - taxAmount : formData.sellPrice)}</strong>
+                              السعر قبل الضريبة: <strong>{formatCurrency(pricesIncludeTax ? formData.sellPrice - taxAmount : formData.sellPrice)}</strong>
                             </p>
                             <p className="text-gray-700">
                               قيمة الضريبة ({tax.rate}%): <strong>{formatCurrency(taxAmount)}</strong>
