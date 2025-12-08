@@ -7,19 +7,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
 import { Badge } from './ui/badge';
-import { Plus, Search, Edit, Trash2, Download, Printer, FileText, DollarSign, Calendar } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, FileText, } from 'lucide-react';
 import { toast } from 'sonner';
 import { createCashReceiptEntry, addJournalEntry } from '../data/journalEntries';
 import { addToSafe, getSafeBalance } from '../data/safes';
-import { loadAccounts } from '../data/chartOfAccounts';
 import { SearchableSelect } from './ui/searchable-select';
 import {
   loadReceiptVouchers,
-  saveReceiptVouchers,
   addReceiptVoucher,
   updateReceiptVoucher,
   deleteReceiptVoucher,
   generateReceiptVoucherNumber,
+  loadOtherSources,
   type ReceiptVoucher
 } from '../data/vouchers';
 
@@ -48,10 +47,14 @@ export function ReceiptVouchers() {
 
   // Load customers from POS component (shared data structure)
   const customers = useMemo(() => [
+    { id: 'general', name: 'عميل عام', accountNumber: 'ACC-GEN', phone: '' },
     { id: '1', name: 'شركة النجاح التقنية', accountNumber: 'ACC-001', phone: '0501234567' },
     { id: '2', name: 'مؤسسة الريادة للخدمات', accountNumber: 'ACC-002', phone: '0502222222' },
     { id: '3', name: 'شركة التميز للاستثمار', accountNumber: 'ACC-003', phone: '0503333333' },
   ], []);
+
+  // Load other sources
+  const otherSources = useMemo(() => loadOtherSources(), []);
 
   // Load safes
   const safes = useMemo(() => [
@@ -65,9 +68,9 @@ export function ReceiptVouchers() {
         voucher.voucherNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         voucher.fromName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         voucher.description.toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       const matchesStatus = filterStatus === 'all' || voucher.status === filterStatus;
-      
+
       return matchesSearch && matchesStatus;
     });
   }, [vouchers, searchTerm, filterStatus]);
@@ -90,11 +93,21 @@ export function ReceiptVouchers() {
 
   const handleEdit = (voucher: ReceiptVoucher) => {
     setEditingVoucher(voucher);
+
+    // If it's "other" type and no fromId, try to find by name
+    let fromId = voucher.fromId || '';
+    if (voucher.fromType === 'other' && !fromId && voucher.fromName) {
+      const foundSource = otherSources.find(s => s.name === voucher.fromName);
+      if (foundSource) {
+        fromId = foundSource.id;
+      }
+    }
+
     setFormData({
       date: voucher.date,
       paymentMethod: voucher.paymentMethod,
       fromType: voucher.fromType,
-      fromId: voucher.fromId || '',
+      fromId: fromId,
       fromName: voucher.fromName,
       amount: voucher.amount,
       description: voucher.description,
@@ -106,7 +119,7 @@ export function ReceiptVouchers() {
 
   const handleDelete = (id: string) => {
     if (!confirm('هل أنت متأكد من حذف هذا السند؟')) return;
-    
+
     if (deleteReceiptVoucher(id)) {
       setVouchers(loadReceiptVouchers());
       toast.success('تم حذف السند بنجاح');
@@ -127,7 +140,7 @@ export function ReceiptVouchers() {
     }
 
     const voucherNumber = editingVoucher?.voucherNumber || generateReceiptVoucherNumber();
-    
+
     if (editingVoucher) {
       // Update existing voucher
       const updated = updateReceiptVoucher(editingVoucher.id, {
@@ -142,7 +155,7 @@ export function ReceiptVouchers() {
         bankAccount: formData.paymentMethod === 'card' ? formData.bankAccount : undefined,
         status: 'مُعتمد'
       });
-      
+
       if (updated) {
         setVouchers(loadReceiptVouchers());
         toast.success('تم تحديث السند بنجاح');
@@ -218,6 +231,14 @@ export function ReceiptVouchers() {
       phone: c.phone
     }));
   }, [customers]);
+
+  const otherSourceOptions = useMemo(() => {
+    return otherSources.map(s => ({
+      id: s.id,
+      name: s.name,
+      description: s.description
+    }));
+  }, [otherSources]);
 
   return (
     <div className="space-y-6">
@@ -314,7 +335,7 @@ export function ReceiptVouchers() {
                         <Badge
                           variant={
                             voucher.status === 'مُعتمد' ? 'default' :
-                            voucher.status === 'قيد المراجعة' ? 'secondary' : 'destructive'
+                              voucher.status === 'قيد المراجعة' ? 'secondary' : 'destructive'
                           }
                         >
                           {voucher.status}
@@ -433,12 +454,23 @@ export function ReceiptVouchers() {
               </div>
             ) : (
               <div className="space-y-2">
-                <Label>اسم المصدر *</Label>
-                <Input
-                  value={formData.fromName}
-                  onChange={(e) => setFormData({ ...formData, fromName: e.target.value })}
-                  placeholder="أدخل اسم المصدر"
-                  className="text-right"
+                <Label>اختر المصدر *</Label>
+                <SearchableSelect
+                  options={otherSourceOptions}
+                  value={formData.fromId}
+                  onValueChange={(id) => {
+                    const source = otherSources.find(s => s.id === id);
+                    setFormData({
+                      ...formData,
+                      fromId: id,
+                      fromName: source?.name || ''
+                    });
+                  }}
+                  placeholder="ابحث عن المصدر..."
+                  searchPlaceholder="ابحث بالاسم..."
+                  emptyMessage="لا توجد مصادر أخرى"
+                  displayKey="name"
+                  searchKeys={['name', 'description']}
                 />
               </div>
             )}

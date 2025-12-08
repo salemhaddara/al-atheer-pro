@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { Label } from './ui/label';
 import { useUser } from '../contexts/UserContext';
 import { SearchableSelect } from './ui/searchable-select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 
 interface CartItem {
     id: string;
@@ -19,6 +20,7 @@ interface CartItem {
     quantity: number;
     barcode?: string;
     costPrice?: number;
+    expiryDate?: string; // تاريخ انتهاء الصلاحية
 }
 
 interface CreatePurchaseOrderProps {
@@ -54,6 +56,9 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
     const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().split('T')[0]);
     const [dueDate, setDueDate] = useState('');
     const [notes, setNotes] = useState('');
+    const [showExpiryDialog, setShowExpiryDialog] = useState(false);
+    const [pendingProduct, setPendingProduct] = useState<typeof products[0] | null>(null);
+    const [expiryDate, setExpiryDate] = useState('');
 
     // قائمة المستودعات
     const warehouses = [
@@ -112,13 +117,13 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
     }, [products, searchTerm]);
 
     // Add product to cart
-    const addProductToCart = (product: typeof products[0]) => {
+    const addProductToCart = (product: typeof products[0], expiry?: string) => {
         const existingItem = cart.find(item => item.id === product.id);
 
         if (existingItem) {
             setCart(cart.map(item =>
                 item.id === product.id
-                    ? { ...item, quantity: item.quantity + 1 }
+                    ? { ...item, quantity: item.quantity + 1, expiryDate: expiry || item.expiryDate }
                     : item
             ));
         } else {
@@ -128,8 +133,25 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
                 price: product.costPrice || product.price,
                 quantity: 1,
                 barcode: product.barcode,
-                costPrice: product.costPrice
+                costPrice: product.costPrice,
+                expiryDate: expiry
             }]);
+        }
+    };
+
+    const handleProductClick = (product: typeof products[0]) => {
+        setPendingProduct(product);
+        setShowExpiryDialog(true);
+        setExpiryDate('');
+    };
+
+    const confirmAddProduct = () => {
+        if (pendingProduct) {
+            addProductToCart(pendingProduct, expiryDate || undefined);
+            setShowExpiryDialog(false);
+            setPendingProduct(null);
+            setExpiryDate('');
+            toast.success(`تم إضافة ${pendingProduct.name} للسلة`);
         }
     };
 
@@ -177,9 +199,8 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
             );
 
             if (productByBarcode) {
-                addProductToCart(productByBarcode);
+                handleProductClick(productByBarcode);
                 setSearchTerm('');
-                toast.success(`تم إضافة ${productByBarcode.name} للسلة`);
             } else {
                 toast.error('لم يتم العثور على منتج بهذا الباركود');
             }
@@ -332,7 +353,7 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
                             <Card
                                 key={product.id}
                                 className="cursor-pointer hover:shadow-md transition-shadow"
-                                onClick={() => addProductToCart(product)}
+                                onClick={() => handleProductClick(product)}
                             >
                                 <CardContent className="p-4">
                                     <div className="aspect-square bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
@@ -398,6 +419,9 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-sm font-medium truncate">{item.name}</p>
                                                         <p className="text-sm text-gray-600">{formatCurrency(item.price)}</p>
+                                                        {item.expiryDate && (
+                                                            <p className="text-xs text-gray-500 mt-1">تاريخ الانتهاء: {new Date(item.expiryDate).toLocaleDateString('ar-SA')}</p>
+                                                        )}
                                                     </div>
                                                     <div className="flex items-center gap-2">
                                                         <Button
@@ -565,6 +589,47 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
                     </Card>
                 </div>
             </div>
+
+            {/* Expiry Date Dialog */}
+            <Dialog open={showExpiryDialog} onOpenChange={setShowExpiryDialog}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>إضافة منتج للسلة</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        {pendingProduct && (
+                            <>
+                                <div>
+                                    <p className="text-sm font-medium">المنتج: {pendingProduct.name}</p>
+                                    <p className="text-xs text-gray-500">السعر: {formatCurrency(pendingProduct.costPrice || pendingProduct.price)}</p>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>تاريخ انتهاء الصلاحية (اختياري)</Label>
+                                    <Input
+                                        type="date"
+                                        value={expiryDate}
+                                        onChange={(e) => setExpiryDate(e.target.value)}
+                                        placeholder="اختر التاريخ"
+                                    />
+                                    <p className="text-xs text-gray-500">يمكنك ترك هذا الحقل فارغاً إذا لم يكن للمنتج تاريخ انتهاء</p>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => {
+                            setShowExpiryDialog(false);
+                            setPendingProduct(null);
+                            setExpiryDate('');
+                        }}>
+                            إلغاء
+                        </Button>
+                        <Button onClick={confirmAddProduct}>
+                            إضافة للسلة
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

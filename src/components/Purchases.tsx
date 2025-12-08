@@ -422,7 +422,8 @@ export function Purchases() {
                             name: item.name,
                             quantity: item.quantity,
                             unitCost: item.price,
-                            returnQuantity: 0
+                            returnQuantity: 0,
+                            expiryDate: item.expiryDate
                           }));
                           setReturnItems(mappedItems);
                           setReturnError(null);
@@ -477,6 +478,7 @@ export function Purchases() {
                           <TableHead className="text-right">الصنف</TableHead>
                           <TableHead className="text-right">الكمية المشتراة</TableHead>
                           <TableHead className="text-right">سعر التكلفة</TableHead>
+                          <TableHead className="text-right">تاريخ الانتهاء</TableHead>
                           <TableHead className="text-right">الكمية المرتجعة</TableHead>
                           <TableHead className="text-right">قيمة المرتجع</TableHead>
                         </TableRow>
@@ -487,6 +489,9 @@ export function Purchases() {
                             <TableCell className="text-right">{item.name}</TableCell>
                             <TableCell className="text-right">{item.quantity}</TableCell>
                             <TableCell className="text-right">{formatCurrency(item.unitCost)}</TableCell>
+                            <TableCell className="text-right">
+                              {(item as any).expiryDate ? new Date((item as any).expiryDate).toLocaleDateString('ar-SA') : '-'}
+                            </TableCell>
                             <TableCell className="text-right">
                               <Input
                                 type="number"

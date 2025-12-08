@@ -104,3 +104,21 @@ export const addToMainBank = (amount: number): boolean => {
     return addToBank(defaultBankId, amount);
 };
 
+/**
+ * Deduct amount from default/main bank account (used for card payments)
+ * If no bankId is provided, uses the first available bank
+ */
+export const deductFromMainBank = (amount: number): boolean => {
+    const banks = loadBanks();
+    const bankIds = Object.keys(banks);
+
+    if (bankIds.length === 0) {
+        console.error('No banks available');
+        return false;
+    }
+
+    // Use the first bank as default, or you can specify a default bank ID
+    const defaultBankId = bankIds[0];
+    return deductFromBank(defaultBankId, amount);
+};
+

@@ -5,15 +5,41 @@ import { Label } from './ui/label';
 import { Switch } from './ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Building2, Bell, Lock, Palette, DollarSign, Percent, Plus } from 'lucide-react';
+import { Building2, Bell, Lock, Palette, DollarSign, Percent, Plus, FileText, Edit, Trash2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '../contexts/LanguageContext';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from './ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import {
+  loadOtherSources,
+  addOtherSource,
+  updateOtherSource,
+  deleteOtherSource,
+  loadOtherRecipients,
+  addOtherRecipient,
+  updateOtherRecipient,
+  deleteOtherRecipient,
+  type OtherSource,
+  type OtherRecipient
+} from '../data/vouchers';
 
 export function Settings() {
   const { t, direction, language, setLanguage } = useLanguage();
   const [systemType, setSystemType] = useState<'restaurant' | 'retail'>('retail');
   const [pricesIncludeTax, setPricesIncludeTax] = useState(true);
+
+  // Vouchers management state
+  const [otherSources, setOtherSources] = useState<OtherSource[]>([]);
+  const [otherRecipients, setOtherRecipients] = useState<OtherRecipient[]>([]);
+  const [sourceSearchTerm, setSourceSearchTerm] = useState('');
+  const [recipientSearchTerm, setRecipientSearchTerm] = useState('');
+  const [isSourceDialogOpen, setIsSourceDialogOpen] = useState(false);
+  const [isRecipientDialogOpen, setIsRecipientDialogOpen] = useState(false);
+  const [editingSource, setEditingSource] = useState<OtherSource | null>(null);
+  const [editingRecipient, setEditingRecipient] = useState<OtherRecipient | null>(null);
+  const [sourceFormData, setSourceFormData] = useState({ name: '', description: '' });
+  const [recipientFormData, setRecipientFormData] = useState({ name: '', description: '' });
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -30,10 +56,126 @@ export function Settings() {
         localStorage.setItem('prices_include_tax', 'true');
       }
     }
+
+    // Load other sources and recipients
+    setOtherSources(loadOtherSources());
+    setOtherRecipients(loadOtherRecipients());
   }, []);
 
   const handleSave = () => {
     toast.success(t('settings.saveSuccess'));
+  };
+
+  // Other Sources handlers
+  const filteredSources = useMemo(() => {
+    if (!sourceSearchTerm.trim()) return otherSources;
+    const searchLower = sourceSearchTerm.toLowerCase();
+    return otherSources.filter(s =>
+      s.name.toLowerCase().includes(searchLower) ||
+      (s.description && s.description.toLowerCase().includes(searchLower))
+    );
+  }, [otherSources, sourceSearchTerm]);
+
+  const handleAddSource = () => {
+    setEditingSource(null);
+    setSourceFormData({ name: '', description: '' });
+    setIsSourceDialogOpen(true);
+  };
+
+  const handleEditSource = (source: OtherSource) => {
+    setEditingSource(source);
+    setSourceFormData({ name: source.name, description: source.description || '' });
+    setIsSourceDialogOpen(true);
+  };
+
+  const handleDeleteSource = (id: string) => {
+    if (!confirm('هل أنت متأكد من حذف هذا المصدر؟')) return;
+    if (deleteOtherSource(id)) {
+      setOtherSources(loadOtherSources());
+      toast.success('تم حذف المصدر بنجاح');
+    } else {
+      toast.error('فشل حذف المصدر');
+    }
+  };
+
+  const handleSaveSource = () => {
+    if (!sourceFormData.name.trim()) {
+      toast.error('يرجى إدخال اسم المصدر');
+      return;
+    }
+
+    if (editingSource) {
+      if (updateOtherSource(editingSource.id, sourceFormData)) {
+        setOtherSources(loadOtherSources());
+        toast.success('تم تحديث المصدر بنجاح');
+      } else {
+        toast.error('فشل تحديث المصدر');
+      }
+    } else {
+      addOtherSource(sourceFormData);
+      setOtherSources(loadOtherSources());
+      toast.success('تم إضافة المصدر بنجاح');
+    }
+
+    setIsSourceDialogOpen(false);
+    setEditingSource(null);
+    setSourceFormData({ name: '', description: '' });
+  };
+
+  // Other Recipients handlers
+  const filteredRecipients = useMemo(() => {
+    if (!recipientSearchTerm.trim()) return otherRecipients;
+    const searchLower = recipientSearchTerm.toLowerCase();
+    return otherRecipients.filter(r =>
+      r.name.toLowerCase().includes(searchLower) ||
+      (r.description && r.description.toLowerCase().includes(searchLower))
+    );
+  }, [otherRecipients, recipientSearchTerm]);
+
+  const handleAddRecipient = () => {
+    setEditingRecipient(null);
+    setRecipientFormData({ name: '', description: '' });
+    setIsRecipientDialogOpen(true);
+  };
+
+  const handleEditRecipient = (recipient: OtherRecipient) => {
+    setEditingRecipient(recipient);
+    setRecipientFormData({ name: recipient.name, description: recipient.description || '' });
+    setIsRecipientDialogOpen(true);
+  };
+
+  const handleDeleteRecipient = (id: string) => {
+    if (!confirm('هل أنت متأكد من حذف هذا المستفيد؟')) return;
+    if (deleteOtherRecipient(id)) {
+      setOtherRecipients(loadOtherRecipients());
+      toast.success('تم حذف المستفيد بنجاح');
+    } else {
+      toast.error('فشل حذف المستفيد');
+    }
+  };
+
+  const handleSaveRecipient = () => {
+    if (!recipientFormData.name.trim()) {
+      toast.error('يرجى إدخال اسم المستفيد');
+      return;
+    }
+
+    if (editingRecipient) {
+      if (updateOtherRecipient(editingRecipient.id, recipientFormData)) {
+        setOtherRecipients(loadOtherRecipients());
+        toast.success('تم تحديث المستفيد بنجاح');
+      } else {
+        toast.error('فشل تحديث المستفيد');
+      }
+    } else {
+      addOtherRecipient(recipientFormData);
+      setOtherRecipients(loadOtherRecipients());
+      toast.success('تم إضافة المستفيد بنجاح');
+    }
+
+    setIsRecipientDialogOpen(false);
+    setEditingRecipient(null);
+    setRecipientFormData({ name: '', description: '' });
   };
 
   return (
@@ -44,30 +186,34 @@ export function Settings() {
       </div>
 
       <Tabs defaultValue="company" className="space-y-6" dir={direction}>
-        <TabsList className="grid w-full grid-cols-6" dir={direction}>
-          <TabsTrigger value="company" className="gap-2">
+        <TabsList className="flex w-full flex-nowrap overflow-x-auto" dir={direction}>
+          <TabsTrigger value="company" className="gap-1.5 flex-shrink-0 text-xs sm:text-sm">
             <Building2 className="w-4 h-4" />
             {t('settings.tabs.company')}
           </TabsTrigger>
-          <TabsTrigger value="financial" className="gap-2">
+          <TabsTrigger value="financial" className="gap-1.5 flex-shrink-0 text-xs sm:text-sm">
             <DollarSign className="w-4 h-4" />
             {t('settings.tabs.financial')}
           </TabsTrigger>
-          <TabsTrigger value="taxes" className="gap-2">
+          <TabsTrigger value="taxes" className="gap-1.5 flex-shrink-0 text-xs sm:text-sm">
             <Percent className="w-4 h-4" />
             {t('settings.tabs.taxes')}
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="gap-2">
+          <TabsTrigger value="notifications" className="gap-1.5 flex-shrink-0 text-xs sm:text-sm">
             <Bell className="w-4 h-4" />
             {t('settings.tabs.notifications')}
           </TabsTrigger>
-          <TabsTrigger value="security" className="gap-2">
+          <TabsTrigger value="security" className="gap-1.5 flex-shrink-0 text-xs sm:text-sm">
             <Lock className="w-4 h-4" />
             {t('settings.tabs.security')}
           </TabsTrigger>
-          <TabsTrigger value="appearance" className="gap-2">
+          <TabsTrigger value="appearance" className="gap-1.5 flex-shrink-0 text-xs sm:text-sm">
             <Palette className="w-4 h-4" />
             {t('settings.tabs.appearance')}
+          </TabsTrigger>
+          <TabsTrigger value="vouchers" className="gap-1.5 flex-shrink-0 text-xs sm:text-sm">
+            <FileText className="w-4 h-4" />
+            سندات
           </TabsTrigger>
         </TabsList>
 
@@ -549,6 +695,242 @@ export function Settings() {
               <Button onClick={handleSave}>{t('settings.saveChanges')}</Button>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="vouchers">
+          <div className="space-y-6">
+            {/* Other Sources Management */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>المصادر الأخرى</CardTitle>
+                    <CardDescription>إدارة المصادر الأخرى المستخدمة في سندات القبض</CardDescription>
+                  </div>
+                  <Button onClick={handleAddSource} className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    إضافة مصدر
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="relative">
+                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    placeholder="ابحث عن المصدر..."
+                    value={sourceSearchTerm}
+                    onChange={(e) => setSourceSearchTerm(e.target.value)}
+                    className="pr-10"
+                    dir="rtl"
+                  />
+                </div>
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-right">الاسم</TableHead>
+                        <TableHead className="text-right">الوصف</TableHead>
+                        <TableHead className="text-right w-24">إجراءات</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredSources.length > 0 ? (
+                        filteredSources.map((source) => (
+                          <TableRow key={source.id}>
+                            <TableCell className="font-medium">{source.name}</TableCell>
+                            <TableCell className="text-gray-600">{source.description || '-'}</TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditSource(source)}
+                                  title="تعديل"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteSource(source.id)}
+                                  title="حذف"
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center py-8 text-gray-500">
+                            {sourceSearchTerm ? 'لا توجد نتائج' : 'لا توجد مصادر أخرى'}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Other Recipients Management */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>المستفيدون الآخرون</CardTitle>
+                    <CardDescription>إدارة المستفيدين الآخرين المستخدمين في سندات الصرف</CardDescription>
+                  </div>
+                  <Button onClick={handleAddRecipient} className="gap-2">
+                    <Plus className="w-4 h-4" />
+                    إضافة مستفيد
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="relative">
+                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    placeholder="ابحث عن المستفيد..."
+                    value={recipientSearchTerm}
+                    onChange={(e) => setRecipientSearchTerm(e.target.value)}
+                    className="pr-10"
+                    dir="rtl"
+                  />
+                </div>
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-right">الاسم</TableHead>
+                        <TableHead className="text-right">الوصف</TableHead>
+                        <TableHead className="text-right w-24">إجراءات</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredRecipients.length > 0 ? (
+                        filteredRecipients.map((recipient) => (
+                          <TableRow key={recipient.id}>
+                            <TableCell className="font-medium">{recipient.name}</TableCell>
+                            <TableCell className="text-gray-600">{recipient.description || '-'}</TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleEditRecipient(recipient)}
+                                  title="تعديل"
+                                >
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteRecipient(recipient.id)}
+                                  title="حذف"
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center py-8 text-gray-500">
+                            {recipientSearchTerm ? 'لا توجد نتائج' : 'لا توجد مستفيدين آخرين'}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Source Dialog */}
+          <Dialog open={isSourceDialogOpen} onOpenChange={setIsSourceDialogOpen}>
+            <DialogContent className="max-w-md" dir="rtl">
+              <DialogHeader>
+                <DialogTitle>{editingSource ? 'تعديل المصدر' : 'إضافة مصدر جديد'}</DialogTitle>
+                <DialogDescription>
+                  {editingSource ? 'تعديل بيانات المصدر' : 'إضافة مصدر جديد لسندات القبض'}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>اسم المصدر *</Label>
+                  <Input
+                    value={sourceFormData.name}
+                    onChange={(e) => setSourceFormData({ ...sourceFormData, name: e.target.value })}
+                    placeholder="أدخل اسم المصدر"
+                    className="text-right"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>الوصف (اختياري)</Label>
+                  <Input
+                    value={sourceFormData.description}
+                    onChange={(e) => setSourceFormData({ ...sourceFormData, description: e.target.value })}
+                    placeholder="أدخل وصف المصدر"
+                    className="text-right"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 pt-4 border-t">
+                <Button onClick={() => setIsSourceDialogOpen(false)} variant="outline" className="flex-1">
+                  إلغاء
+                </Button>
+                <Button onClick={handleSaveSource} className="flex-1">
+                  {editingSource ? 'حفظ التعديلات' : 'إضافة'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+
+          {/* Recipient Dialog */}
+          <Dialog open={isRecipientDialogOpen} onOpenChange={setIsRecipientDialogOpen}>
+            <DialogContent className="max-w-md" dir="rtl">
+              <DialogHeader>
+                <DialogTitle>{editingRecipient ? 'تعديل المستفيد' : 'إضافة مستفيد جديد'}</DialogTitle>
+                <DialogDescription>
+                  {editingRecipient ? 'تعديل بيانات المستفيد' : 'إضافة مستفيد جديد لسندات الصرف'}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>اسم المستفيد *</Label>
+                  <Input
+                    value={recipientFormData.name}
+                    onChange={(e) => setRecipientFormData({ ...recipientFormData, name: e.target.value })}
+                    placeholder="أدخل اسم المستفيد"
+                    className="text-right"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>الوصف (اختياري)</Label>
+                  <Input
+                    value={recipientFormData.description}
+                    onChange={(e) => setRecipientFormData({ ...recipientFormData, description: e.target.value })}
+                    placeholder="أدخل وصف المستفيد"
+                    className="text-right"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 pt-4 border-t">
+                <Button onClick={() => setIsRecipientDialogOpen(false)} variant="outline" className="flex-1">
+                  إلغاء
+                </Button>
+                <Button onClick={handleSaveRecipient} className="flex-1">
+                  {editingRecipient ? 'حفظ التعديلات' : 'إضافة'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
       </Tabs>
     </div>

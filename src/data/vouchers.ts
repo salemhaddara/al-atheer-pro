@@ -72,10 +72,10 @@ export const addReceiptVoucher = (voucher: Omit<ReceiptVoucher, 'id' | 'createdA
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
-  
+
   vouchers.push(newVoucher);
   saveReceiptVouchers(vouchers);
-  
+
   return newVoucher;
 };
 
@@ -83,15 +83,15 @@ export const addReceiptVoucher = (voucher: Omit<ReceiptVoucher, 'id' | 'createdA
 export const updateReceiptVoucher = (id: string, updates: Partial<ReceiptVoucher>): ReceiptVoucher | null => {
   const vouchers = loadReceiptVouchers();
   const index = vouchers.findIndex(v => v.id === id);
-  
+
   if (index === -1) return null;
-  
+
   vouchers[index] = {
     ...vouchers[index],
     ...updates,
     updatedAt: new Date().toISOString()
   };
-  
+
   saveReceiptVouchers(vouchers);
   return vouchers[index];
 };
@@ -100,9 +100,9 @@ export const updateReceiptVoucher = (id: string, updates: Partial<ReceiptVoucher
 export const deleteReceiptVoucher = (id: string): boolean => {
   const vouchers = loadReceiptVouchers();
   const filtered = vouchers.filter(v => v.id !== id);
-  
+
   if (filtered.length === vouchers.length) return false;
-  
+
   saveReceiptVouchers(filtered);
   return true;
 };
@@ -116,10 +116,10 @@ export const addPaymentVoucher = (voucher: Omit<PaymentVoucher, 'id' | 'createdA
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
-  
+
   vouchers.push(newVoucher);
   savePaymentVouchers(vouchers);
-  
+
   return newVoucher;
 };
 
@@ -127,15 +127,15 @@ export const addPaymentVoucher = (voucher: Omit<PaymentVoucher, 'id' | 'createdA
 export const updatePaymentVoucher = (id: string, updates: Partial<PaymentVoucher>): PaymentVoucher | null => {
   const vouchers = loadPaymentVouchers();
   const index = vouchers.findIndex(v => v.id === id);
-  
+
   if (index === -1) return null;
-  
+
   vouchers[index] = {
     ...vouchers[index],
     ...updates,
     updatedAt: new Date().toISOString()
   };
-  
+
   savePaymentVouchers(vouchers);
   return vouchers[index];
 };
@@ -144,9 +144,9 @@ export const updatePaymentVoucher = (id: string, updates: Partial<PaymentVoucher
 export const deletePaymentVoucher = (id: string): boolean => {
   const vouchers = loadPaymentVouchers();
   const filtered = vouchers.filter(v => v.id !== id);
-  
+
   if (filtered.length === vouchers.length) return false;
-  
+
   savePaymentVouchers(filtered);
   return true;
 };
@@ -162,5 +162,126 @@ export const generatePaymentVoucherNumber = (): string => {
   const year = new Date().getFullYear();
   const timestamp = Date.now();
   return `PAY-${year}-${String(timestamp).slice(-6)}`;
+};
+
+// Other Sources and Recipients Management
+export interface OtherSource {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OtherRecipient {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Storage keys
+const OTHER_SOURCES_KEY = 'other_sources';
+const OTHER_RECIPIENTS_KEY = 'other_recipients';
+
+// Other Sources Management
+export const loadOtherSources = (): OtherSource[] => {
+  return dataCache.getFromLocalStorage(OTHER_SOURCES_KEY, []);
+};
+
+export const saveOtherSources = (sources: OtherSource[]): void => {
+  dataCache.saveToLocalStorage(OTHER_SOURCES_KEY, sources);
+};
+
+export const addOtherSource = (source: Omit<OtherSource, 'id' | 'createdAt' | 'updatedAt'>): OtherSource => {
+  const sources = loadOtherSources();
+  const newSource: OtherSource = {
+    ...source,
+    id: `src-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  sources.push(newSource);
+  saveOtherSources(sources);
+
+  return newSource;
+};
+
+export const updateOtherSource = (id: string, updates: Partial<OtherSource>): OtherSource | null => {
+  const sources = loadOtherSources();
+  const index = sources.findIndex(s => s.id === id);
+
+  if (index === -1) return null;
+
+  sources[index] = {
+    ...sources[index],
+    ...updates,
+    updatedAt: new Date().toISOString()
+  };
+
+  saveOtherSources(sources);
+  return sources[index];
+};
+
+export const deleteOtherSource = (id: string): boolean => {
+  const sources = loadOtherSources();
+  const filtered = sources.filter(s => s.id !== id);
+
+  if (filtered.length === sources.length) return false;
+
+  saveOtherSources(filtered);
+  return true;
+};
+
+// Other Recipients Management
+export const loadOtherRecipients = (): OtherRecipient[] => {
+  return dataCache.getFromLocalStorage(OTHER_RECIPIENTS_KEY, []);
+};
+
+export const saveOtherRecipients = (recipients: OtherRecipient[]): void => {
+  dataCache.saveToLocalStorage(OTHER_RECIPIENTS_KEY, recipients);
+};
+
+export const addOtherRecipient = (recipient: Omit<OtherRecipient, 'id' | 'createdAt' | 'updatedAt'>): OtherRecipient => {
+  const recipients = loadOtherRecipients();
+  const newRecipient: OtherRecipient = {
+    ...recipient,
+    id: `rec-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  recipients.push(newRecipient);
+  saveOtherRecipients(recipients);
+
+  return newRecipient;
+};
+
+export const updateOtherRecipient = (id: string, updates: Partial<OtherRecipient>): OtherRecipient | null => {
+  const recipients = loadOtherRecipients();
+  const index = recipients.findIndex(r => r.id === id);
+
+  if (index === -1) return null;
+
+  recipients[index] = {
+    ...recipients[index],
+    ...updates,
+    updatedAt: new Date().toISOString()
+  };
+
+  saveOtherRecipients(recipients);
+  return recipients[index];
+};
+
+export const deleteOtherRecipient = (id: string): boolean => {
+  const recipients = loadOtherRecipients();
+  const filtered = recipients.filter(r => r.id !== id);
+
+  if (filtered.length === recipients.length) return false;
+
+  saveOtherRecipients(filtered);
+  return true;
 };
 

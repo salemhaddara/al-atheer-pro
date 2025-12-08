@@ -20,6 +20,8 @@ import {
   MapPin,
   DollarSign,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Store,
   BarChart3,
   Wallet,
@@ -27,7 +29,8 @@ import {
   PackageCheck,
   Landmark,
   CalendarClock,
-  BookOpen
+  BookOpen,
+  MapPin as MapPinIcon
 } from 'lucide-react';
 import { useState, useMemo, useCallback, memo, useEffect } from 'react';
 import Link from 'next/link';
@@ -39,6 +42,8 @@ import { useUser } from '../contexts/UserContext';
 interface SidebarProps {
   currentCompany: string;
   onCompanyChange: (company: string) => void;
+  isCollapsed?: boolean;
+  onToggle?: (collapsed: boolean) => void;
 }
 
 // Route mapping for Next.js
@@ -69,6 +74,7 @@ const routeMap: Record<string, string> = {
   'branches': '/branches',
   'customers': '/customers',
   'customer-statements': '/customer-statements',
+  'vendor-statements': '/vendor-statements',
   'suppliers': '/suppliers',
   'reports': '/reports',
   'financial-reports': '/reports/financial',
@@ -85,12 +91,39 @@ const routeMap: Record<string, string> = {
   'permissions': '/settings/permissions',
 };
 
-export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange }: SidebarProps) {
+export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, isCollapsed: controlledCollapsed, onToggle }: SidebarProps) {
   const { t, direction } = useLanguage();
-  const { isAdmin } = useUser();
+  const { isAdmin, currentUser } = useUser();
   const pathname = usePathname();
   const router = useRouter();
+  const [internalCollapsed, setInternalCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('sidebar_collapsed');
+      return saved === 'true';
+    }
+    return false;
+  });
   const [expandedSections, setExpandedSections] = useState<string[]>(['accounting', 'sales']);
+  const [currentBranch, setCurrentBranch] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('current_branch') || 'الفرع الرئيسي';
+    }
+    return 'الفرع الرئيسي';
+  });
+
+  // Use controlled state if provided, otherwise use internal state
+  const isCollapsed = controlledCollapsed !== undefined ? controlledCollapsed : internalCollapsed;
+
+  const toggleCollapse = useCallback(() => {
+    const newCollapsed = !isCollapsed;
+    if (controlledCollapsed === undefined) {
+      setInternalCollapsed(newCollapsed);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('sidebar_collapsed', String(newCollapsed));
+      }
+    }
+    onToggle?.(newCollapsed);
+  }, [isCollapsed, controlledCollapsed, onToggle]);
 
   // Prefetch common routes on mount for faster navigation
   useEffect(() => {
@@ -210,6 +243,7 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange }
           { id: 'customers', label: t('sidebar.menu.customers'), icon: Users, adminOnly: false },
           { id: 'customer-statements', label: 'كشوف العملاء', icon: FileText, adminOnly: true },
           { id: 'suppliers', label: t('sidebar.menu.suppliers'), icon: Users2, adminOnly: true },
+          { id: 'vendor-statements', label: 'كشوف الموردين', icon: FileText, adminOnly: true },
         ]
       },
       {
@@ -261,37 +295,165 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange }
 
   return (
     <div
-      className={`fixed top-0 h-screen w-64 bg-white border-gray-200 shadow-sm overflow-y-auto ${direction === 'rtl' ? 'right-0 border-l' : 'left-0 border-r'
-        }`}
+      className={`fixed top-0 h-screen bg-white border-gray-200 shadow-lg overflow-y-auto transition-all duration-300 ease-in-out ${isCollapsed ? 'w-20 overflow-x-visible' : 'w-64 overflow-x-hidden'
+        } ${direction === 'rtl' ? 'right-0 border-l' : 'left-0 border-r'}`}
+      style={{
+        scrollbarWidth: 'thin',
+        scrollbarColor: '#d1d5db transparent'
+      }}
       dir={direction}
     >
-      <div className="p-6 border-b border-gray-200">
-        <h1 className="text-blue-600">{t('sidebar.systemTitle')}</h1>
-        <p className="text-gray-500 text-sm mt-1">{t('sidebar.systemSubtitle')}</p>
+      {/* Header with Toggle Button */}
+      <div className={`border-b border-gray-200 relative ${isCollapsed ? 'p-3' : 'p-6'}`}>
+        {isCollapsed ? (
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-sm">
+              <LayoutDashboard className="w-5 h-5 text-white" />
+            </div>
+            <button
+              onClick={toggleCollapse}
+              className="p-1.5 rounded-lg hover:bg-gray-100 active:scale-95 transition-all text-gray-600 hover:text-gray-900"
+              aria-label={t('sidebar.expand') || 'Expand sidebar'}
+            >
+              {direction === 'rtl' ? (
+                <ChevronLeft className="w-4 h-4" />
+              ) : (
+                <ChevronRight className="w-4 h-4" />
+              )}
+            </button>
+          </div>
+        ) : (
+          <>
+            <h1 className="text-blue-600 font-semibold pr-10">{t('sidebar.systemTitle')}</h1>
+            <p className="text-gray-500 text-sm mt-1 pr-10">{t('sidebar.systemSubtitle')}</p>
+            <button
+              onClick={toggleCollapse}
+              className={`absolute top-4 ${direction === 'rtl' ? 'left-4' : 'right-4'} p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-600 hover:text-gray-900`}
+              aria-label={t('sidebar.collapse') || 'Collapse sidebar'}
+            >
+              {direction === 'rtl' ? (
+                <ChevronRight className="w-5 h-5" />
+              ) : (
+                <ChevronLeft className="w-5 h-5" />
+              )}
+            </button>
+          </>
+        )}
       </div>
+
+      {/* User Info Section */}
+      {currentUser && (
+        <div className={`border-b border-gray-200 ${isCollapsed ? 'py-3' : 'py-4'}`}>
+          {isCollapsed ? (
+            <div className="flex justify-center">
+              <div className="relative">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm ring-2 ring-blue-100">
+                  <span className="text-white font-semibold text-sm">
+                    {currentUser.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                  </span>
+                </div>
+                {currentUser.role === 'admin' && (
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white"></div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="px-4 space-y-3">
+              {/* User Avatar and Basic Info */}
+              <div className="flex items-start gap-3">
+                <div className="relative flex-shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm ring-2 ring-blue-100">
+                    <span className="text-white font-semibold text-base">
+                      {currentUser.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0 space-y-0.5">
+                  <p className="text-sm font-semibold text-gray-900 truncate leading-tight">{currentUser.name} {currentUser.position && (
+                    <span className="text-xs text-gray-600 truncate leading-tight">({currentUser.position})</span>
+                  )}</p>
+
+                  {currentUser.department && (
+                    <p className="text-xs text-gray-500 truncate leading-tight">{currentUser.department}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Branch Info */}
+              <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                <MapPinIcon className={`w-4 h-4 text-gray-500 flex-shrink-0 ${direction === 'rtl' ? 'ml-1' : 'mr-1'}`} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-gray-700 truncate">{currentBranch}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Company Selector */}
-      <div className="p-4 border-b border-gray-200">
-        <label className="text-sm text-gray-600 mb-2 block">{t('sidebar.currentCompany')}</label>
-        <Select value={currentCompany} onValueChange={onCompanyChange}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {companies.map((company) => (
-              <SelectItem key={company.id} value={company.name}>
-                {company.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {!isCollapsed && (
+        <div className="p-4 border-b border-gray-200">
+          <label className="text-sm text-gray-600 mb-2 block">{t('sidebar.currentCompany')}</label>
+          <Select value={currentCompany} onValueChange={onCompanyChange}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {companies.map((company) => (
+                <SelectItem key={company.id} value={company.name}>
+                  {company.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
-      <nav className="p-4">
-        {menuSections.map((section) => {
+      <nav className={`${isCollapsed ? 'px-2 py-3 overflow-visible' : 'p-4'}`}>
+        {menuSections.map((section, sectionIndex) => {
           const SectionIcon = section.icon;
           const isExpanded = expandedSections.includes(section.id);
 
+          // When collapsed, show all items directly without sections
+          if (isCollapsed) {
+            return (
+              <div key={section.id}>
+                {section.items.map((item, itemIndex) => {
+                  const Icon = item.icon;
+                  const route = routeMap[item.id] || `/${item.id}`;
+                  const isActive = pathname === route || (pathname === '/' && item.id === 'dashboard');
+                  const isFirstInSection = itemIndex === 0;
+                  const showSectionDivider = isFirstInSection && sectionIndex > 0;
+
+                  return (
+                    <div key={item.id} className="relative">
+                      {/* Section divider */}
+                      {showSectionDivider && (
+                        <div className="h-px bg-gray-200 my-2 mx-2" />
+                      )}
+                      <Link
+                        href={route}
+                        prefetch={true}
+                        className={`w-full flex items-center justify-center px-2 py-2.5 rounded-xl mb-1.5 transition-all duration-200 relative group ${isActive
+                          ? 'bg-blue-50 text-blue-600 font-medium shadow-sm'
+                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                          }`}
+                      >
+                        {/* Active indicator bar */}
+                        {isActive && (
+                          <div className={`absolute ${direction === 'rtl' ? 'right-0' : 'left-0'} top-1/2 -translate-y-1/2 w-1 h-6 bg-blue-600 ${direction === 'rtl' ? 'rounded-l-full' : 'rounded-r-full'}`} />
+                        )}
+                        <Icon className={`w-5 h-5 transition-transform group-hover:scale-110 ${isActive ? 'text-blue-600' : ''} relative z-10`} />
+                      </Link>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          }
+
+          // When expanded, show sections with expandable functionality
           return (
             <div key={section.id} className="mb-2">
               {section.expandable && SectionIcon ? (

@@ -19,6 +19,7 @@ import {
   updatePaymentVoucher,
   deletePaymentVoucher,
   generatePaymentVoucherNumber,
+  loadOtherRecipients,
   type PaymentVoucher
 } from '../data/vouchers';
 
@@ -47,10 +48,14 @@ export function PaymentVouchers() {
 
   // Load suppliers from Purchases component (shared data structure)
   const suppliers = useMemo(() => [
+    { id: 'general', name: 'مورد عام', accountNumber: 'SUP-GEN', phone: '' },
     { id: '1', name: 'مورد المعدات المكتبية', accountNumber: 'SUP-001', phone: '0501234567' },
     { id: '2', name: 'مورد الأثاث', accountNumber: 'SUP-002', phone: '0507654321' },
     { id: '3', name: 'مورد الأجهزة الإلكترونية', accountNumber: 'SUP-003', phone: '0509876543' },
   ], []);
+
+  // Load other recipients
+  const otherRecipients = useMemo(() => loadOtherRecipients(), []);
 
   // Load safes
   const safes = useMemo(() => [
@@ -64,9 +69,9 @@ export function PaymentVouchers() {
         voucher.voucherNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
         voucher.toName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         voucher.description.toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       const matchesStatus = filterStatus === 'all' || voucher.status === filterStatus;
-      
+
       return matchesSearch && matchesStatus;
     });
   }, [vouchers, searchTerm, filterStatus]);
@@ -89,11 +94,21 @@ export function PaymentVouchers() {
 
   const handleEdit = (voucher: PaymentVoucher) => {
     setEditingVoucher(voucher);
+
+    // If it's "other" type and no toId, try to find by name
+    let toId = voucher.toId || '';
+    if (voucher.toType === 'other' && !toId && voucher.toName) {
+      const foundRecipient = otherRecipients.find(r => r.name === voucher.toName);
+      if (foundRecipient) {
+        toId = foundRecipient.id;
+      }
+    }
+
     setFormData({
       date: voucher.date,
       paymentMethod: voucher.paymentMethod,
       toType: voucher.toType,
-      toId: voucher.toId || '',
+      toId: toId,
       toName: voucher.toName,
       amount: voucher.amount,
       description: voucher.description,
@@ -105,7 +120,7 @@ export function PaymentVouchers() {
 
   const handleDelete = (id: string) => {
     if (!confirm('هل أنت متأكد من حذف هذا السند؟')) return;
-    
+
     if (deletePaymentVoucher(id)) {
       setVouchers(loadPaymentVouchers());
       toast.success('تم حذف السند بنجاح');
@@ -135,7 +150,7 @@ export function PaymentVouchers() {
     }
 
     const voucherNumber = editingVoucher?.voucherNumber || generatePaymentVoucherNumber();
-    
+
     if (editingVoucher) {
       // Update existing voucher
       const updated = updatePaymentVoucher(editingVoucher.id, {
@@ -150,7 +165,7 @@ export function PaymentVouchers() {
         bankAccount: formData.paymentMethod === 'card' ? formData.bankAccount : undefined,
         status: 'مُعتمد'
       });
-      
+
       if (updated) {
         setVouchers(loadPaymentVouchers());
         toast.success('تم تحديث السند بنجاح');
@@ -226,6 +241,14 @@ export function PaymentVouchers() {
       phone: s.phone
     }));
   }, [suppliers]);
+
+  const otherRecipientOptions = useMemo(() => {
+    return otherRecipients.map(r => ({
+      id: r.id,
+      name: r.name,
+      description: r.description
+    }));
+  }, [otherRecipients]);
 
   return (
     <div className="space-y-6">
@@ -322,7 +345,7 @@ export function PaymentVouchers() {
                         <Badge
                           variant={
                             voucher.status === 'مُعتمد' ? 'default' :
-                            voucher.status === 'قيد المراجعة' ? 'secondary' : 'destructive'
+                              voucher.status === 'قيد المراجعة' ? 'secondary' : 'destructive'
                           }
                         >
                           {voucher.status}
@@ -441,12 +464,23 @@ export function PaymentVouchers() {
               </div>
             ) : (
               <div className="space-y-2">
-                <Label>اسم المستفيد *</Label>
-                <Input
-                  value={formData.toName}
-                  onChange={(e) => setFormData({ ...formData, toName: e.target.value })}
-                  placeholder="أدخل اسم المستفيد"
-                  className="text-right"
+                <Label>اختر المستفيد *</Label>
+                <SearchableSelect
+                  options={otherRecipientOptions}
+                  value={formData.toId}
+                  onValueChange={(id) => {
+                    const recipient = otherRecipients.find(r => r.id === id);
+                    setFormData({
+                      ...formData,
+                      toId: id,
+                      toName: recipient?.name || ''
+                    });
+                  }}
+                  placeholder="ابحث عن المستفيد..."
+                  searchPlaceholder="ابحث بالاسم..."
+                  emptyMessage="لا توجد مستفيدين آخرين"
+                  displayKey="name"
+                  searchKeys={['name', 'description']}
                 />
               </div>
             )}
