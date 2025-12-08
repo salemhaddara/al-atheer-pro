@@ -239,6 +239,7 @@ export function POS() {
       toast.error(`الحد الأدنى للكمية: ${product.minQuantity}`);
       return;
     }
+    //test
 
     const existingItem = cart.find(item => item.id === product.id);
 
