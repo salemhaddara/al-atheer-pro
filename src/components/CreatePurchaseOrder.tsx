@@ -6,12 +6,13 @@ import { Badge } from './ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
-import { Search, ShoppingCart, CreditCard, Banknote, X, Plus, Minus, Trash2, Package, ArrowRight, AlertTriangle } from 'lucide-react';
+import { Search, ShoppingCart, CreditCard, Banknote, X, Plus, Minus, Trash2, Package, ArrowRight, AlertTriangle, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { Label } from './ui/label';
 import { useUser } from '../contexts/UserContext';
 import { SearchableSelect } from './ui/searchable-select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
+import { loadBanks } from '../data/banks';
 
 interface CartItem {
     id: string;
@@ -87,10 +88,29 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
     }, [isAdmin, currentUser?.assignedWarehouseId]);
 
     // Mixed payment breakdown state
-    const [paymentBreakdown, setPaymentBreakdown] = useState<{ cash: number; credit: number }>({
+    const [paymentBreakdown, setPaymentBreakdown] = useState<{
+        cash: number;
+        credit: number;
+        bankWithdrawal: number;
+    }>({
         cash: 0,
-        credit: 0
+        credit: 0,
+        bankWithdrawal: 0
     });
+
+    // Bank selection for bank withdrawal
+    const [selectedBankId, setSelectedBankId] = useState<string>('');
+    const [banks, setBanks] = useState<Array<{ id: string; name: string; balance: number }>>([]);
+
+    // Load banks on mount
+    useEffect(() => {
+        const loadedBanks = loadBanks();
+        const banksArray = Object.values(loadedBanks);
+        setBanks(banksArray);
+        if (banksArray.length > 0) {
+            setSelectedBankId(banksArray[0].id);
+        }
+    }, []);
 
     const selectedSupplier = useMemo(
         () => suppliers.find(s => s.id === selectedSupplierId),
@@ -103,7 +123,7 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
     const total = subtotal + tax;
 
     // Calculate payment breakdown total
-    const paymentTotal = paymentBreakdown.cash + paymentBreakdown.credit;
+    const paymentTotal = paymentBreakdown.cash + paymentBreakdown.credit + paymentBreakdown.bankWithdrawal;
     const paymentRemaining = total - paymentTotal;
 
     // Filter products by search term (name or barcode)
@@ -172,17 +192,17 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
 
     const clearCart = () => {
         setCart([]);
-        setPaymentBreakdown({ cash: 0, credit: 0 });
+        setPaymentBreakdown({ cash: 0, credit: 0, bankWithdrawal: 0 });
     };
 
     // Update payment breakdown
-    const updatePaymentBreakdown = (field: 'cash' | 'credit', value: number) => {
+    const updatePaymentBreakdown = (field: 'cash' | 'credit' | 'bankWithdrawal', value: number) => {
         const newBreakdown = { ...paymentBreakdown, [field]: Math.max(0, value) };
         setPaymentBreakdown(newBreakdown);
     };
 
     // Auto-fill remaining amount
-    const fillRemaining = (method: 'cash' | 'credit') => {
+    const fillRemaining = (method: 'cash' | 'credit' | 'bankWithdrawal') => {
         if (paymentRemaining > 0) {
             updatePaymentBreakdown(method, paymentBreakdown[method] + paymentRemaining);
         }
@@ -231,6 +251,12 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
             return;
         }
 
+        // Validate bank selection if bank withdrawal is used
+        if (paymentBreakdown.bankWithdrawal > 0 && !selectedBankId) {
+            toast.error('يرجى اختيار البنك للصرف');
+            return;
+        }
+
         const order = {
             supplierId: selectedSupplierId,
             supplierName: selectedSupplier.name,
@@ -240,7 +266,10 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
             subtotal,
             tax,
             total,
-            paymentBreakdown,
+            paymentBreakdown: {
+                ...paymentBreakdown,
+                selectedBankId: paymentBreakdown.bankWithdrawal > 0 ? selectedBankId : undefined
+            },
             warehouse: selectedWarehouse,
             notes
         };
@@ -538,6 +567,52 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
                                                 min="0"
                                                 step="0.01"
                                             />
+                                        </div>
+
+                                        {/* Bank Withdrawal Payment */}
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <label className="text-sm flex items-center gap-2">
+                                                    <Wallet className="w-4 h-4 text-purple-600" />
+                                                    صرف من بنك
+                                                </label>
+                                                {paymentRemaining > 0 && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-6 text-xs"
+                                                        onClick={() => fillRemaining('bankWithdrawal')}
+                                                    >
+                                                        تعبئة المتبقي
+                                                    </Button>
+                                                )}
+                                            </div>
+                                            <Input
+                                                type="number"
+                                                placeholder="0.00"
+                                                value={paymentBreakdown.bankWithdrawal > 0 ? paymentBreakdown.bankWithdrawal : ''}
+                                                onChange={(e) => updatePaymentBreakdown('bankWithdrawal', parseFloat(e.target.value) || 0)}
+                                                className="text-right mb-2"
+                                                min="0"
+                                                step="0.01"
+                                            />
+                                            {paymentBreakdown.bankWithdrawal > 0 && (
+                                                <Select
+                                                    value={selectedBankId}
+                                                    onValueChange={setSelectedBankId}
+                                                >
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="اختر البنك" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {banks.map((bank) => (
+                                                            <SelectItem key={bank.id} value={bank.id}>
+                                                                {bank.name} - الرصيد: {formatCurrency(bank.balance)}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            )}
                                         </div>
 
                                         {/* Payment Summary */}

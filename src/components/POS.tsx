@@ -17,7 +17,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { createSalesReturnJournalEntries, createMixedPaymentSalesJournalEntries, addJournalEntries } from '../data/journalEntries';
 import { reduceStock, increaseStock, getStock, } from '../data/inventory';
 import { addToSafe, deductFromSafe, } from '../data/safes';
-import { addToMainBank } from '../data/banks';
+import { addToMainBank, addToBank, loadBanks } from '../data/banks';
 import { useUser } from '../contexts/UserContext';
 import { SearchableSelect } from './ui/searchable-select';
 import { getPriceForQuantity, PricingTier } from '../utils/pricing';
@@ -193,14 +193,30 @@ export function POS() {
   }, []);
 
   // Mixed payment breakdown state
-  const [paymentBreakdown, setPaymentBreakdown] = useState<{ cash: number; card: number; credit: number }>({
+  const [paymentBreakdown, setPaymentBreakdown] = useState<{ cash: number; card: number; credit: number; selectedBankId?: string }>({
     cash: 0,
     card: 0,
     credit: 0
   });
 
+  // Bank selection for card payments
+  const [banks, setBanks] = useState<Array<{ id: string; name: string; balance: number }>>([]);
+  const [showCardPaymentDialog, setShowCardPaymentDialog] = useState(false);
+  const [cardPaymentAmount, setCardPaymentAmount] = useState(0);
+  const [cardPaymentStatus, setCardPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'failed'>('idle');
+
+  // Load banks on mount
+  useEffect(() => {
+    const loadedBanks = loadBanks();
+    const banksArray = Object.values(loadedBanks);
+    setBanks(banksArray);
+    if (banksArray.length > 0 && !paymentBreakdown.selectedBankId) {
+      setPaymentBreakdown(prev => ({ ...prev, selectedBankId: banksArray[0].id }));
+    }
+  }, []);
+
   // Load default payment preferences from localStorage
-  const loadDefaultPaymentPreferences = (): { cash: number; card: number; credit: number } => {
+  const loadDefaultPaymentPreferences = (): { cash: number; card: number; credit: number; selectedBankId?: string } => {
     if (typeof window === 'undefined') return { cash: 0, card: 0, credit: 0 };
     try {
       const stored = localStorage.getItem('pos_payment_preferences');
@@ -214,7 +230,7 @@ export function POS() {
   };
 
   // Save default payment preferences to localStorage
-  const saveDefaultPaymentPreferences = (preferences: { cash: number; card: number; credit: number }) => {
+  const saveDefaultPaymentPreferences = (preferences: { cash: number; card: number; credit: number; selectedBankId?: string }) => {
     if (typeof window === 'undefined') return;
     try {
       localStorage.setItem('pos_payment_preferences', JSON.stringify(preferences));
@@ -518,9 +534,9 @@ export function POS() {
   // Reset payment breakdown when cart is cleared
   useEffect(() => {
     if (cart.length === 0) {
-      setPaymentBreakdown({ cash: 0, card: 0, credit: 0 });
+      setPaymentBreakdown({ cash: 0, card: 0, credit: 0, selectedBankId: banks.length > 0 ? banks[0].id : undefined });
     }
-  }, [cart.length]);
+  }, [cart.length, banks]);
 
   // Apply saved preferences when total changes and breakdown is empty
   useEffect(() => {
@@ -534,7 +550,8 @@ export function POS() {
           setPaymentBreakdown({
             cash: (preferences.cash / prefTotal) * total,
             card: (preferences.card / prefTotal) * total,
-            credit: (preferences.credit / prefTotal) * total
+            credit: (preferences.credit / prefTotal) * total,
+            selectedBankId: paymentBreakdown.selectedBankId || (banks.length > 0 ? banks[0].id : undefined)
           });
         }
       }
@@ -633,7 +650,12 @@ export function POS() {
 
     // Add to bank account if card payment exists (network money)
     if (paymentBreakdown.card > 0) {
-      const success = addToMainBank(paymentBreakdown.card);
+      const bankId = paymentBreakdown.selectedBankId;
+      if (!bankId) {
+        toast.error('يرجى اختيار البنك للدفع بالبطاقة');
+        return;
+      }
+      const success = addToBank(bankId, paymentBreakdown.card);
       if (!success) {
         toast.error('فشل تحديث الحساب البنكي');
         return;
@@ -796,6 +818,38 @@ export function POS() {
     setIsAddCustomerDialogOpen(false);
     setNewCustomerData({ name: '', phone: '', address: '' });
     toast.success('تم إضافة العميل بسرعة');
+  };
+
+  // Handle card payment simulation
+  const handleCardPayment = () => {
+    if (!paymentBreakdown.selectedBankId) {
+      toast.error('يرجى اختيار البنك أولاً');
+      setShowCardPaymentDialog(false);
+      return;
+    }
+
+    setCardPaymentStatus('processing');
+
+    // Simulate POS machine processing (2-3 seconds)
+    setTimeout(() => {
+      // Simulate success (90% success rate for demo)
+      const isSuccess = Math.random() > 0.1;
+
+      if (isSuccess) {
+        setCardPaymentStatus('success');
+        // Update payment breakdown to confirm the card payment
+        updatePaymentBreakdown('card', cardPaymentAmount);
+        toast.success(`تمت معاملة البطاقة بنجاح - ${formatCurrency(cardPaymentAmount)}`);
+        // Auto-close after 2 seconds on success
+        setTimeout(() => {
+          setShowCardPaymentDialog(false);
+          setCardPaymentStatus('idle');
+        }, 2000);
+      } else {
+        setCardPaymentStatus('failed');
+        toast.error('فشلت معاملة البطاقة - يرجى المحاولة مرة أخرى');
+      }
+    }, 2000);
   };
 
   return (
@@ -1560,15 +1614,60 @@ export function POS() {
                             </Button>
                           )}
                         </div>
+                        <div className="flex gap-2">
                         <Input
                           type="number"
                           placeholder="0.00"
                           value={paymentBreakdown.card > 0 ? paymentBreakdown.card : ''}
-                          onChange={(e) => updatePaymentBreakdown('card', parseFloat(e.target.value) || 0)}
-                          className="text-right"
+                            onChange={(e) => {
+                              const amount = parseFloat(e.target.value) || 0;
+                              updatePaymentBreakdown('card', amount);
+                              if (amount > 0) {
+                                setCardPaymentAmount(amount);
+                              }
+                            }}
+                            className="text-right flex-1"
                           min="0"
                           step="0.01"
                         />
+                          {paymentBreakdown.card > 0 && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setCardPaymentAmount(paymentBreakdown.card);
+                                setShowCardPaymentDialog(true);
+                                setCardPaymentStatus('idle');
+                              }}
+                              className="gap-2"
+                            >
+                              <CreditCard className="w-4 h-4" />
+                              محاكاة الدفع
+                            </Button>
+                          )}
+                        </div>
+                        {paymentBreakdown.card > 0 && banks.length > 0 && (
+                          <div className="space-y-1">
+                            <Label className="text-xs text-gray-600">اختر البنك</Label>
+                            <Select
+                              value={paymentBreakdown.selectedBankId || banks[0].id}
+                              onValueChange={(bankId) => {
+                                setPaymentBreakdown(prev => ({ ...prev, selectedBankId: bankId }));
+                              }}
+                            >
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {banks.map((bank) => (
+                                  <SelectItem key={bank.id} value={bank.id}>
+                                    {bank.name} - الرصيد: {formatCurrency(bank.balance)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
                       </div>
 
                       {/* Credit Payment */}
@@ -2161,15 +2260,60 @@ export function POS() {
                               </Button>
                             )}
                           </div>
+                          <div className="flex gap-2">
                           <Input
                             type="number"
                             placeholder="0.00"
                             value={paymentBreakdown.card > 0 ? paymentBreakdown.card : ''}
-                            onChange={(e) => updatePaymentBreakdown('card', parseFloat(e.target.value) || 0)}
-                            className="text-right"
+                              onChange={(e) => {
+                                const amount = parseFloat(e.target.value) || 0;
+                                updatePaymentBreakdown('card', amount);
+                                if (amount > 0) {
+                                  setCardPaymentAmount(amount);
+                                }
+                              }}
+                              className="text-right flex-1"
                             min="0"
                             step="0.01"
                           />
+                            {paymentBreakdown.card > 0 && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setCardPaymentAmount(paymentBreakdown.card);
+                                  setShowCardPaymentDialog(true);
+                                  setCardPaymentStatus('idle');
+                                }}
+                                className="gap-2"
+                              >
+                                <CreditCard className="w-4 h-4" />
+                                محاكاة الدفع
+                              </Button>
+                            )}
+                          </div>
+                          {paymentBreakdown.card > 0 && banks.length > 0 && (
+                            <div className="space-y-1">
+                              <Label className="text-xs text-gray-600">اختر البنك</Label>
+                              <Select
+                                value={paymentBreakdown.selectedBankId || banks[0].id}
+                                onValueChange={(bankId) => {
+                                  setPaymentBreakdown(prev => ({ ...prev, selectedBankId: bankId }));
+                                }}
+                              >
+                                <SelectTrigger className="h-8 text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {banks.map((bank) => (
+                                    <SelectItem key={bank.id} value={bank.id}>
+                                      {bank.name} - الرصيد: {formatCurrency(bank.balance)}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
                         </div>
 
                         {/* Credit Payment */}
@@ -2601,6 +2745,127 @@ export function POS() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Card Payment Simulation Dialog */}
+      <Dialog open={showCardPaymentDialog} onOpenChange={setShowCardPaymentDialog}>
+        <DialogContent dir="rtl" className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="w-5 h-5" />
+              محاكاة آلة الدفع بالبطاقة
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {cardPaymentStatus === 'idle' && (
+              <>
+                <div className="text-center space-y-2">
+                  <div className="mx-auto w-32 h-32 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center mb-4">
+                    <CreditCard className="w-16 h-16 text-blue-600" />
+                  </div>
+                  <p className="text-lg font-semibold">المبلغ: {formatCurrency(cardPaymentAmount)}</p>
+                  <p className="text-sm text-gray-600">البنك المحدد: {banks.find(b => b.id === paymentBreakdown.selectedBankId)?.name || 'غير محدد'}</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>رقم البطاقة (محاكاة)</Label>
+                  <Input
+                    placeholder="1234 5678 9012 3456"
+                    className="text-center font-mono text-lg tracking-widest"
+                    maxLength={19}
+                    onKeyDown={(e) => {
+                      // Auto-format card number
+                      if (e.key === 'Enter' && e.currentTarget.value.replace(/\s/g, '').length >= 13) {
+                        handleCardPayment();
+                      }
+                    }}
+                  />
+                  <p className="text-xs text-gray-500 text-center">أدخل رقم البطاقة ثم اضغط Enter للبدء</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setShowCardPaymentDialog(false);
+                      setCardPaymentStatus('idle');
+                    }}
+                  >
+                    إلغاء
+                  </Button>
+                  <Button
+                    className="flex-1 gap-2"
+                    onClick={handleCardPayment}
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    بدء المعاملة
+                  </Button>
+                </div>
+              </>
+            )}
+
+            {cardPaymentStatus === 'processing' && (
+              <div className="text-center space-y-4 py-8">
+                <div className="mx-auto w-24 h-24 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <div className="space-y-2">
+                  <p className="text-lg font-semibold">جاري معالجة الدفع...</p>
+                  <p className="text-sm text-gray-600">يرجى الانتظار</p>
+                </div>
+              </div>
+            )}
+
+            {cardPaymentStatus === 'success' && (
+              <div className="text-center space-y-4 py-8">
+                <div className="mx-auto w-24 h-24 bg-green-100 rounded-full flex items-center justify-center">
+                  <Check className="w-12 h-12 text-green-600" />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-lg font-semibold text-green-600">تمت المعاملة بنجاح</p>
+                  <p className="text-sm text-gray-600">المبلغ: {formatCurrency(cardPaymentAmount)}</p>
+                  <p className="text-xs text-gray-500">تم إضافة المبلغ إلى البنك المحدد</p>
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    setShowCardPaymentDialog(false);
+                    setCardPaymentStatus('idle');
+                  }}
+                >
+                  موافق
+                </Button>
+              </div>
+            )}
+
+            {cardPaymentStatus === 'failed' && (
+              <div className="text-center space-y-4 py-8">
+                <div className="mx-auto w-24 h-24 bg-red-100 rounded-full flex items-center justify-center">
+                  <X className="w-12 h-12 text-red-600" />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-lg font-semibold text-red-600">فشلت المعاملة</p>
+                  <p className="text-sm text-gray-600">يرجى المحاولة مرة أخرى</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setShowCardPaymentDialog(false);
+                      setCardPaymentStatus('idle');
+                    }}
+                  >
+                    إلغاء
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={handleCardPayment}
+                  >
+                    إعادة المحاولة
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -7,14 +7,43 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
-import { Plus, Search, ShoppingBag, Package, Users2, Eye, Download, FileText } from 'lucide-react';
+import { Plus, Search, ShoppingBag, Package, Users2, Eye, Download, FileText, User, Warehouse } from 'lucide-react';
 import { toast } from 'sonner';
 import { CreatePurchaseOrder } from './CreatePurchaseOrder';
 import { reduceStock } from '../data/inventory';
 import { addJournalEntries, createPurchaseReturnJournalEntries } from '../data/journalEntries';
+import { useUser } from '../contexts/UserContext';
 
 export function Purchases() {
+  const { currentUser, isAdmin, hasAccessToWarehouse } = useUser();
   const [showCreateOrder, setShowCreateOrder] = useState(false);
+  const [selectedWarehouse, setSelectedWarehouse] = useState('1');
+
+  // قائمة المستودعات
+  const warehouses = [
+    { id: '1', name: 'المستودع الرئيسي' },
+    { id: '2', name: 'مستودع الفرع الشمالي' },
+    { id: '3', name: 'مستودع الفرع الجنوبي' }
+  ];
+
+  // تصفية المستودعات حسب الصلاحيات
+  const availableWarehouses = useMemo(() => {
+    if (isAdmin()) {
+      return warehouses; // الإدارة ترى كل المستودعات
+    }
+    // الموظف يرى فقط المستودع المخصص له
+    if (currentUser?.assignedWarehouseId) {
+      return warehouses.filter(w => w.id === currentUser.assignedWarehouseId);
+    }
+    return []; // لا يوجد مستودع مخصص
+  }, [isAdmin, currentUser?.assignedWarehouseId]);
+
+  // تعيين المستودع الافتراضي للموظف
+  useEffect(() => {
+    if (!isAdmin() && currentUser?.assignedWarehouseId) {
+      setSelectedWarehouse(currentUser.assignedWarehouseId);
+    }
+  }, [isAdmin, currentUser?.assignedWarehouseId]);
   const [purchaseOrders, setPurchaseOrders] = useState([
     {
       id: 'PO-2025-001',
@@ -173,15 +202,51 @@ export function Purchases() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="text-right flex-1">
-          <h1>إدارة المشتريات</h1>
-          <p className="text-gray-600">متابعة وإدارة طلبات الشراء والموردين</p>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1>المشتريات</h1>
+            <p className="text-gray-600">نظام إدارة المشتريات والموردين</p>
+          </div>
+          <div className="flex gap-4 items-center">
+            {/* User Info */}
+            <div className="space-y-1">
+              <label className="text-sm text-gray-600">المستخدم المسؤول</label>
+              <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-md">
+                <User className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-semibold text-blue-700">
+                  {currentUser?.name || 'غير محدد'}
+                </span>
+              </div>
+            </div>
+            {/* Warehouse Selection */}
+            {availableWarehouses.length > 0 && (
+              <div className="space-y-1">
+                <label className="text-sm text-gray-600">المستودع</label>
+                <Select
+                  value={selectedWarehouse}
+                  onValueChange={setSelectedWarehouse}
+                  disabled={!isAdmin() && availableWarehouses.length === 1}
+                >
+                  <SelectTrigger className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableWarehouses.map((warehouse) => (
+                      <SelectItem key={warehouse.id} value={warehouse.id}>
+                        {warehouse.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <Button className="gap-2 shrink-0" onClick={() => setShowCreateOrder(true)}>
+              <Plus className="w-4 h-4" />
+              طلب شراء جديد
+            </Button>
+          </div>
         </div>
-        <Button className="gap-2 shrink-0" onClick={() => setShowCreateOrder(true)}>
-          <Plus className="w-4 h-4" />
-          طلب شراء جديد
-        </Button>
       </div>
 
       {/* Statistics */}

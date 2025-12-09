@@ -54,6 +54,18 @@ export function Employees({ onViewEmployee }: EmployeesProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    position: '',
+    department: '',
+    email: '',
+    phone: '',
+    salary: 0,
+    joinDate: '',
+    shiftId: '',
+    role: 'employee' as 'admin' | 'employee',
+    assignedWarehouseId: ''
+  });
 
   const getShiftInfo = (shiftId?: string) => shiftTemplates.find((shift) => shift.id === shiftId);
 
@@ -79,12 +91,100 @@ export function Employees({ onViewEmployee }: EmployeesProps) {
 
   const handleEdit = (employee: Employee) => {
     setEditingEmployee(employee);
+    setFormData({
+      name: employee.name || '',
+      position: employee.position || '',
+      department: employee.department || '',
+      email: employee.email || '',
+      phone: employee.phone || '',
+      salary: employee.salary || 0,
+      joinDate: employee.joinDate || '',
+      shiftId: employee.shiftId || '',
+      role: employee.role || 'employee',
+      assignedWarehouseId: employee.assignedWarehouseId || ''
+    });
     setIsDialogOpen(true);
   };
 
   const handleAddNew = () => {
     setEditingEmployee(null);
+    setFormData({
+      name: '',
+      position: '',
+      department: '',
+      email: '',
+      phone: '',
+      salary: 0,
+      joinDate: '',
+      shiftId: '',
+      role: 'employee',
+      assignedWarehouseId: ''
+    });
     setIsDialogOpen(true);
+  };
+
+  const handleSave = () => {
+    // Validation
+    if (!formData.name.trim()) {
+      toast.error('يرجى إدخال الاسم الكامل');
+      return;
+    }
+    if (!formData.position.trim()) {
+      toast.error('يرجى إدخال المسمى الوظيفي');
+      return;
+    }
+    if (!formData.department) {
+      toast.error('يرجى اختيار القسم');
+      return;
+    }
+    if (!formData.email.trim()) {
+      toast.error('يرجى إدخال البريد الإلكتروني');
+      return;
+    }
+    if (!formData.phone.trim()) {
+      toast.error('يرجى إدخال رقم الهاتف');
+      return;
+    }
+    if (!formData.joinDate) {
+      toast.error('يرجى إدخال تاريخ التعيين');
+      return;
+    }
+
+    if (editingEmployee) {
+      // Update existing employee
+      setEmployees(employees.map(emp =>
+        emp.id === editingEmployee.id
+          ? {
+            ...emp,
+            ...formData,
+            salary: Number(formData.salary),
+            shiftId: formData.shiftId || undefined,
+            assignedWarehouseId: formData.assignedWarehouseId || undefined
+          }
+          : emp
+      ));
+      toast.success('تم تحديث الموظف بنجاح');
+    } else {
+      // Add new employee
+      const newEmployee: Employee = {
+        id: Date.now().toString(),
+        name: formData.name.trim(),
+        position: formData.position.trim(),
+        department: formData.department,
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        salary: Number(formData.salary),
+        joinDate: formData.joinDate,
+        shiftId: formData.shiftId || undefined,
+        role: formData.role,
+        assignedWarehouseId: formData.assignedWarehouseId || undefined,
+        status: 'نشط'
+      };
+      setEmployees([...employees, newEmployee]);
+      toast.success('تم إضافة الموظف بنجاح');
+    }
+
+    setIsDialogOpen(false);
   };
 
   return (
@@ -107,17 +207,28 @@ export function Employees({ onViewEmployee }: EmployeesProps) {
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div>
-                <Label>الاسم الكامل</Label>
-                <Input placeholder="أدخل الاسم الكامل" defaultValue={editingEmployee?.name} />
+                <Label>الاسم الكامل *</Label>
+                <Input
+                  placeholder="أدخل الاسم الكامل"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>المسمى الوظيفي</Label>
-                  <Input placeholder="مثال: مدير مبيعات" defaultValue={editingEmployee?.position} />
+                  <Label>المسمى الوظيفي *</Label>
+                  <Input
+                    placeholder="مثال: مدير مبيعات"
+                    value={formData.position}
+                    onChange={(e) => setFormData({ ...formData, position: e.target.value })}
+                  />
                 </div>
                 <div>
-                  <Label>القسم</Label>
-                  <Select defaultValue={editingEmployee?.department}>
+                  <Label>القسم *</Label>
+                  <Select
+                    value={formData.department}
+                    onValueChange={(value) => setFormData({ ...formData, department: value })}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="اختر القسم" />
                     </SelectTrigger>
@@ -133,26 +244,47 @@ export function Employees({ onViewEmployee }: EmployeesProps) {
                 </div>
               </div>
               <div>
-                <Label>البريد الإلكتروني</Label>
-                <Input type="email" placeholder="example@domain.com" defaultValue={editingEmployee?.email} />
+                <Label>البريد الإلكتروني *</Label>
+                <Input
+                  type="email"
+                  placeholder="example@domain.com"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                />
               </div>
               <div>
-                <Label>رقم الهاتف</Label>
-                <Input placeholder="05xxxxxxxx" defaultValue={editingEmployee?.phone} />
+                <Label>رقم الهاتف *</Label>
+                <Input
+                  placeholder="05xxxxxxxx"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>الراتب (ر.س)</Label>
-                  <Input type="number" placeholder="0" defaultValue={editingEmployee?.salary} />
+                  <Label>الراتب (ر.س) *</Label>
+                  <Input
+                    type="number"
+                    placeholder="0"
+                    value={formData.salary || ''}
+                    onChange={(e) => setFormData({ ...formData, salary: parseFloat(e.target.value) || 0 })}
+                  />
                 </div>
                 <div>
-                  <Label>تاريخ التعيين</Label>
-                  <Input type="date" defaultValue={editingEmployee?.joinDate} />
+                  <Label>تاريخ التعيين *</Label>
+                  <Input
+                    type="date"
+                    value={formData.joinDate}
+                    onChange={(e) => setFormData({ ...formData, joinDate: e.target.value })}
+                  />
                 </div>
               </div>
               <div>
                 <Label>الوردية المرتبطة</Label>
-                <Select defaultValue={editingEmployee?.shiftId}>
+                <Select
+                  value={formData.shiftId || undefined}
+                  onValueChange={(value) => setFormData({ ...formData, shiftId: value === 'none' ? '' : value })}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="حدد الوردية" />
                   </SelectTrigger>
@@ -168,7 +300,10 @@ export function Employees({ onViewEmployee }: EmployeesProps) {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>الدور / الصلاحيات</Label>
-                  <Select defaultValue={editingEmployee?.role || 'employee'}>
+                  <Select
+                    value={formData.role}
+                    onValueChange={(value: 'admin' | 'employee') => setFormData({ ...formData, role: value })}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="اختر الدور" />
                     </SelectTrigger>
@@ -180,12 +315,14 @@ export function Employees({ onViewEmployee }: EmployeesProps) {
                 </div>
                 <div>
                   <Label>المستودع المخصص (للموظفين فقط)</Label>
-                  <Select defaultValue={editingEmployee?.assignedWarehouseId}>
+                  <Select
+                    value={formData.assignedWarehouseId || undefined}
+                    onValueChange={(value) => setFormData({ ...formData, assignedWarehouseId: value === 'none' ? '' : value })}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="اختر المستودع" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">لا يوجد</SelectItem>
                       <SelectItem value="1">المستودع الرئيسي</SelectItem>
                       <SelectItem value="2">مستودع الفرع الشمالي</SelectItem>
                       <SelectItem value="3">مستودع الفرع الجنوبي</SelectItem>
@@ -194,10 +331,7 @@ export function Employees({ onViewEmployee }: EmployeesProps) {
                 </div>
               </div>
               <div className="flex gap-2 pt-4">
-                <Button className="flex-1" onClick={() => {
-                  toast.success(editingEmployee ? 'تم تحديث الموظف بنجاح' : 'تم إضافة الموظف بنجاح');
-                  setIsDialogOpen(false);
-                }}>
+                <Button className="flex-1" onClick={handleSave}>
                   {editingEmployee ? 'تحديث' : 'إضافة'}
                 </Button>
                 <Button variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>

@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Package, Warehouse, Download } from 'lucide-react';
+import { Package, Warehouse, Download, User, Printer } from 'lucide-react';
 import { initializeInventoryItem } from '../data/inventory';
 import { addJournalEntry, createOpeningInventoryEntry } from '../data/journalEntries';
+import { useUser } from '../contexts/UserContext';
 
 interface Product {
   id: string;
@@ -24,6 +25,7 @@ interface OpeningItem {
 }
 
 export function OpeningInventory() {
+  const { currentUser, isAdmin } = useUser();
   const [selectedWarehouse, setSelectedWarehouse] = useState('1');
   const [openingDate, setOpeningDate] = useState(new Date().toISOString().split('T')[0]);
   const [items, setItems] = useState<OpeningItem[]>([]);
@@ -35,6 +37,24 @@ export function OpeningInventory() {
     { id: '2', name: 'مستودع الفرع الشمالي' },
     { id: '3', name: 'مستودع الفرع الجنوبي' }
   ];
+
+  // تصفية المستودعات حسب الصلاحيات
+  const availableWarehouses = useMemo(() => {
+    if (isAdmin()) {
+      return warehouses;
+    }
+    if (currentUser?.assignedWarehouseId) {
+      return warehouses.filter(w => w.id === currentUser.assignedWarehouseId);
+    }
+    return [];
+  }, [isAdmin, currentUser?.assignedWarehouseId]);
+
+  // تعيين المستودع الافتراضي للموظف
+  useEffect(() => {
+    if (!isAdmin() && currentUser?.assignedWarehouseId) {
+      setSelectedWarehouse(currentUser.assignedWarehouseId);
+    }
+  }, [isAdmin, currentUser?.assignedWarehouseId]);
 
   const products: Product[] = [
     { id: '1', name: 'كمبيوتر محمول HP', defaultCost: 2500, barcode: '1234567890' },
@@ -118,15 +138,168 @@ export function OpeningInventory() {
     setError(null);
   };
 
+  const handlePrint = () => {
+    if (items.length === 0) {
+      setError('لا توجد أصناف للطباعة');
+      return;
+    }
+
+    const warehouseName = warehouses.find(w => w.id === selectedWarehouse)?.name || 'غير محدد';
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html dir="rtl" lang="ar">
+      <head>
+        <meta charset="UTF-8">
+        <title>مخزون أول المدة - ${warehouseName}</title>
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            direction: rtl;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+          }
+          .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+          }
+          .info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-size: 14px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+          }
+          th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: right;
+          }
+          th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+          }
+          .total-row {
+            background-color: #f9f9f9;
+            font-weight: bold;
+          }
+          .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>مخزون أول المدة</h1>
+          <p>المستودع: ${warehouseName}</p>
+          <p>التاريخ: ${new Date(openingDate).toLocaleDateString('ar-SA')}</p>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>الصنف</th>
+              <th>الكمية</th>
+              <th>تكلفة الوحدة</th>
+              <th>الإجمالي</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${items.map(item => `
+              <tr>
+                <td>${item.name}</td>
+                <td>${item.quantity}</td>
+                <td>${formatCurrency(item.costPrice)}</td>
+                <td>${formatCurrency(item.quantity * item.costPrice)}</td>
+              </tr>
+            `).join('')}
+            <tr class="total-row">
+              <td colspan="3">إجمالي قيمة مخزون أول المدة</td>
+              <td>${formatCurrency(totalAmount)}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="footer">
+          <p>تم الطباعة في: ${new Date().toLocaleString('ar-SA')}</p>
+          <p>المستخدم: ${currentUser?.name || 'غير محدد'}</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.focus();
+
+    // Wait for content to load then print
+    setTimeout(() => {
+      printWindow.print();
+    }, 250);
+  };
+
   return (
     <div className="space-y-6" dir="rtl">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="text-right flex-1">
-          <h1>مخزون أول المدة</h1>
-          <p className="text-gray-600">
-            استخدام هذه الواجهة لإدخال البضاعة الموجودة عند بدء استخدام النظام بدلاً من فواتير المشتريات
-          </p>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1>مخزون أول المدة</h1>
+            <p className="text-gray-600">
+              استخدام هذه الواجهة لإدخال البضاعة الموجودة عند بدء استخدام النظام
+            </p>
+          </div>
+          <div className="flex gap-4 items-center">
+            {/* User Info */}
+            <div className="space-y-1">
+              <label className="text-sm text-gray-600">المستخدم المسؤول</label>
+              <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-md">
+                <User className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-semibold text-blue-700">
+                  {currentUser?.name || 'غير محدد'}
+                </span>
+              </div>
+            </div>
+            {/* Warehouse Selection */}
+            {availableWarehouses.length > 0 && (
+              <div className="space-y-1">
+                <label className="text-sm text-gray-600">المستودع</label>
+                <Select
+                  value={selectedWarehouse}
+                  onValueChange={setSelectedWarehouse}
+                  disabled={!isAdmin() && availableWarehouses.length === 1}
+                >
+                  <SelectTrigger className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableWarehouses.map((warehouse) => (
+                      <SelectItem key={warehouse.id} value={warehouse.id}>
+                        {warehouse.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -134,28 +307,10 @@ export function OpeningInventory() {
       <Card>
         <CardHeader className="text-right">
           <CardTitle>إعدادات مخزون أول المدة</CardTitle>
-          <CardDescription>اختر المستودع وتاريخ بداية التعامل بالنظام</CardDescription>
+          <CardDescription>اختر تاريخ بداية التعامل بالنظام</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label>المستودع</Label>
-              <Select
-                value={selectedWarehouse}
-                onValueChange={setSelectedWarehouse}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {warehouses.map((w) => (
-                    <SelectItem key={w.id} value={w.id}>
-                      {w.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>تاريخ مخزون أول المدة</Label>
               <Input
@@ -304,10 +459,16 @@ export function OpeningInventory() {
                     <p className="text-xs text-gray-500">
                       ملاحظة: يمكن استخدام هذه الواجهة مرة واحدة عند بداية استخدام النظام، ولا تنشئ فواتير مشتريات.
                     </p>
-                    <Button className="gap-2" onClick={handleSaveOpeningInventory}>
-                      <Download className="w-4 h-4" />
-                      حفظ مخزون أول المدة
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" className="gap-2" onClick={handlePrint}>
+                        <Printer className="w-4 h-4" />
+                        طباعة
+                      </Button>
+                      <Button className="gap-2" onClick={handleSaveOpeningInventory}>
+                        <Download className="w-4 h-4" />
+                        حفظ مخزون أول المدة
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}

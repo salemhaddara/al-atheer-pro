@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Plus, X, Package, DollarSign, ShoppingCart, Info, ChevronDown, ChevronLeft, Folder, FolderOpen, ArrowRight } from 'lucide-react';
+import { Plus, X, Package, DollarSign, ShoppingCart, Info, ChevronDown, ChevronLeft, Folder, FolderOpen, ArrowRight, Image as ImageIcon, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Category {
@@ -52,6 +52,7 @@ interface Product {
   weight?: number;
   countryOfOrigin?: string;
   manufacturer?: string;
+  imageUrl?: string; // Product image URL or base64
   status: string;
 }
 
@@ -60,7 +61,7 @@ interface CreateEditProductProps {
   categories: Category[];
   taxRates: TaxRate[];
   products: Product[];
-  setProducts: (products: Product[]) => void;
+  setProducts: any; // Using any to avoid type conflicts between different Product interfaces
   onBack: () => void;
   formData: any;
   setFormData: (data: any) => void;
@@ -263,6 +264,88 @@ export function CreateEditProduct({
               <TabsContent value="basic" className="space-y-6 mt-0">
                 <div className="space-y-4">
                   <h3 className="text-sm font-semibold text-right text-gray-700">المعلومات الأساسية</h3>
+
+                  {/* Product Image Upload */}
+                  <div className="space-y-2">
+                    <Label>صورة المنتج</Label>
+                    <div className="flex gap-4 items-start">
+                      <div className="flex-1">
+                        <div className="border-2 border-dashed rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+                          <input
+                            type="file"
+                            id="product-image"
+                            className="hidden"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                // Validate file size (max 5MB)
+                                if (file.size > 5 * 1024 * 1024) {
+                                  toast.error('حجم الصورة يجب أن يكون أقل من 5 ميجابايت');
+                                  return;
+                                }
+                                // Validate file type
+                                if (!file.type.startsWith('image/')) {
+                                  toast.error('الرجاء اختيار ملف صورة صحيح');
+                                  return;
+                                }
+                                // Convert to base64
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  setFormData({ ...formData, imageUrl: reader.result as string });
+                                };
+                                reader.onerror = () => {
+                                  toast.error('حدث خطأ أثناء قراءة الصورة');
+                                };
+                                reader.readAsDataURL(file);
+                              }
+                            }}
+                          />
+                          <label
+                            htmlFor="product-image"
+                            className="cursor-pointer flex flex-col items-center gap-2"
+                          >
+                            {formData.imageUrl ? (
+                              <div className="relative w-full">
+                                <img
+                                  src={formData.imageUrl}
+                                  alt="معاينة الصورة"
+                                  className="w-full h-48 object-contain rounded-lg border"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="sm"
+                                  className="absolute top-2 left-2"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setFormData({ ...formData, imageUrl: '' });
+                                    const input = document.getElementById('product-image') as HTMLInputElement;
+                                    if (input) input.value = '';
+                                  }}
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <>
+                                <div className="flex items-center justify-center w-16 h-16 mx-auto bg-gray-100 rounded-full mb-2">
+                                  <ImageIcon className="w-8 h-8 text-gray-400" />
+                                </div>
+                                <p className="text-sm text-gray-600">انقر لرفع صورة المنتج</p>
+                                <p className="text-xs text-gray-400">PNG, JPG, GIF حتى 5MB</p>
+                                <Button type="button" variant="outline" size="sm" className="gap-2 mt-2">
+                                  <Upload className="w-4 h-4" />
+                                  اختر صورة
+                                </Button>
+                              </>
+                            )}
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">

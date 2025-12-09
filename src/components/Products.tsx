@@ -70,6 +70,7 @@ interface Product {
   weight?: number;
   countryOfOrigin?: string;
   manufacturer?: string;
+  imageUrl?: string; // Product image URL or base64
   status: string;
 }
 
@@ -400,6 +401,7 @@ export function Products() {
     weight: undefined as number | undefined,
     countryOfOrigin: '',
     manufacturer: '',
+    imageUrl: '',
     status: 'نشط'
   });
 
@@ -624,6 +626,7 @@ export function Products() {
       weight: undefined,
       countryOfOrigin: '',
       manufacturer: '',
+      imageUrl: '',
       status: 'نشط'
     });
     setAdditionalUnits([]);
@@ -664,6 +667,7 @@ export function Products() {
       weight: product.weight,
       countryOfOrigin: product.countryOfOrigin || '',
       manufacturer: product.manufacturer || '',
+      imageUrl: product.imageUrl || '',
       status: product.status
     });
 
@@ -767,6 +771,7 @@ export function Products() {
       weight: formData.weight,
       countryOfOrigin: formData.countryOfOrigin,
       manufacturer: formData.manufacturer,
+      imageUrl: formData.imageUrl,
       status: formData.status
     };
 
@@ -1350,10 +1355,10 @@ export function Products() {
                   <CardTitle>قائمة المنتجات</CardTitle>
                   <CardDescription>جميع المنتجات المسجلة في النظام</CardDescription>
                 </div>
-                    <Button onClick={handleAddProduct} className="gap-2">
-                      <Plus className="w-4 h-4" />
-                      إضافة منتج جديد
-                    </Button>
+                <Button onClick={handleAddProduct} className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  إضافة منتج جديد
+                </Button>
 
               </div>
             </CardHeader>
@@ -1422,8 +1427,8 @@ export function Products() {
               </div>
 
               {/* Products Table */}
-                <div className="border rounded-lg overflow-hidden">
-                  <Table>
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50">
                       <TableHead className="text-right w-12"></TableHead>
@@ -1729,7 +1734,7 @@ export function Products() {
                     <p>لا توجد منتجات</p>
                   </div>
                 )}
-                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

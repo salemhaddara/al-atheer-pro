@@ -148,20 +148,27 @@ export const createSalesJournalEntry = (
 export const createPurchaseJournalEntry = (
   purchaseOrderNumber: string,
   amount: number,
-  paymentMethod: 'cash' | 'credit',
+  paymentMethod: 'cash' | 'credit' | 'bankWithdrawal',
   supplierId?: string,
   supplierName?: string
 ): JournalEntry => {
   const today = new Date().toISOString().split('T')[0];
   const now = new Date().toISOString();
 
-  const creditAccount = paymentMethod === 'cash'
-    ? getAccountCodeByName('الصندوق') // '1010'
-    : getAccountCodeByName('الموردين'); // '2010'
+  let creditAccount = getAccountCodeByName('الصندوق'); // '1010'
+  if (paymentMethod === 'credit') {
+    creditAccount = getAccountCodeByName('الموردين'); // '2010'
+  } else if (paymentMethod === 'bankWithdrawal') {
+    creditAccount = getAccountCodeByName('البنك'); // '1020'
+  }
+
+  const paymentMethodText = paymentMethod === 'cash' ? 'نقداً'
+    : paymentMethod === 'credit' ? 'على الحساب'
+      : 'صرف من بنك';
 
   const description = supplierName
-    ? `شراء بضاعة ${paymentMethod === 'cash' ? 'نقداً' : 'على الحساب'} - ${supplierName}`
-    : `شراء بضاعة ${paymentMethod === 'cash' ? 'نقداً' : 'على الحساب'}`;
+    ? `شراء بضاعة ${paymentMethodText} - ${supplierName}`
+    : `شراء بضاعة ${paymentMethodText}`;
 
   return {
     id: generateEntryId('auto'),
@@ -177,6 +184,87 @@ export const createPurchaseJournalEntry = (
     sourceReference: purchaseOrderNumber,
     createdAt: now
   };
+};
+
+/**
+ * Create complete purchase journal entries with mixed payment methods
+ * Supports cash, credit, transfer, and bankWithdrawal payments in any combination
+ * Returns array of entries: [purchase entries for each payment method]
+ */
+export const createMixedPaymentPurchaseJournalEntries = (
+  purchaseOrderNumber: string,
+  amount: number,
+  paymentBreakdown: {
+    cash: number;
+    credit: number;
+    bankWithdrawal: number;
+  },
+  supplierId?: string,
+  supplierName?: string,
+  selectedBankId?: string
+): JournalEntry[] => {
+  const today = new Date().toISOString().split('T')[0];
+  const now = new Date().toISOString();
+  const entries: JournalEntry[] = [];
+
+  const supplierInfo = supplierName ? ` - ${supplierName}` : '';
+
+  // Create entry for cash payment
+  if (paymentBreakdown.cash > 0) {
+    entries.push({
+      id: generateEntryId('auto'),
+      date: today,
+      description: `شراء بضاعة نقداً${supplierInfo}`,
+      debitAccount: getAccountCodeByName('المخزون'), // '1040'
+      creditAccount: getAccountCodeByName('الصندوق'), // '1010'
+      amount: paymentBreakdown.cash,
+      reference: purchaseOrderNumber,
+      status: 'مُعتمد',
+      type: 'auto',
+      operationType: 'شراء',
+      sourceReference: purchaseOrderNumber,
+      createdAt: now
+    });
+  }
+
+  // Create entry for credit payment
+  if (paymentBreakdown.credit > 0) {
+    entries.push({
+      id: generateEntryId('auto'),
+      date: today,
+      description: `شراء بضاعة على الحساب${supplierInfo}`,
+      debitAccount: getAccountCodeByName('المخزون'), // '1040'
+      creditAccount: getAccountCodeByName('الموردين'), // '2010'
+      amount: paymentBreakdown.credit,
+      reference: purchaseOrderNumber,
+      status: 'مُعتمد',
+      type: 'auto',
+      operationType: 'شراء',
+      sourceReference: purchaseOrderNumber,
+      createdAt: now
+    });
+  }
+
+  // Create entry for bank withdrawal payment
+  if (paymentBreakdown.bankWithdrawal > 0) {
+    const bankInfo = selectedBankId ? ` - بنك: ${selectedBankId}` : '';
+    entries.push({
+      id: generateEntryId('auto'),
+      date: today,
+      description: `شراء بضاعة صرف من بنك${bankInfo}${supplierInfo}`,
+      debitAccount: getAccountCodeByName('المخزون'), // '1040'
+      creditAccount: getAccountCodeByName('البنك'), // '1020'
+      amount: paymentBreakdown.bankWithdrawal,
+      reference: purchaseOrderNumber,
+      status: 'مُعتمد',
+      type: 'auto',
+      operationType: 'شراء',
+      sourceReference: purchaseOrderNumber,
+      createdAt: now
+    });
+  }
+
+  return entries;
 };
 
 /**

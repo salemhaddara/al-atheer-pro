@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -12,6 +12,8 @@ import { ScrollArea } from './ui/scroll-area';
 import { Plus, Edit2, Trash2, CalendarDays, Users2, Clock3, Download, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { defaultShiftAssignments, defaultShiftTemplates, ShiftAssignment, ShiftTemplate } from '../data/shifts';
+import { SearchableSelect } from './ui/searchable-select';
+import type { Employee } from './Employees';
 
 interface ShiftFormState {
     id?: string;
@@ -28,6 +30,7 @@ interface ShiftFormState {
 }
 
 interface AssignmentFormState {
+    employeeId: string;
     employeeName: string;
     shiftId: string;
     role?: string;
@@ -56,12 +59,83 @@ export function Shifts() {
         notes: ''
     });
     const [assignmentForm, setAssignmentForm] = useState<AssignmentFormState>({
+        employeeId: '',
         employeeName: '',
         shiftId: shifts[0]?.id ?? '',
         role: '',
         date: new Date().toISOString().split('T')[0],
         status: 'مؤكد'
     });
+
+    // Load employees from localStorage or use default list
+    const [employees, setEmployees] = useState<Employee[]>([]);
+
+    useEffect(() => {
+        // Try to load employees from localStorage
+        if (typeof window !== 'undefined') {
+            try {
+                const stored = localStorage.getItem('employees');
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    setEmployees(parsed);
+                } else {
+                    // Default employees list
+                    const defaultEmployees: Employee[] = [
+                        { id: '1', name: 'خالد أحمد', position: 'مدير عام', department: 'الإدارة', email: 'khaled@example.com', phone: '0501234567', salary: 15000, joinDate: '2020-01-15', shiftId: 'shift-1', status: 'نشط', nationality: 'سعودي', maritalStatus: 'متزوج', birthDate: '1985-05-10', gender: 'ذكر', branchIds: ['1'], role: 'admin' },
+                        { id: '2', name: 'سارة محمد', position: 'مديرة مبيعات', department: 'المبيعات', email: 'sara@example.com', phone: '0502345678', salary: 12000, joinDate: '2021-03-20', shiftId: 'shift-4', status: 'نشط', nationality: 'سعودي', maritalStatus: 'متزوج', birthDate: '1990-08-15', gender: 'أنثى', branchIds: ['1', '2'], role: 'admin' },
+                        { id: '3', name: 'عبدالله حسن', position: 'محاسب', department: 'المحاسبة', email: 'abdullah@example.com', phone: '0503456789', salary: 8000, joinDate: '2021-06-10', shiftId: 'shift-2', status: 'نشط', nationality: 'سعودي', maritalStatus: 'أعزب', birthDate: '1995-12-20', gender: 'ذكر', branchIds: ['1'], role: 'admin' },
+                        { id: '4', name: 'هند علي', position: 'مديرة موارد بشرية', department: 'الموارد البشرية', email: 'hind@example.com', phone: '0504567890', salary: 10000, joinDate: '2020-09-05', shiftId: 'shift-1', status: 'نشط', nationality: 'سعودي', maritalStatus: 'متزوج', birthDate: '1988-03-25', gender: 'أنثى', branchIds: ['1'], role: 'admin' },
+                        { id: '5', name: 'يوسف عمر', position: 'مطور برمجيات', department: 'تقنية المعلومات', email: 'youssef@example.com', phone: '0505678901', salary: 11000, joinDate: '2022-02-14', shiftId: 'shift-2', status: 'نشط', nationality: 'سعودي', maritalStatus: 'أعزب', birthDate: '1993-07-08', gender: 'ذكر', branchIds: ['1'], role: 'admin' },
+                        { id: '6', name: 'ريم سعيد', position: 'مسؤولة تسويق', department: 'التسويق', email: 'reem@example.com', phone: '0506789012', salary: 9000, joinDate: '2022-05-22', shiftId: 'shift-3', status: 'نشط', nationality: 'سعودي', maritalStatus: 'أعزب', birthDate: '1996-11-12', gender: 'أنثى', branchIds: ['2'], role: 'admin' },
+                        { id: '7', name: 'محمد الكاشير', position: 'كاشير', department: 'المبيعات', email: 'cashier1@example.com', phone: '0501111111', salary: 5000, joinDate: '2023-01-01', shiftId: 'shift-1', status: 'نشط', nationality: 'سعودي', maritalStatus: 'أعزب', birthDate: '1998-01-01', gender: 'ذكر', branchIds: ['1'], role: 'employee', assignedWarehouseId: '1' },
+                        { id: '8', name: 'فاطمة الكاشيرة', position: 'كاشيرة', department: 'المبيعات', email: 'cashier2@example.com', phone: '0502222222', salary: 5000, joinDate: '2023-02-01', shiftId: 'shift-2', status: 'نشط', nationality: 'سعودي', maritalStatus: 'أعزب', birthDate: '1999-01-01', gender: 'أنثى', branchIds: ['2'], role: 'employee', assignedWarehouseId: '2' },
+                    ];
+                    setEmployees(defaultEmployees);
+                }
+            } catch (error) {
+                console.error('Error loading employees:', error);
+                setEmployees([]);
+            }
+        }
+    }, []);
+
+    // Listen for employees updates
+    useEffect(() => {
+        const handleStorageChange = () => {
+            if (typeof window !== 'undefined') {
+                try {
+                    const stored = localStorage.getItem('employees');
+                    if (stored) {
+                        const parsed = JSON.parse(stored);
+                        setEmployees(parsed);
+                    }
+                } catch (error) {
+                    console.error('Error loading employees:', error);
+                }
+            }
+        };
+
+        window.addEventListener('storage', handleStorageChange);
+        window.addEventListener('employeesUpdated', handleStorageChange);
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            window.removeEventListener('employeesUpdated', handleStorageChange);
+        };
+    }, []);
+
+    // Prepare employees for SearchableSelect (only active employees)
+    const employeeOptions = useMemo(() => {
+        return employees
+            .filter(emp => emp.status === 'نشط' || !emp.status)
+            .map(emp => ({
+                id: emp.id,
+                name: emp.name,
+                phone: emp.phone,
+                position: emp.position,
+                department: emp.department
+            }));
+    }, [employees]);
 
     const filteredShifts = useMemo(() => {
         return shifts.filter(shift =>
@@ -157,6 +231,7 @@ export function Shifts() {
 
     const openAssignmentDialog = () => {
         setAssignmentForm({
+            employeeId: '',
             employeeName: '',
             shiftId: shifts[0]?.id ?? '',
             role: '',
@@ -167,8 +242,8 @@ export function Shifts() {
     };
 
     const handleAssignmentSave = () => {
-        if (!assignmentForm.employeeName || !assignmentForm.shiftId) {
-            toast.error('الرجاء إدخال اسم الموظف واختيار الوردية');
+        if (!assignmentForm.employeeId || !assignmentForm.employeeName || !assignmentForm.shiftId) {
+            toast.error('الرجاء اختيار الموظف واختيار الوردية');
             return;
         }
         const targetShift = shifts.find(shift => shift.id === assignmentForm.shiftId);
@@ -178,7 +253,11 @@ export function Shifts() {
         }
         const newAssignment: ShiftAssignment = {
             id: `assign-${Date.now()}`,
-            ...assignmentForm
+            employeeName: assignmentForm.employeeName,
+            shiftId: assignmentForm.shiftId,
+            role: assignmentForm.role,
+            date: assignmentForm.date,
+            status: assignmentForm.status
         };
         setAssignments([...assignments, newAssignment]);
         toast.success('تم تعيين الموظف في الوردية');
@@ -560,7 +639,22 @@ export function Shifts() {
                     <div className="space-y-4">
                         <div>
                             <Label>اسم الموظف</Label>
-                            <Input value={assignmentForm.employeeName} onChange={(e) => setAssignmentForm({ ...assignmentForm, employeeName: e.target.value })} />
+                            <SearchableSelect
+                                options={employeeOptions}
+                                value={assignmentForm.employeeId}
+                                onValueChange={(employeeId) => {
+                                    const selectedEmployee = employees.find(emp => emp.id === employeeId);
+                                    setAssignmentForm({
+                                        ...assignmentForm,
+                                        employeeId: employeeId,
+                                        employeeName: selectedEmployee?.name || ''
+                                    });
+                                }}
+                                placeholder="اختر الموظف..."
+                                searchPlaceholder="ابحث بالاسم أو الهاتف..."
+                                emptyMessage="لا يوجد موظفين"
+                                searchKeys={['name', 'phone', 'position', 'department']}
+                            />
                         </div>
                         <div>
                             <Label>الوردية</Label>
