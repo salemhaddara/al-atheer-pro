@@ -509,6 +509,10 @@
       "tobaccoTax": "ضريبة التبغ الخاصة",
       "tobaccoTaxEn": "Special Tobacco Tax",
       "tobaccoTaxDesc": "تفعيل ضريبة انتقائية إضافية على منتجات التبغ",
+      "priceModificationIncludesTax": "تعديل السعر شامل الضريبة",
+      "priceModificationIncludesTaxDesc": "عند التفعيل، السعر المدخل عند تعديل السعر في صفحة POS سيكون شاملاً للضريبة",
+      "priceModificationIncludesTaxEnabled": "تم تفعيل: تعديل السعر شامل الضريبة",
+      "priceModificationIncludesTaxDisabled": "تم إلغاء: تعديل السعر غير شامل للضريبة",
       "eInvoicing": "تفعيل الفواتير الإلكترونية",
       "eInvoicingDesc": "التوافق مع منظومة الفاتورة الإلكترونية"
     },

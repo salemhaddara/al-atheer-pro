@@ -509,6 +509,10 @@
       "tobaccoTax": "Special Tobacco Tax",
       "tobaccoTaxEn": "Special Tobacco Tax",
       "tobaccoTaxDesc": "Enable additional excise tax on tobacco products",
+      "priceModificationIncludesTax": "Price Modification Includes Tax",
+      "priceModificationIncludesTaxDesc": "When enabled, the price entered when modifying price in POS page will include tax",
+      "priceModificationIncludesTaxEnabled": "Enabled: Price modification includes tax",
+      "priceModificationIncludesTaxDisabled": "Disabled: Price modification does not include tax",
       "eInvoicing": "Enable E-Invoicing",
       "eInvoicingDesc": "Compliance with electronic invoicing system"
     },

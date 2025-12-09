@@ -7,11 +7,10 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
 import { ScrollArea } from './ui/scroll-area';
-import { Plus, Search, Filter, FileText, DollarSign, TrendingUp, TrendingDown, Download, Eye, ShoppingCart, Package, Warehouse, Receipt, ArrowRightLeft, Zap, BookOpen } from 'lucide-react';
+import { Plus, Search, Filter, FileText, DollarSign, TrendingUp, TrendingDown, Download, Eye, ShoppingCart, Package, Warehouse, Receipt, ArrowRightLeft, Zap, BookOpen, Trash2, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { getAllJournalEntries, getEntriesByType, addJournalEntry, type JournalEntry } from '../data/journalEntries';
 
@@ -126,15 +125,20 @@ export function Accounting() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | JournalEntry['operationType']>('all');
   const [activeTab, setActiveTab] = useState<'auto' | 'manual'>('auto');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [showAddEntryPage, setShowAddEntryPage] = useState(false);
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     reference: '',
-    description: '',
-    debitAccount: '',
-    creditAccount: '',
-    amount: 0
+    description: ''
   });
+
+  // Multiple debit and credit accounts
+  const [debitEntries, setDebitEntries] = useState<Array<{ account: string; amount: number }>>([
+    { account: '', amount: 0 }
+  ]);
+  const [creditEntries, setCreditEntries] = useState<Array<{ account: string; amount: number }>>([
+    { account: '', amount: 0 }
+  ]);
 
   // فلترة القيود
   const filteredEntries = useMemo(() => {
@@ -159,30 +163,76 @@ export function Accounting() {
     return entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [autoEntries, manualEntries, activeTab, filterType, searchTerm]);
 
-  const handleAddEntry = (formData: {
-    date: string;
-    reference: string;
-    description: string;
-    debitAccount: string;
-    creditAccount: string;
-    amount: number;
-  }) => {
-    const newEntry: JournalEntry = {
-      id: `JE-${Date.now()}`,
-      date: formData.date,
-      description: formData.description,
-      debitAccount: formData.debitAccount,
-      creditAccount: formData.creditAccount,
-      amount: formData.amount,
-      reference: formData.reference,
-      status: 'مُعتمد',
-      type: 'manual',
-      createdAt: new Date().toISOString()
-    };
+  const handleAddEntry = () => {
+    // Validate that all debit and credit entries have accounts and amounts
+    const validDebitEntries = debitEntries.filter(e => e.account && e.amount > 0);
+    const validCreditEntries = creditEntries.filter(e => e.account && e.amount > 0);
 
-    addJournalEntry(newEntry);
+    if (validDebitEntries.length === 0 || validCreditEntries.length === 0) {
+      toast.error('يرجى إضافة حساب مدين واحد على الأقل وحساب دائن واحد على الأقل');
+      return;
+    }
+
+    // Calculate totals
+    const totalDebit = validDebitEntries.reduce((sum, e) => sum + e.amount, 0);
+    const totalCredit = validCreditEntries.reduce((sum, e) => sum + e.amount, 0);
+
+    // Validate that debit total equals credit total
+    if (Math.abs(totalDebit - totalCredit) > 0.01) {
+      toast.error(`المجموع المدين (${totalDebit.toFixed(2)}) يجب أن يساوي المجموع الدائن (${totalCredit.toFixed(2)})`);
+      return;
+    }
+
+    if (!formData.description) {
+      toast.error('يرجى إدخال وصف للقيد');
+      return;
+    }
+
+    // Create journal entries
+    // Strategy: Distribute each debit entry proportionally across all credit entries
+    const baseId = Date.now();
+    const entries: JournalEntry[] = [];
+
+    validDebitEntries.forEach((debitEntry, debitIdx) => {
+      const debitAmount = debitEntry.amount;
+
+      // Calculate how much of this debit should go to each credit account
+      validCreditEntries.forEach((creditEntry, creditIdx) => {
+        // Proportional distribution: each credit gets (creditAmount / totalCredit) of each debit
+        const creditProportion = creditEntry.amount / totalCredit;
+        const allocatedAmount = debitAmount * creditProportion;
+
+        if (allocatedAmount > 0.01) {
+          entries.push({
+            id: `JE-${baseId}-${debitIdx}-${creditIdx}`,
+            date: formData.date,
+            description: formData.description,
+            debitAccount: debitEntry.account,
+            creditAccount: creditEntry.account,
+            amount: Math.round(allocatedAmount * 100) / 100, // Round to 2 decimal places
+            reference: formData.reference || `REF-${baseId}`,
+            status: 'مُعتمد',
+            type: 'manual',
+            createdAt: new Date().toISOString()
+          });
+        }
+      });
+    });
+
+    // Add all entries
+    entries.forEach(entry => addJournalEntry(entry));
     setAllEntries(getAllJournalEntries());
-    toast.success('تم إضافة القيد المحاسبي بنجاح');
+    toast.success(`تم إضافة ${entries.length} قيد محاسبي بنجاح`);
+
+    // Reset form
+    setFormData({
+      date: new Date().toISOString().split('T')[0],
+      reference: '',
+      description: ''
+    });
+    setDebitEntries([{ account: '', amount: 0 }]);
+    setCreditEntries([{ account: '', amount: 0 }]);
+    setShowAddEntryPage(false);
   };
 
   const formatCurrency = (amount: number) => {
@@ -266,29 +316,29 @@ export function Accounting() {
   const totalAutoAmount = autoEntries.reduce((sum, e) => sum + e.amount, 0);
   const totalManualAmount = manualEntries.reduce((sum, e) => sum + e.amount, 0);
 
-  return (
-    <div className="space-y-6" dir="rtl">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="text-right flex-1">
-          <h1 className="text-3xl font-bold">المحاسبة والمالية</h1>
-          <p className="text-gray-600">إدارة القيود المحاسبية التلقائية واليدوية والحسابات المالية</p>
-        </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="gap-2 shrink-0">
-              <Plus className="w-4 h-4" />
-              قيد محاسبي جديد
+  // Show add entry page if showAddEntryPage is true
+  if (showAddEntryPage) {
+    return (
+      <div className="space-y-6" dir="rtl">
+        {/* Header with Back Button */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="outline" onClick={() => setShowAddEntryPage(false)} className="gap-2">
+              <ArrowRight className="w-4 h-4" />
+              الرجوع
             </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl" dir="rtl">
-            <DialogHeader className="text-right">
-              <DialogTitle>إضافة قيد محاسبي يدوي</DialogTitle>
-              <DialogDescription>
-                قم بإدخال تفاصيل القيد المحاسبي (القيود التلقائية تُنشأ تلقائياً من العمليات)
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
+            <div className="text-right">
+              <h1 className="text-3xl font-bold">إضافة قيد محاسبي يدوي</h1>
+              <p className="text-gray-600">قم بإدخال تفاصيل القيد المحاسبي (القيود التلقائية تُنشأ تلقائياً من العمليات)</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Form Content */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-6">
+              {/* Basic Information */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>التاريخ</Label>
@@ -315,69 +365,240 @@ export function Accounting() {
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>الحساب المدين</Label>
-                  <Select value={formData.debitAccount} onValueChange={(value) => setFormData({ ...formData, debitAccount: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="اختر الحساب" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {accounts.map((account) => (
-                        <SelectItem key={account.code} value={account.name}>
-                          {account.name} ({account.code})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+
+              {/* Debit and Credit Sections */}
+              <div className="grid grid-cols-2 gap-6">
+                {/* Debit Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-lg font-semibold text-red-600">الحسابات المدينة (مدين)</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDebitEntries([...debitEntries, { account: '', amount: 0 }])}
+                      className="gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      إضافة حساب
+                    </Button>
+                  </div>
+                  <div className="space-y-3 border rounded-lg p-4 bg-red-50">
+                    {debitEntries.map((entry, index) => (
+                      <div key={index} className="grid grid-cols-[1fr_auto_120px] gap-2 items-end">
+                        <div className="space-y-1">
+                          <Label className="text-sm">الحساب</Label>
+                          <Select
+                            value={entry.account}
+                            onValueChange={(value) => {
+                              const newEntries = [...debitEntries];
+                              newEntries[index].account = value;
+                              setDebitEntries(newEntries);
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="اختر الحساب" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {accounts.map((account) => (
+                                <SelectItem key={account.code} value={account.name}>
+                                  {account.name} ({account.code})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-sm">المبلغ</Label>
+                          <Input
+                            type="number"
+                            placeholder="0.00"
+                            value={entry.amount || ''}
+                            onChange={(e) => {
+                              const newEntries = [...debitEntries];
+                              newEntries[index].amount = Number(e.target.value) || 0;
+                              setDebitEntries(newEntries);
+                            }}
+                            className="w-32"
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (debitEntries.length > 1) {
+                              setDebitEntries(debitEntries.filter((_, i) => i !== index));
+                            } else {
+                              toast.error('يجب أن يكون هناك حساب مدين واحد على الأقل');
+                            }
+                          }}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <div className="pt-2 border-t">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold">المجموع:</span>
+                        <span className="font-bold text-red-600">
+                          {formatCurrency(debitEntries.reduce((sum, e) => sum + (e.amount || 0), 0))}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>الحساب الدائن</Label>
-                  <Select value={formData.creditAccount} onValueChange={(value) => setFormData({ ...formData, creditAccount: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="اختر الحساب" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {accounts.map((account) => (
-                        <SelectItem key={account.code} value={account.name}>
-                          {account.name} ({account.code})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+
+                {/* Credit Section */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-lg font-semibold text-green-600">الحسابات الدائنة (دائن)</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCreditEntries([...creditEntries, { account: '', amount: 0 }])}
+                      className="gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      إضافة حساب
+                    </Button>
+                  </div>
+                  <div className="space-y-3 border rounded-lg p-4 bg-green-50">
+                    {creditEntries.map((entry, index) => (
+                      <div key={index} className="grid grid-cols-[1fr_auto_120px] gap-2 items-end">
+                        <div className="space-y-1">
+                          <Label className="text-sm">الحساب</Label>
+                          <Select
+                            value={entry.account}
+                            onValueChange={(value) => {
+                              const newEntries = [...creditEntries];
+                              newEntries[index].account = value;
+                              setCreditEntries(newEntries);
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="اختر الحساب" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {accounts.map((account) => (
+                                <SelectItem key={account.code} value={account.name}>
+                                  {account.name} ({account.code})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-sm">المبلغ</Label>
+                          <Input
+                            type="number"
+                            placeholder="0.00"
+                            value={entry.amount || ''}
+                            onChange={(e) => {
+                              const newEntries = [...creditEntries];
+                              newEntries[index].amount = Number(e.target.value) || 0;
+                              setCreditEntries(newEntries);
+                            }}
+                            className="w-32"
+                          />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (creditEntries.length > 1) {
+                              setCreditEntries(creditEntries.filter((_, i) => i !== index));
+                            } else {
+                              toast.error('يجب أن يكون هناك حساب دائن واحد على الأقل');
+                            }
+                          }}
+                          className="text-green-600 hover:text-green-700"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <div className="pt-2 border-t">
+                      <div className="flex justify-between items-center">
+                        <span className="font-semibold">المجموع:</span>
+                        <span className="font-bold text-green-600">
+                          {formatCurrency(creditEntries.reduce((sum, e) => sum + (e.amount || 0), 0))}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>المبلغ</Label>
-                <Input
-                  type="number"
-                  placeholder="0.00"
-                  value={formData.amount || ''}
-                  onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
-                />
+
+              {/* Balance Check */}
+              <div className="p-4 border rounded-lg bg-gray-50">
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold">الفرق:</span>
+                  <span className={`font-bold text-lg ${Math.abs(
+                    debitEntries.reduce((sum, e) => sum + (e.amount || 0), 0) -
+                    creditEntries.reduce((sum, e) => sum + (e.amount || 0), 0)
+                  ) < 0.01 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                    {formatCurrency(
+                      debitEntries.reduce((sum, e) => sum + (e.amount || 0), 0) -
+                      creditEntries.reduce((sum, e) => sum + (e.amount || 0), 0)
+                    )}
+                  </span>
+                </div>
+                {Math.abs(
+                  debitEntries.reduce((sum, e) => sum + (e.amount || 0), 0) -
+                  creditEntries.reduce((sum, e) => sum + (e.amount || 0), 0)
+                ) >= 0.01 && (
+                    <p className="text-sm text-red-600 mt-2">⚠️ يجب أن يكون المجموع المدين مساوياً للمجموع الدائن</p>
+                  )}
               </div>
-              <div className="flex gap-2">
-                <Button onClick={() => {
-                  if (!formData.debitAccount || !formData.creditAccount || !formData.amount || !formData.description) {
-                    toast.error('يرجى ملء جميع الحقول المطلوبة');
-                    return;
-                  }
-                  handleAddEntry(formData);
-                  setFormData({
-                    date: new Date().toISOString().split('T')[0],
-                    reference: '',
-                    description: '',
-                    debitAccount: '',
-                    creditAccount: '',
-                    amount: 0
-                  });
-                  setIsDialogOpen(false);
-                }} className="flex-1">حفظ القيد</Button>
-                <Button variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>إلغاء</Button>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-4 border-t">
+                <Button onClick={handleAddEntry} className="flex-1" size="lg">
+                  حفظ القيد
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  size="lg"
+                  onClick={() => {
+                    setShowAddEntryPage(false);
+                    setFormData({
+                      date: new Date().toISOString().split('T')[0],
+                      reference: '',
+                      description: ''
+                    });
+                    setDebitEntries([{ account: '', amount: 0 }]);
+                    setCreditEntries([{ account: '', amount: 0 }]);
+                  }}
+                >
+                  إلغاء
+                </Button>
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Main page
+  return (
+    <div className="space-y-6" dir="rtl">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="text-right flex-1">
+          <h1 className="text-3xl font-bold">المحاسبة والمالية</h1>
+          <p className="text-gray-600">إدارة القيود المحاسبية التلقائية واليدوية والحسابات المالية</p>
+        </div>
+        <Button className="gap-2 shrink-0" onClick={() => setShowAddEntryPage(true)}>
+          <Plus className="w-4 h-4" />
+          قيد محاسبي جديد
+        </Button>
       </div>
 
       {/* Statistics Cards */}

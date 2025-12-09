@@ -28,6 +28,7 @@ export function Settings() {
   const { t, direction, language, setLanguage } = useLanguage();
   const [systemType, setSystemType] = useState<'restaurant' | 'retail'>('retail');
   const [pricesIncludeTax, setPricesIncludeTax] = useState(true);
+  const [priceModificationIncludesTax, setPriceModificationIncludesTax] = useState(true);
 
   // Vouchers management state
   const [otherSources, setOtherSources] = useState<OtherSource[]>([]);
@@ -54,6 +55,14 @@ export function Settings() {
       } else {
         // Default to true (prices include tax)
         localStorage.setItem('prices_include_tax', 'true');
+      }
+
+      const savedPriceModificationIncludesTax = localStorage.getItem('price_modification_includes_tax');
+      if (savedPriceModificationIncludesTax !== null) {
+        setPriceModificationIncludesTax(savedPriceModificationIncludesTax === 'true');
+      } else {
+        // Default to true (price modification includes tax)
+        localStorage.setItem('price_modification_includes_tax', 'true');
       }
     }
 
@@ -492,6 +501,23 @@ export function Settings() {
                       setPricesIncludeTax(checked);
                       localStorage.setItem('prices_include_tax', String(checked));
                       toast.success(checked ? 'تم تفعيل: الأسعار شاملة الضريبة' : 'تم إلغاء: الأسعار غير شاملة للضريبة');
+                    }}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between p-3 border rounded-lg bg-green-50">
+                  <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                    <Label>{t('settings.taxes.priceModificationIncludesTax')}</Label>
+                    <p className="text-sm text-gray-600">{t('settings.taxes.priceModificationIncludesTaxDesc')}</p>
+                  </div>
+                  <Switch
+                    checked={priceModificationIncludesTax}
+                    onCheckedChange={(checked) => {
+                      setPriceModificationIncludesTax(checked);
+                      localStorage.setItem('price_modification_includes_tax', String(checked));
+                      // Dispatch custom event to update POS page immediately
+                      window.dispatchEvent(new Event('priceModificationSettingChanged'));
+                      toast.success(checked ? t('settings.taxes.priceModificationIncludesTaxEnabled') : t('settings.taxes.priceModificationIncludesTaxDisabled'));
                     }}
                   />
                 </div>

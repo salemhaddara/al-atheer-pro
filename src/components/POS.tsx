@@ -61,6 +61,7 @@ export function POS() {
   const [editingPriceValue, setEditingPriceValue] = useState<string>('');
   const [editingQuantityId, setEditingQuantityId] = useState<string | null>(null);
   const [editingQuantityValue, setEditingQuantityValue] = useState<string>('');
+  const [priceModificationIncludesTax, setPriceModificationIncludesTax] = useState(true);
 
   // POS Terminal and Drawer Management
   const [selectedPosId, setSelectedPosId] = useState<string>('pos-1');
@@ -152,10 +153,18 @@ export function POS() {
       if (savedType) {
         setSystemType(savedType);
       }
+
+      const savedPriceModificationIncludesTax = localStorage.getItem('price_modification_includes_tax');
+      if (savedPriceModificationIncludesTax !== null) {
+        setPriceModificationIncludesTax(savedPriceModificationIncludesTax === 'true');
+      } else {
+        // Default to true
+        setPriceModificationIncludesTax(true);
+      }
     }
   }, []);
 
-  // Listen for storage changes to update system type
+  // Listen for storage changes to update system type and price modification setting
   useEffect(() => {
     const handleStorageChange = () => {
       if (typeof window !== 'undefined') {
@@ -163,16 +172,23 @@ export function POS() {
         if (savedType) {
           setSystemType(savedType);
         }
+
+        const savedPriceModificationIncludesTax = localStorage.getItem('price_modification_includes_tax');
+        if (savedPriceModificationIncludesTax !== null) {
+          setPriceModificationIncludesTax(savedPriceModificationIncludesTax === 'true');
+        }
       }
     };
 
     window.addEventListener('storage', handleStorageChange);
-    // Also listen for custom event for same-window updates
+    // Also listen for custom events for same-window updates
     window.addEventListener('systemTypeChanged', handleStorageChange);
+    window.addEventListener('priceModificationSettingChanged', handleStorageChange);
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('systemTypeChanged', handleStorageChange);
+      window.removeEventListener('priceModificationSettingChanged', handleStorageChange);
     };
   }, []);
 
@@ -442,7 +458,12 @@ export function POS() {
 
   const startEditingPrice = (item: CartItem) => {
     setEditingPriceId(item.id);
-    setEditingPriceValue(item.price.toString());
+    // If price modification includes tax, show price with tax, otherwise show price without tax
+    const taxRate = 0.15; // 15% VAT
+    const displayPrice = priceModificationIncludesTax
+      ? item.price * (1 + taxRate)
+      : item.price;
+    setEditingPriceValue(displayPrice.toFixed(2));
   };
 
   const savePriceEdit = (id: string) => {
@@ -451,7 +472,14 @@ export function POS() {
       toast.error('يرجى إدخال سعر صحيح');
       return;
     }
-    updateItemPrice(id, priceValue);
+
+    // If price modification includes tax, extract tax from the entered price
+    const taxRate = 0.15; // 15% VAT
+    const finalPrice = priceModificationIncludesTax
+      ? priceValue / (1 + taxRate)
+      : priceValue;
+
+    updateItemPrice(id, finalPrice);
     setEditingPriceId(null);
     setEditingPriceValue('');
   };
