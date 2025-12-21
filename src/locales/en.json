@@ -413,7 +413,8 @@
       "taxes": "Taxes",
       "notifications": "Notifications",
       "security": "Security",
-      "appearance": "Appearance"
+      "appearance": "Appearance",
+      "vouchers": "Vouchers"
     },
     "company": {
       "title": "Institution Data",
@@ -447,6 +448,13 @@
       "logoUpload": "Click to upload logo",
       "logoFormat": "PNG, JPG up to 2MB",
       "currency": "Default Currency",
+      "systemType": "System Type",
+      "systemTypeSaved": "System type saved successfully",
+      "systemTypeOptions": {
+        "restaurant": "Restaurant",
+        "retail": "Retail"
+      },
+      "systemTypeDescription": "Restaurants: Products displayed in boxes on POS page | Retail: Products displayed in table on POS page",
       "currencyOptions": {
         "SAR": "Saudi Riyal (SAR)",
         "USD": "US Dollar ($)",
@@ -514,7 +522,9 @@
       "priceModificationIncludesTaxEnabled": "Enabled: Price modification includes tax",
       "priceModificationIncludesTaxDisabled": "Disabled: Price modification does not include tax",
       "eInvoicing": "Enable E-Invoicing",
-      "eInvoicingDesc": "Compliance with electronic invoicing system"
+      "eInvoicingDesc": "Compliance with electronic invoicing system",
+      "pricesIncludeTax": "Prices Include Tax",
+      "pricesIncludeTaxDesc": "When enabled, all prices entered in the system will be included in tax"
     },
     "notifications": {
       "title": "Notification Settings",
@@ -571,6 +581,56 @@
         "mmddyyyy": "MM/DD/YYYY",
         "yyyymmdd": "YYYY/MM/DD"
       }
+    },
+    "vouchers": {
+      "otherSources": "Other Sources",
+      "otherSourcesDesc": "Manage other sources used in receipts",
+      "addSource": "Add Source",
+      "searchSource": "Search for source...",
+      "name": "Name",
+      "description": "Description",
+      "actions": "Actions",
+      "noResults": "No results",
+      "noSources": "No other sources",
+      "edit": "Edit",
+      "delete": "Delete",
+      "cancel": "Cancel",
+      "saveChanges": "Save Changes",
+      "otherRecipients": "Other Recipients",
+      "otherRecipientsDesc": "Manage other recipients used in vouchers",
+      "addRecipient": "Add Recipient",
+      "searchRecipient": "Search for recipient...",
+      "recipientName": "Recipient Name",
+      "recipientNamePlaceholder": "Enter recipient name",
+      "recipientDescription": "Recipient Description",
+      "recipientDescriptionPlaceholder": "Enter recipient description",
+      "noRecipients": "No other recipients",
+      "editRecipient": "Edit Recipient",
+      "editRecipientDesc": "Edit recipient data",
+      "addRecipientDesc": "Add new recipient for vouchers" ,
+      "addSourceDesc": "Add new source for receipts",
+      "sourceName": "Source Name",
+      "sourceNamePlaceholder": "Enter source name",
+      "sourceDescription": "Source Description",
+      "sourceDescriptionPlaceholder": "Enter source description",
+      "editSource": "Edit Source",
+      "editSourceDesc": "Edit source data",
+      "updateSourceSuccess": "Source updated successfully",
+      "updateSourceError": "Update source failed",
+      "addSourceSuccess": "Source added successfully",
+      "addSourceError": "Source added failed",
+      "deleteRecipientConfirm": "Are you sure you want to delete this recipient?",
+      "deleteRecipientSuccess": "Recipient deleted successfully",
+      "deleteRecipientError": "Recipient deleted failed",
+      "updateRecipientSuccess": "Recipient updated successfully",
+      "updateRecipientError": "Recipient updated failed",
+      "addRecipientSuccess": "Recipient added successfully",
+      "addRecipientError": "Recipient added failed",
+      "recipientNameRequired": "Please enter recipient name",
+      "deleteSourceConfirm": "Are you sure you want to delete this source?",
+      "deleteSourceSuccess": "Source deleted successfully",
+      "deleteSourceError": "Source deleted failed",
+      "sourceNameRequired": "Please enter source name"
     }
   },
   "branches": {

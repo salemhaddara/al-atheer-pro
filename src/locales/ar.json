@@ -413,7 +413,8 @@
       "taxes": "الضرائب",
       "notifications": "الإشعارات",
       "security": "الأمان",
-      "appearance": "المظهر"
+      "appearance": "المظهر",
+      "vouchers": "سندات"
     },
     "company": {
       "title": "بيانات المؤسسة",
@@ -447,6 +448,13 @@
       "logoUpload": "اضغط لرفع الشعار",
       "logoFormat": "PNG, JPG حتى 2MB",
       "currency": "العملة الافتراضية",
+      "systemType": "نوع النظام",
+      "systemTypeSaved": "تم حفظ نوع النظام بنجاح",
+      "systemTypeOptions": {
+        "restaurant": "مطعم",
+        "retail": "محل تجاري"
+      },
+      "systemTypeDescription": "المطاعم: المنتجات تظهر في شكل مربعات في صفحة POS | المحلات التجارية: المنتجات تظهر في جدول في صفحة POS",
       "currencyOptions": {
         "SAR": "ريال سعودي (ر.س)",
         "USD": "دولار أمريكي ($)",
@@ -514,7 +522,10 @@
       "priceModificationIncludesTaxEnabled": "تم تفعيل: تعديل السعر شامل الضريبة",
       "priceModificationIncludesTaxDisabled": "تم إلغاء: تعديل السعر غير شامل للضريبة",
       "eInvoicing": "تفعيل الفواتير الإلكترونية",
-      "eInvoicingDesc": "التوافق مع منظومة الفاتورة الإلكترونية"
+      "eInvoicingDesc": "التوافق مع منظومة الفاتورة الإلكترونية",
+      "pricesIncludeTax": "الأسعار شاملة الضريبة",
+      "pricesIncludeTaxDesc": "عند التفعيل، ستكون جميع الأسعار المدخلة في النظام شاملة للضريبة"
+
     },
     "notifications": {
       "title": "إعدادات الإشعارات",
@@ -571,7 +582,60 @@
         "mmddyyyy": "شهر/يوم/سنة",
         "yyyymmdd": "سنة/شهر/يوم"
       }
+    },
+    "vouchers": {
+      "otherSources": "المصادر الأخرى",
+      "otherSourcesDesc": "إدارة المصادر الأخرى المستخدمة في سندات القبض",
+      "addSource": "إضافة مصدر",
+      "searchSource": "ابحث عن المصدر...",
+      "name": "الاسم",
+      "description": "الوصف",
+      "actions": "إجراءات",
+      "noResults": "لا توجد نتائج",
+      "noSources": "لا توجد مصادر أخرى",
+      "edit": "تعديل",
+      "delete": "حذف",
+      "cancel": "إلغاء",
+      "saveChanges": "حفظ التعديلات",
+      "otherRecipients": "المستفيدين الأخرى",
+      "otherRecipientsDesc": "إدارة المستفيدين الأخرى المستخدمة في سندات الصرف",
+      "addRecipient": "إضافة مستفيد",
+      "searchRecipient": "ابحث عن المستفيد...",
+      "recipientName": "اسم المستفيد",
+      "recipientNamePlaceholder": "أدخل اسم المستفيد",
+      "recipientDescription": "الوصف",
+      "recipientDescriptionPlaceholder": "أدخل وصف المستفيد",
+      "noRecipients": "لا توجد مستفيدين أخرى",
+      "editRecipient": "تعديل المستفيد",
+      "editRecipientDesc": "تعديل بيانات المستفيد",
+      "addRecipientDesc": "إضافة مستفيد جديد لسندات الصرف" ,
+      "addSourceDesc": "إضافة مصدر جديد لسندات القبض",
+      "sourceName": "اسم المصدر",
+      "sourceNamePlaceholder": "أدخل اسم المصدر",
+      "sourceDescription": "الوصف",
+      "sourceDescriptionPlaceholder": "أدخل وصف المصدر",
+      "editSource": "تعديل المصدر",
+      "editSourceDesc": "تعديل بيانات المصدر",
+      "deleteSourceConfirm": "هل أنت متأكد من حذف هذا المصدر؟",
+      "deleteSourceSuccess": "تم حذف المصدر بنجاح",
+      "deleteSourceError": "فشل حذف المصدر",
+      "updateSourceSuccess": "تم تحديث المصدر بنجاح",
+      "updateSourceError": "فشل تحديث المصدر",
+      "addSourceSuccess": "تم إضافة المصدر بنجاح",
+      "addSourceError": "فشل إضافة المصدر",
+      "deleteRecipientConfirm": "هل أنت متأكد من حذف هذا المستفيد؟",
+      "deleteRecipientSuccess": "تم حذف المستفيد بنجاح",
+      "deleteRecipientError": "فشل حذف المستفيد",
+      "updateRecipientSuccess": "تم تحديث المستفيد بنجاح",
+      "updateRecipientError": "فشل تحديث المستفيد",
+      "addRecipientSuccess": "تم إضافة المستفيد بنجاح",
+      "addRecipientError": "فشل إضافة المستفيد",
+      "recipientNameRequired": "يرجى إدخال اسم المستفيد",
+      "sourceNameRequired": "يرجى إدخال اسم المصدر"
+
+      
     }
+  
   },
   "branches": {
     "title": "إدارة الفروع",

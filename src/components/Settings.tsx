@@ -98,32 +98,32 @@ export function Settings() {
   };
 
   const handleDeleteSource = (id: string) => {
-    if (!confirm('هل أنت متأكد من حذف هذا المصدر؟')) return;
+    if (!confirm(t('settings.vouchers.deleteSourceConfirm'))) return;
     if (deleteOtherSource(id)) {
       setOtherSources(loadOtherSources());
-      toast.success('تم حذف المصدر بنجاح');
+      toast.success(t('settings.vouchers.deleteSourceSuccess'));
     } else {
-      toast.error('فشل حذف المصدر');
+      toast.error(t('settings.vouchers.deleteSourceError'));
     }
   };
 
   const handleSaveSource = () => {
     if (!sourceFormData.name.trim()) {
-      toast.error('يرجى إدخال اسم المصدر');
+      toast.error(t('settings.vouchers.sourceNameRequired'));
       return;
     }
 
     if (editingSource) {
       if (updateOtherSource(editingSource.id, sourceFormData)) {
         setOtherSources(loadOtherSources());
-        toast.success('تم تحديث المصدر بنجاح');
+        toast.success(t('settings.vouchers.updateSourceSuccess'));
       } else {
-        toast.error('فشل تحديث المصدر');
+        toast.error(t('settings.vouchers.updateSourceError'));
       }
     } else {
       addOtherSource(sourceFormData);
       setOtherSources(loadOtherSources());
-      toast.success('تم إضافة المصدر بنجاح');
+      toast.success(t('settings.vouchers.addSourceSuccess'));
     }
 
     setIsSourceDialogOpen(false);
@@ -154,32 +154,32 @@ export function Settings() {
   };
 
   const handleDeleteRecipient = (id: string) => {
-    if (!confirm('هل أنت متأكد من حذف هذا المستفيد؟')) return;
+    if (!confirm(t('settings.vouchers.deleteRecipientConfirm'))) return;
     if (deleteOtherRecipient(id)) {
       setOtherRecipients(loadOtherRecipients());
-      toast.success('تم حذف المستفيد بنجاح');
+      toast.success(t('settings.vouchers.deleteRecipientSuccess'));
     } else {
-      toast.error('فشل حذف المستفيد');
+      toast.error(t('settings.vouchers.deleteRecipientError'));
     }
   };
 
   const handleSaveRecipient = () => {
     if (!recipientFormData.name.trim()) {
-      toast.error('يرجى إدخال اسم المستفيد');
+      toast.error(t('settings.vouchers.recipientNameRequired'));
       return;
     }
 
     if (editingRecipient) {
       if (updateOtherRecipient(editingRecipient.id, recipientFormData)) {
         setOtherRecipients(loadOtherRecipients());
-        toast.success('تم تحديث المستفيد بنجاح');
+        toast.success(t('settings.vouchers.updateRecipientSuccess'));
       } else {
-        toast.error('فشل تحديث المستفيد');
+        toast.error(t('settings.vouchers.updateRecipientError'));
       }
     } else {
       addOtherRecipient(recipientFormData);
       setOtherRecipients(loadOtherRecipients());
-      toast.success('تم إضافة المستفيد بنجاح');
+      toast.success(t('settings.vouchers.addRecipientSuccess'));
     }
 
     setIsRecipientDialogOpen(false);
@@ -222,7 +222,7 @@ export function Settings() {
           </TabsTrigger>
           <TabsTrigger value="vouchers" className="gap-1.5 flex-shrink-0 text-xs sm:text-sm">
             <FileText className="w-4 h-4" />
-            سندات
+           {t('settings.tabs.vouchers')}
           </TabsTrigger>
         </TabsList>
 
@@ -331,7 +331,7 @@ export function Settings() {
               </div>
 
               <div>
-                <Label>نوع النظام</Label>
+                <Label>{t('settings.company.systemType')}</Label>
                 <Select
                   value={systemType}
                   onValueChange={(value: 'restaurant' | 'retail') => {
@@ -340,7 +340,7 @@ export function Settings() {
                       localStorage.setItem('system_type', value);
                       // Dispatch custom event to update POS page immediately
                       window.dispatchEvent(new Event('systemTypeChanged'));
-                      toast.success('تم حفظ نوع النظام بنجاح');
+                      toast.success(t('settings.company.systemTypeSaved'));
                     }
                   }}
                 >
@@ -348,12 +348,12 @@ export function Settings() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="restaurant">مطعم</SelectItem>
-                    <SelectItem value="retail">محل تجاري</SelectItem>
+                    <SelectItem value="restaurant">{t('settings.company.systemTypeOptions.restaurant')}</SelectItem>
+                    <SelectItem value="retail">{t('settings.company.systemTypeOptions.retail')}</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-sm text-gray-500 mt-1">
-                  المطاعم: المنتجات تظهر في شكل مربعات في صفحة POS | المحلات التجارية: المنتجات تظهر في جدول في صفحة POS
+                  {t('settings.company.systemTypeDescription')}
                 </p>
               </div>
 
@@ -492,8 +492,8 @@ export function Settings() {
 
                 <div className="flex items-center justify-between p-3 border rounded-lg bg-blue-50">
                   <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
-                    <Label>الأسعار شاملة الضريبة</Label>
-                    <p className="text-sm text-gray-600">عند التفعيل، ستكون جميع الأسعار المدخلة في النظام شاملة للضريبة</p>
+                    <Label>{t('settings.taxes.pricesIncludeTax')}</Label>
+                    <p className="text-sm text-gray-600">{t('settings.taxes.pricesIncludeTaxDesc')}</p>
                   </div>
                   <Switch
                     checked={pricesIncludeTax}
@@ -730,33 +730,33 @@ export function Settings() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>المصادر الأخرى</CardTitle>
-                    <CardDescription>إدارة المصادر الأخرى المستخدمة في سندات القبض</CardDescription>
+                    <CardTitle>{t('settings.vouchers.otherSources')}</CardTitle>
+                    <CardDescription>{t('settings.vouchers.otherSourcesDesc')}</CardDescription>
                   </div>
                   <Button onClick={handleAddSource} className="gap-2">
                     <Plus className="w-4 h-4" />
-                    إضافة مصدر
+                    {t('settings.vouchers.addSource')}
                   </Button>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="relative">
-                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Search className={`absolute ${direction === 'rtl' ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400`} />
                   <Input
-                    placeholder="ابحث عن المصدر..."
+                    placeholder={t('settings.vouchers.searchSource')}
                     value={sourceSearchTerm}
                     onChange={(e) => setSourceSearchTerm(e.target.value)}
-                    className="pr-10"
-                    dir="rtl"
+                    className={direction === 'rtl' ? 'pr-10' : 'pl-10'}
+                    dir={direction}
                   />
                 </div>
                 <div className="border rounded-lg overflow-hidden">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-right">الاسم</TableHead>
-                        <TableHead className="text-right">الوصف</TableHead>
-                        <TableHead className="text-right w-24">إجراءات</TableHead>
+                        <TableHead className="text-right">{t('settings.vouchers.name')}</TableHead>
+                        <TableHead className="text-right">{t('settings.vouchers.description')}</TableHead>
+                        <TableHead className="text-right w-24">{t('settings.vouchers.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -771,7 +771,7 @@ export function Settings() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleEditSource(source)}
-                                  title="تعديل"
+                                  title={t('settings.vouchers.edit')}
                                 >
                                   <Edit className="w-4 h-4" />
                                 </Button>
@@ -779,7 +779,7 @@ export function Settings() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleDeleteSource(source.id)}
-                                  title="حذف"
+                                  title={t('settings.vouchers.delete')}
                                   className="text-red-600 hover:text-red-700"
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -791,7 +791,7 @@ export function Settings() {
                       ) : (
                         <TableRow>
                           <TableCell colSpan={3} className="text-center py-8 text-gray-500">
-                            {sourceSearchTerm ? 'لا توجد نتائج' : 'لا توجد مصادر أخرى'}
+                            {sourceSearchTerm ? t('settings.vouchers.noResults') : t('settings.vouchers.noSources')}
                           </TableCell>
                         </TableRow>
                       )}
@@ -806,33 +806,33 @@ export function Settings() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>المستفيدون الآخرون</CardTitle>
-                    <CardDescription>إدارة المستفيدين الآخرين المستخدمين في سندات الصرف</CardDescription>
+                    <CardTitle>{t('settings.vouchers.otherRecipients')}</CardTitle>
+                    <CardDescription>{t('settings.vouchers.otherRecipientsDesc')}</CardDescription>
                   </div>
                   <Button onClick={handleAddRecipient} className="gap-2">
                     <Plus className="w-4 h-4" />
-                    إضافة مستفيد
+                    {t('settings.vouchers.addRecipient')}
                   </Button>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="relative">
-                  <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Search className={`absolute ${direction === 'rtl' ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400`} />
                   <Input
-                    placeholder="ابحث عن المستفيد..."
+                    placeholder={t('settings.vouchers.searchRecipient')}
                     value={recipientSearchTerm}
                     onChange={(e) => setRecipientSearchTerm(e.target.value)}
-                    className="pr-10"
-                    dir="rtl"
+                    className={direction === 'rtl' ? 'pr-10' : 'pl-10'}
+                    dir={direction}
                   />
                 </div>
                 <div className="border rounded-lg overflow-hidden">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-right">الاسم</TableHead>
-                        <TableHead className="text-right">الوصف</TableHead>
-                        <TableHead className="text-right w-24">إجراءات</TableHead>
+                        <TableHead className="text-right">{t('settings.vouchers.name')}</TableHead>
+                        <TableHead className="text-right">{t('settings.vouchers.description')}</TableHead>
+                        <TableHead className="text-right w-24">{t('settings.vouchers.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -847,7 +847,7 @@ export function Settings() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleEditRecipient(recipient)}
-                                  title="تعديل"
+                                  title={t('settings.vouchers.edit')}
                                 >
                                   <Edit className="w-4 h-4" />
                                 </Button>
@@ -855,7 +855,7 @@ export function Settings() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => handleDeleteRecipient(recipient.id)}
-                                  title="حذف"
+                                  title={t('settings.vouchers.delete')}
                                   className="text-red-600 hover:text-red-700"
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -867,7 +867,7 @@ export function Settings() {
                       ) : (
                         <TableRow>
                           <TableCell colSpan={3} className="text-center py-8 text-gray-500">
-                            {recipientSearchTerm ? 'لا توجد نتائج' : 'لا توجد مستفيدين آخرين'}
+                            {recipientSearchTerm ? t('settings.vouchers.noResults') : t('settings.vouchers.noRecipients')}
                           </TableCell>
                         </TableRow>
                       )}
@@ -882,37 +882,37 @@ export function Settings() {
           <Dialog open={isSourceDialogOpen} onOpenChange={setIsSourceDialogOpen}>
             <DialogContent className="max-w-md" dir="rtl">
               <DialogHeader>
-                <DialogTitle>{editingSource ? 'تعديل المصدر' : 'إضافة مصدر جديد'}</DialogTitle>
+                <DialogTitle>{editingSource ? t('settings.vouchers.editSource') : t('settings.vouchers.addSource')}</DialogTitle>
                 <DialogDescription>
-                  {editingSource ? 'تعديل بيانات المصدر' : 'إضافة مصدر جديد لسندات القبض'}
+                  {editingSource ? t('settings.vouchers.editSourceDesc') : t('settings.vouchers.addSourceDesc')}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>اسم المصدر *</Label>
+                  <Label>{t('settings.vouchers.sourceName')}</Label>
                   <Input
                     value={sourceFormData.name}
                     onChange={(e) => setSourceFormData({ ...sourceFormData, name: e.target.value })}
-                    placeholder="أدخل اسم المصدر"
+                    placeholder={t('settings.vouchers.sourceNamePlaceholder')}
                     className="text-right"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>الوصف (اختياري)</Label>
+                  <Label>{t('settings.vouchers.sourceDescription')}</Label>
                   <Input
                     value={sourceFormData.description}
                     onChange={(e) => setSourceFormData({ ...sourceFormData, description: e.target.value })}
-                    placeholder="أدخل وصف المصدر"
+                    placeholder={t('settings.vouchers.sourceDescriptionPlaceholder')}
                     className="text-right"
                   />
                 </div>
               </div>
               <div className="flex gap-3 pt-4 border-t">
                 <Button onClick={() => setIsSourceDialogOpen(false)} variant="outline" className="flex-1">
-                  إلغاء
+                  {t('settings.vouchers.cancel')}
                 </Button>
                 <Button onClick={handleSaveSource} className="flex-1">
-                  {editingSource ? 'حفظ التعديلات' : 'إضافة'}
+                  {editingSource ? t('settings.vouchers.saveChanges') : t('settings.vouchers.addSource')}
                 </Button>
               </div>
             </DialogContent>
@@ -922,37 +922,37 @@ export function Settings() {
           <Dialog open={isRecipientDialogOpen} onOpenChange={setIsRecipientDialogOpen}>
             <DialogContent className="max-w-md" dir="rtl">
               <DialogHeader>
-                <DialogTitle>{editingRecipient ? 'تعديل المستفيد' : 'إضافة مستفيد جديد'}</DialogTitle>
+                <DialogTitle>{editingRecipient ? t('settings.vouchers.editRecipient') : t('settings.vouchers.addRecipient')}</DialogTitle>
                 <DialogDescription>
-                  {editingRecipient ? 'تعديل بيانات المستفيد' : 'إضافة مستفيد جديد لسندات الصرف'}
+                {editingRecipient ? t('settings.vouchers.editRecipientDesc') : t('settings.vouchers.addRecipientDesc')}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>اسم المستفيد *</Label>
+                  <Label>{t('settings.vouchers.recipientName')}</Label>
                   <Input
                     value={recipientFormData.name}
                     onChange={(e) => setRecipientFormData({ ...recipientFormData, name: e.target.value })}
-                    placeholder="أدخل اسم المستفيد"
+                    placeholder={t('settings.vouchers.recipientNamePlaceholder')}
                     className="text-right"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>الوصف (اختياري)</Label>
+                  <Label>{t('settings.vouchers.recipientDescription')}</Label>
                   <Input
                     value={recipientFormData.description}
                     onChange={(e) => setRecipientFormData({ ...recipientFormData, description: e.target.value })}
-                    placeholder="أدخل وصف المستفيد"
+                    placeholder={t('settings.vouchers.recipientDescriptionPlaceholder')}
                     className="text-right"
                   />
                 </div>
               </div>
               <div className="flex gap-3 pt-4 border-t">
                 <Button onClick={() => setIsRecipientDialogOpen(false)} variant="outline" className="flex-1">
-                  إلغاء
+                  {t('settings.vouchers.cancel')}
                 </Button>
                 <Button onClick={handleSaveRecipient} className="flex-1">
-                  {editingRecipient ? 'حفظ التعديلات' : 'إضافة'}
+                  {editingRecipient ? t('settings.vouchers.saveChanges') : t('settings.vouchers.addRecipient')}
                 </Button>
               </div>
             </DialogContent>
