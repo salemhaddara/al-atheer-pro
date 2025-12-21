@@ -203,7 +203,7 @@ export function Purchases() {
     <div className="space-y-6">
       {/* Header */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between">
           <div>
             <h1>المشتريات</h1>
             <p className="text-gray-600">نظام إدارة المشتريات والموردين</p>
@@ -239,12 +239,12 @@ export function Purchases() {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+        </div>
             )}
-            <Button className="gap-2 shrink-0" onClick={() => setShowCreateOrder(true)}>
-              <Plus className="w-4 h-4" />
-              طلب شراء جديد
-            </Button>
+        <Button className="gap-2 shrink-0" onClick={() => setShowCreateOrder(true)}>
+          <Plus className="w-4 h-4" />
+          طلب شراء جديد
+        </Button>
           </div>
         </div>
       </div>

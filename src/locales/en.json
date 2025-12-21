@@ -607,7 +607,7 @@
       "noRecipients": "No other recipients",
       "editRecipient": "Edit Recipient",
       "editRecipientDesc": "Edit recipient data",
-      "addRecipientDesc": "Add new recipient for vouchers" ,
+      "addRecipientDesc": "Add new recipient for vouchers",
       "addSourceDesc": "Add new source for receipts",
       "sourceName": "Source Name",
       "sourceNamePlaceholder": "Enter source name",
@@ -721,5 +721,54 @@
   "banks": {
     "title": "Banks & ATM Management",
     "subtitle": "Manage bank accounts, ATMs, and point of sale devices"
+  },
+  "openingInventory": {
+    "title": "Opening Inventory",
+    "subtitle": "Initial Inventory System",
+    "cashier": "Responsible Cashier",
+    "warehouse": "Warehouse",
+    "searchProducts": "Search Products",
+    "searchPlaceholder": "Search by name or barcode... (Press Enter to search by barcode)",
+    "products": "Products",
+    "noProducts": "No products found",
+    "summary": {
+      "title": "Opening Inventory Summary",
+      "itemsCount": "Items Count",
+      "totalQuantity": "Total Quantity",
+      "totalValue": "Total Inventory Value",
+      "averageCost": "Average Cost Price"
+    },
+    "cart": {
+      "title": "Opening Inventory",
+      "empty": "No items in inventory",
+      "emptySubtext": "Add products to get started",
+      "unitCost": "Unit Cost",
+      "editCost": "Edit Cost Price",
+      "editQuantity": "Click to edit quantity",
+      "note": "Note: This interface can be used once at the beginning of using the system and does not create purchase invoices.",
+      "print": "Print",
+      "save": "Save Opening Inventory"
+    },
+    "search": {
+      "placeholder": "Search by name or enter barcode...",
+      "noResults": "No products found",
+      "notFound": "Product not found with this barcode"
+    },
+    "messages": {
+      "added": "{name} added to inventory",
+      "noItemsToPrint": "No items to print",
+      "selectDate": "Please select opening inventory date",
+      "addItems": "Please add items to opening inventory",
+      "invalidTotal": "Total inventory value must be greater than zero",
+      "saved": "Opening inventory saved successfully - {entryNumber}",
+      "invalidQuantity": "Please enter a valid quantity",
+      "invalidPrice": "Please enter a valid cost price",
+      "outOfStock": "Product is out of stock"
+    },
+    "warehouses": {
+      "main": "Main Warehouse",
+      "north": "North Branch Warehouse",
+      "south": "South Branch Warehouse"
+    }
   }
 }
