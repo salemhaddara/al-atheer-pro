@@ -8,31 +8,22 @@ import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { Search, ShoppingCart, CreditCard, Banknote, X, Plus, Minus, Trash2, Package, Briefcase, AlertTriangle, RotateCcw, User, Wallet, Lock as LockIcon, ChevronsUpDown, Edit2, Check, Printer, Download, Users } from 'lucide-react';
+import { Search, ShoppingCart, CreditCard, X, Plus, Minus, Trash2, Package, Briefcase, AlertTriangle, RotateCcw, User, Lock as LockIcon, ChevronsUpDown, Edit2, Check, Printer, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Label } from './ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
-import { createSalesReturnJournalEntries, createMixedPaymentSalesJournalEntries, addJournalEntries } from '../data/journalEntries';
-import { reduceStock, increaseStock, getStock, } from '../data/inventory';
-import { addToSafe, deductFromSafe, } from '../data/safes';
-import { addToMainBank, addToBank, loadBanks } from '../data/banks';
+import { getStock } from '../data/inventory';
 import { useUser } from '../contexts/UserContext';
 import { SearchableSelect } from './ui/searchable-select';
 import { getPriceForQuantity, PricingTier } from '../utils/pricing';
-import { initializeInventoryItem } from '../data/inventory';
-import { addJournalEntry, createOpeningInventoryEntry } from '../data/journalEntries';
-import CustomDatePicker from "@/components/CustomDatePicker";
-import { getTranslation, Language, Direction } from '../lib/translations';
 
 import {
   getDrawer,
   checkAndOpenDrawer,
   addToDrawer,
-  deductFromDrawer,
   closeDrawer,
-  getDrawerTransactions,
   createOrUpdateDrawer,
   getDrawersByEmployee,
   type CashDrawer
@@ -74,7 +65,7 @@ export function Quotations({
   direction: 'ltr' | 'rtl';
   translations: Record<string, string>;
 }) {
-  const { currentUser, isAdmin, hasAccessToWarehouse, hasPermission } = useUser();
+  const { currentUser, isAdmin } = useUser();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedWarehouse, setSelectedWarehouse] = useState('1');
@@ -85,8 +76,7 @@ export function Quotations({
   const [editingQuantityValue, setEditingQuantityValue] = useState<string>('');
   const [priceModificationIncludesTax, setPriceModificationIncludesTax] = useState(true);
   const [systemType, setSystemType] = useState<'restaurant' | 'retail'>('retail');
-  const [customerName, setCustomerName] = useState(''); 
-   // POS Terminal and Drawer Management
+  // POS Terminal and Drawer Management
   const [selectedPosId, setSelectedPosId] = useState<string>('pos-1');
   const [currentDrawer, setCurrentDrawer] = useState<CashDrawer | null>(null);
   const [showDrawerDialog, setShowDrawerDialog] = useState(false);
@@ -96,9 +86,8 @@ export function Quotations({
   const [discrepancyReason, setDiscrepancyReason] = useState('');
   const [addMoneyAmount, setAddMoneyAmount] = useState('');
   const [addMoneyNotes, setAddMoneyNotes] = useState('');
-  const [items, setItems] = useState<CartItem[]>([]);
   const [quotations, setQuotations] = useState<Quotations[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [editingQuotationId, setEditingQuotationId] = useState<string | null>(null);
   const [creditCustomers, setCreditCustomers] = useState([
     { id: '1', name: 'شركة النجاح التقنية', phone: '0501234567', address: 'الرياض', creditLimit: 50000, currentBalance: 32000, graceDays: 30, status: 'ممتاز', accountNumber: 'ACC-001' },
     { id: '2', name: 'مؤسسة الريادة للخدمات', phone: '0502222222', address: 'جدة', creditLimit: 30000, currentBalance: 28500, graceDays: 20, status: 'تحذير', accountNumber: 'ACC-002' },
@@ -123,8 +112,6 @@ export function Quotations({
   // Main view tab state
   const [mainTab, setMainTab] = useState<'new' | 'list'>('new');
 
-  const t = (key: string) => getTranslation(language as Language, key);
-  
   // قائمة المستودعات
   const warehouses = [
     { id: '1', name: 'المستودع الرئيسي' },
@@ -255,12 +242,9 @@ export function Quotations({
     [selectedCustomerId, creditCustomers]
   );
 
-  const totalWithTax = total;
-  const totalAmount = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-
   const saveQuotation = () => {
-    if (!customerName.trim()) {
-      toast.error('يرجى إدخال اسم العميل');
+    if (!selectedCustomer) {
+      toast.error('يرجى اختيار العميل');
       return;
     }
 
@@ -272,7 +256,11 @@ export function Quotations({
     // Validate stock availability for all products
     for (const item of cart) {
       if (item.type === 'product') {
-        const currentStock = getStock(item.id, selectedWarehouse);
+        // Use inventory stock or fallback to product's static stock
+        const inventoryStock = getStock(item.id, selectedWarehouse);
+        const product = products.find(p => p.id === item.id);
+        const currentStock = inventoryStock > 0 ? inventoryStock : (product?.stock || item.stock || 0);
+        
         if (currentStock < item.quantity) {
           toast.error(`الكمية المتاحة من ${item.name}: ${currentStock} فقط`);
           return;
@@ -280,36 +268,78 @@ export function Quotations({
       }
     }
 
-    // Get cashier name (current user)
-    const cashierName = currentUser?.name || 'غير محدد';
-
-    // Calculate COGS (Cost of Goods Sold) for products only
-    let totalCOGS = 0;
-    for (const item of cart) {
-      if (item.type === 'product' && item.costPrice) {
-        totalCOGS += item.costPrice * item.quantity;
-      }
+    // Save or update quotation
+    if (editingQuotationId) {
+      // Update existing quotation
+      setQuotations(quotations.map(q => 
+        q.id === editingQuotationId 
+          ? {
+              ...q,
+              customerName: selectedCustomer.name,
+              total: total,
+              items: [...cart],
+              date: new Date().toISOString()
+            }
+          : q
+      ));
+      toast.success('تم تحديث عرض السعر بنجاح');
+      setEditingQuotationId(null);
+    } else {
+      // Create new quotation
+      const newQuotation: Quotations = {
+        id: Date.now().toString(),
+        customerName: selectedCustomer.name,
+        date: new Date().toISOString(),
+        total: total,
+        status: 'مسودة',
+        items: [...cart]
+      };
+      
+      setQuotations([...quotations, newQuotation]);
+      toast.success('تم حفظ عرض السعر بنجاح');
     }
-
-    // Save quotation
-    const newQuotation: Quotations = {
-      id: Date.now().toString(),
-      customerName: customerName,
-      date: new Date().toISOString(),
-      total: total,
-      status: 'مسودة',
-      items: [...cart]
-    };
     
-    setQuotations([...quotations, newQuotation]);
-    toast.success('تم حفظ عرض السعر بنجاح');
-    
-    // Clear cart and customer name
+    // Clear cart and customer selection
     setCart([]);
-    setCustomerName('');
+    setSelectedCustomerId(undefined);
     
     // Switch to list tab to show the saved quotation
     setMainTab('list');
+  };
+
+  const editQuotation = (quotation: Quotations) => {
+    // Find customer by name
+    const customer = creditCustomers.find(c => c.name === quotation.customerName);
+    if (customer) {
+      setSelectedCustomerId(customer.id);
+    }
+    
+    // Load quotation items into cart
+    if (quotation.items) {
+      setCart(quotation.items);
+    }
+    
+    // Set editing mode
+    setEditingQuotationId(quotation.id);
+    
+    // Switch to new tab
+    setMainTab('new');
+    
+    toast.success('تم تحميل عرض السعر للتعديل');
+  };
+
+  const deleteQuotation = (quotationId: string) => {
+    if (window.confirm('هل أنت متأكد من حذف هذا عرض السعر؟')) {
+      setQuotations(quotations.filter(q => q.id !== quotationId));
+      toast.success('تم حذف عرض السعر بنجاح');
+      
+      // If deleting the quotation being edited, clear editing mode
+      if (editingQuotationId === quotationId) {
+        setEditingQuotationId(null);
+        setCart([]);
+        setSelectedCustomerId(undefined);
+      }
+    }
   };
 
   const products = [
@@ -333,8 +363,9 @@ export function Quotations({
 
   // إضافة منتج للسلة
   const addProductToCart = (product: typeof products[0]) => {
-    // Check stock availability
-    const currentStock = getStock(product.id, selectedWarehouse);
+    // Check stock availability - use inventory stock or fallback to product's static stock
+    const inventoryStock = getStock(product.id, selectedWarehouse);
+    const currentStock = inventoryStock > 0 ? inventoryStock : (product.stock || 0);
     if (currentStock <= 0) {
       toast.error('المنتج غير متوفر في المخزون');
       return;
@@ -426,10 +457,13 @@ export function Quotations({
 
   const updateQuantity = (id: string, change: number) => {
     console.log(cart);
-    setCart(cart.map(item => {
+    const updatedCart = cart.map(item => {
       if (item.id === id) {
         const newQuantity = item.quantity + change;
-        if (newQuantity <= 0) return item;
+        if (newQuantity <= 0) {
+          // Return null to mark item for removal
+          return null;
+        }
 
         // Check stock for products
         if (item.type === 'product' && item.stock !== undefined) {
@@ -462,7 +496,9 @@ export function Quotations({
         return { ...item, quantity: newQuantity, price: newPrice };
       }
       return item;
-    }).filter(item => item.quantity > 0));
+    }).filter((item): item is CartItem => item !== null);
+    
+    setCart(updatedCart);
   };
 
   const setQuantityDirect = (id: string, quantity: number) => {
@@ -590,10 +626,13 @@ export function Quotations({
     }).format(amount);
   };
 
-  const filteredProducts = products.map(product => ({
-    ...product,
-    stock: getStock(product.id, selectedWarehouse)
-  })).filter(product =>
+  const filteredProducts = products.map(product => {
+    const inventoryStock = getStock(product.id, selectedWarehouse);
+    return {
+      ...product,
+      stock: inventoryStock > 0 ? inventoryStock : (product.stock || 0)
+    };
+  }).filter(product =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.barcode.includes(searchTerm)
   );
@@ -617,8 +656,9 @@ export function Quotations({
       );
 
       if (productByBarcode) {
-        // Check stock availability
-        const currentStock = getStock(productByBarcode.id, selectedWarehouse);
+        // Check stock availability - use inventory stock or fallback to product's static stock
+        const inventoryStock = getStock(productByBarcode.id, selectedWarehouse);
+        const currentStock = inventoryStock > 0 ? inventoryStock : (productByBarcode.stock || 0);
         if (currentStock <= 0) {
           toast.error('المنتج غير متوفر في المخزون');
           setSearchTerm('');
@@ -678,9 +718,6 @@ export function Quotations({
             <h1>عروض الأسعار</h1>
             <p className="text-gray-600">نظام عروض الأسعار</p>
           </div>
-          <Badge variant="secondary" className="text-sm">
-            إجمالي العروض: {quotations.length}
-          </Badge>
           <div className="flex gap-4 items-center">
             {/* Cash Drawer Status */}
          
@@ -719,24 +756,39 @@ export function Quotations({
           </div>
         </div>
 
-        {/* Date Section (replaces customer header in restaurant mode) */}
+        {/* Customer Info Section - Only show in restaurant mode */}
         {systemType === 'restaurant' && (
-            <Card>
-              <CardHeader className="text-right">
-                <CardTitle>بيانات العميل</CardTitle>
-                <CardDescription>أدخل اسم العميل الذي طلب عرض السعر</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <Label>اسم العميل</Label>
-                  <Input
-                    placeholder="مثال: شركة النجاح التقنية"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+                <div className="flex-1 w-full md:w-auto">
+                  <div className="flex items-center gap-2 mb-2">
+                    <label className="text-sm font-semibold text-gray-700">العميل:</label>
+                    <Button variant="link" className="text-sm p-0 h-auto" onClick={() => setIsAddCustomerDialogOpen(true)}>
+                      إضافة عميل سريع
+                    </Button>
+                  </div>
+                  <SearchableSelect
+                    options={creditCustomers}
+                    value={selectedCustomerId}
+                    onValueChange={setSelectedCustomerId}
+                    placeholder="ابحث عن العميل بالاسم أو رقم الحساب..."
+                    searchPlaceholder="ابحث بالاسم أو رقم الحساب أو الهاتف..."
+                    emptyMessage="لا يوجد عملاء"
+                    className="w-full md:w-64"
+                    displayKey="name"
+                    searchKeys={['name', 'accountNumber', 'phone']}
                   />
                 </div>
-              </CardContent>
-            </Card>
+                {!selectedCustomer && (
+                  <div className="text-xs text-red-600 bg-red-50 p-2 rounded-lg flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4" />
+                    لا يمكن إتمام أي عملية بيع بدون تحديد العميل
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
 
@@ -778,45 +830,44 @@ export function Quotations({
 
             {/* Tabs for Products, Services, and Returns */}
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'products' | 'services' | 'returns')} className="w-full" dir="rtl">
-              <TabsList className="grid w-full grid-cols-1" dir="rtl">
-                <TabsTrigger value="products" className="gap-2">
-                  <Package />
-                  المنتجات ({filteredProducts.length})
-                </TabsTrigger>
-
-              </TabsList>
               {/* Products Tab */}
               <TabsContent value="products" className="mt-4">
                 {systemType === 'restaurant' ? (
-                  // Grid view for restaurants
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {filteredProducts.map((product) => (
-                      <Card
-                        key={product.id}
-                        className="cursor-pointer hover:shadow-md transition-shadow"
-                        onClick={() => addProductToCart(product)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="aspect-square bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
-                            <Package className="w-12 h-12 text-gray-400" />
-                          </div>
-                          <h4 className="text-sm mb-2">{product.name}</h4>
-                          <div className="flex items-center justify-between">
-                            <span className="text-blue-600 font-medium">{formatCurrency(product.price)}</span>
-                            <Badge variant="outline" className="text-xs">
-                              متوفر: {product.stock}
-                            </Badge>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                    {filteredProducts.length === 0 && (
-                      <div className="col-span-full text-center py-12 text-gray-500">
-                        <Package className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                        <p>لا توجد منتجات</p>
-                      </div>
-                    )}
-                  </div>
+               <div className="space-y-4">
+               <div className="flex items-center justify-between">
+                 <h3 className="text-lg font-semibold">المنتجات ({filteredProducts.length})</h3>
+               </div>
+               <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                 {filteredProducts.map((product) => (
+                   <Card
+                     key={product.id}
+                     className="cursor-pointer hover:shadow-md transition-shadow aspect-square flex flex-col"
+                     onClick={() => addProductToCart(product)}
+                   >
+                     <CardContent className="p-3 flex flex-col flex-1 justify-between h-full">
+                       <div className="flex-1 flex items-center justify-center bg-gray-100 rounded-lg mb-2">
+                         <Package className="w-10 h-10 text-gray-400" />
+                       </div>
+                       <div className="flex flex-col gap-1 min-h-0">
+                         <h4 className="text-xs font-medium line-clamp-2 leading-tight mb-1">{product.name}</h4>
+                         <div className="flex flex-col gap-1">
+                           <span className="text-blue-600 font-semibold text-xs">{formatCurrency(product.price)}</span>
+                           <Badge variant="outline" className="text-xs w-fit py-0.5">
+                             {product.stock}
+                           </Badge>
+                         </div>
+                       </div>
+                     </CardContent>
+                   </Card>
+                 ))}
+                 {filteredProducts.length === 0 && (
+                   <div className="col-span-full text-center py-12 text-gray-500">
+                     <Package className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                     <p>لا توجد منتجات</p>
+                   </div>
+                 )}
+               </div>
+             </div>
                 ) : (
                   // Table view for retail stores
                   <div className="border rounded-lg overflow-hidden">
@@ -1029,10 +1080,11 @@ export function Quotations({
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0"
+                              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
                               onClick={() => removeFromCart(item.id)}
+                              title="حذف من السلة"
                             >
-                              <X className="w-4 h-4 text-red-500" />
+                              <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
                         ))}
@@ -1069,9 +1121,9 @@ export function Quotations({
                         <Button
                           className="w-full"
                           onClick={saveQuotation}
-                          disabled={!customerName.trim() || cart.length === 0}
+                          disabled={!selectedCustomer || cart.length === 0}
                         >
-                          حفظ عرض السعر
+                          {editingQuotationId ? 'تحديث عرض السعر' : 'حفظ عرض السعر'}
                         </Button>
 
                         <div className="flex gap-2 justify-between">
@@ -1176,7 +1228,9 @@ export function Quotations({
                                       service.code.toLowerCase() === searchValue.toLowerCase()
                                     );
                                     if (productByBarcode) {
-                                      const currentStock = getStock(productByBarcode.id, selectedWarehouse);
+                                      // Check stock availability - use inventory stock or fallback to product's static stock
+                                      const inventoryStock = getStock(productByBarcode.id, selectedWarehouse);
+                                      const currentStock = inventoryStock > 0 ? inventoryStock : (productByBarcode.stock || 0);
                                       if (currentStock <= 0) {
                                         toast.error('المنتج غير متوفر في المخزون');
                                         setSearchTerm('');
@@ -1394,10 +1448,11 @@ export function Quotations({
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0"
+                              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
                               onClick={() => removeFromCart(item.id)}
+                              title="حذف من السلة"
                             >
-                              <X className="w-4 h-4 text-red-500" />
+                              <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
                         ))}
@@ -1538,7 +1593,7 @@ export function Quotations({
                         <TableHead className="text-right">التاريخ</TableHead>
                         <TableHead className="text-right">الإجمالي</TableHead>
                         <TableHead className="text-right">الحالة</TableHead>
-                        <TableHead className="text-right">إجراءات</TableHead>
+                        <TableHead className="text-center">إجراءات</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1569,8 +1624,22 @@ export function Quotations({
                               <Button variant="outline" size="sm">
                                 <Download className="w-4 h-4" />
                               </Button>
-                              <Button variant="outline" size="sm">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => editQuotation(q)}
+                                title="تعديل عرض السعر"
+                              >
                                 <Edit2 className="w-4 h-4" />
+                              </Button>
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => deleteQuotation(q.id)}
+                                title="حذف عرض السعر"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="w-4 h-4" />
                               </Button>
                             </div>
                           </TableCell>
@@ -1924,297 +1993,3 @@ export function Quotations({
     </div>
   );
 }
-// import { useState } from 'react';
-// import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-// import { Button } from './ui/button';
-// import { Input } from './ui/input';
-// import { Label } from './ui/label';
-// import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-// import { Badge } from './ui/badge';
-// import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-// import { Search, FileText, Users, Package, Download, Printer } from 'lucide-react';
-
-// interface Product {
-//   id: string;
-//   name: string;
-//   price: number;
-// }
-
-// interface QuotationItem {
-//   id: string;
-//   name: string;
-//   quantity: number;
-//   price: number;
-// }
-
-// interface Quotation {
-//   id: string;
-//   customerName: string;
-//   date: string;
-//   total: number;
-//   status: 'مسودة' | 'مرسل';
-// }
-
-// export function Quotations() {
-//   const [customerName, setCustomerName] = useState('');
-//   const [searchTerm, setSearchTerm] = useState('');
-//   const [items, setItems] = useState<QuotationItem[]>([]);
-//   const [quotations, setQuotations] = useState<Quotation[]>([]);
-
-//   const products: Product[] = [
-//     { id: '1', name: 'كمبيوتر محمول HP', price: 3000 },
-//     { id: '2', name: 'طابعة Canon', price: 2000 },
-//     { id: '3', name: 'شاشة Samsung 27\"', price: 1500 },
-//     { id: '4', name: 'لوحة مفاتيح Logitech', price: 300 },
-//     { id: '5', name: 'ماوس Logitech', price: 150 },
-//   ];
-
-//   const filteredProducts = products.filter(p =>
-//     p.name.toLowerCase().includes(searchTerm.toLowerCase())
-//   );
-
-//   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-//   const taxRate = 0.15;
-//   const tax = subtotal * taxRate;
-//   const total = subtotal + tax;
-
-//   const formatCurrency = (amount: number) => {
-//     return new Intl.NumberFormat('ar-SA', {
-//       style: 'currency',
-//       currency: 'SAR'
-//     }).format(amount);
-//   };
-
-//   const addProductToQuotation = (product: Product) => {
-//     const existing = items.find(i => i.id === product.id);
-//     if (existing) {
-//       setItems(items.map(i =>
-//         i.id === product.id ? { ...i, quantity: i.quantity + 1 } : i
-//       ));
-//     } else {
-//       setItems([...items, { id: product.id, name: product.name, price: product.price, quantity: 1 }]);
-//     }
-//   };
-
-
-//     if (items.length === 0) {
-//       return;
-//     }
-
-//     const id = `Q-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
-//     const today = new Date().toISOString().split('T')[0];
-
-//     const q: Quotation = {
-//       id,
-//       customerName: customerName.trim(),
-//       date: today,
-//       total,
-//       status: 'مسودة'
-//     };
-
-//     setQuotations([q, ...quotations]);
-//     setItems([]);
-//     setCustomerName('');
-//   };
-
-//   return (
-//     <div className="space-y-6" dir="rtl">
-//       {/* Header */}
-//       <div className="flex items-center justify-between">
-//         <div className="text-right flex-1">
-//           <h1>عروض الأسعار</h1>
-//           <p className="text-gray-600">إنشاء وعرض عروض أسعار للعملاء بدون تنفيذ عملية بيع</p>
-//         </div>
-//       </div>
-
-//       <Tabs defaultValue="create" className="space-y-6" dir="rtl">
-//         <TabsList className="grid w-full grid-cols-2">
-//           <TabsTrigger value="create">إنشاء عرض سعر</TabsTrigger>
-//           <TabsTrigger value="list">قائمة عروض الأسعار</TabsTrigger>
-//         </TabsList>
-
-//         <TabsContent value="create" className="space-y-6">
-//           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-//             {/* Customer & Items */}
-//             <div className="lg:col-span-2 space-y-4">
-//               {/* Customer Info */}
-//               <Card>
-//                 <CardHeader className="text-right">
-//                   <CardTitle>بيانات العميل</CardTitle>
-//                   <CardDescription>أدخل اسم العميل الذي طلب عرض السعر</CardDescription>
-//                 </CardHeader>
-//                 <CardContent>
-//                   <div className="space-y-2">
-//                     <Label>اسم العميل</Label>
-//                     <Input
-//                       placeholder="مثال: شركة النجاح التقنية"
-//                       value={customerName}
-//                       onChange={(e) => setCustomerName(e.target.value)}
-//                     />
-//                   </div>
-//                 </CardContent>
-//               </Card>
-
-//               {/* Product Search */}
-//               <Card>
-//                 <CardHeader className="text-right">
-//                   <CardTitle>المنتجات</CardTitle>
-//                   <CardDescription>أضف المنتجات إلى عرض السعر</CardDescription>
-//                 </CardHeader>
-//                 <CardContent>
-//                   <div className="space-y-4">
-//                     <div className="relative">
-//                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-//                       <Input
-//                         placeholder="بحث عن منتج..."
-//                         className="pl-10 text-right"
-//                         value={searchTerm}
-//                         onChange={(e) => setSearchTerm(e.target.value)}
-//                       />
-//                     </div>
-
-//                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-//                       {filteredProducts.map((product) => (
-//                         <Card
-//                           key={product.id}
-//                           className="cursor-pointer hover:shadow-md transition-shadow"
-//                           onClick={() => addProductToQuotation(product)}
-//                         >
-//                           <CardContent className="p-4">
-//                             <div className="aspect-square bg-gray-100 rounded-lg.mb-3 flex items-center justify-center">
-//                               <Package className="w-8 h-8 text-gray-400" />
-//                             </div>
-//                             <h4 className="text-sm mb-2 text-right">{product.name}</h4>
-//                             <div className="text-right text-blue-600 font-medium">
-//                               {formatCurrency(product.price)}
-//                             </div>
-//                           </CardContent>
-//                         </Card>
-//                       ))}
-//                       {filteredProducts.length === 0 && (
-//                         <div className="col-span-full text-center.text-gray-500 py-6">
-//                           لا توجد منتجات مطابقة للبحث
-//                         </div>
-//                       )}
-//                     </div>
-//                   </div>
-//                 </CardContent>
-//               </Card>
-//             </div>
-
-//             {/* Quotation Summary */}
-//             <div className="lg:col-span-1">
-//               <Card className="sticky top-6">
-//                 <CardHeader className="text-right">
-//                   <CardTitle className="flex items-center justify-between">
-//                     <span>ملخص عرض السعر</span>
-//                     <FileText className="w-5 h-5" />
-//                   </CardTitle>
-//                 </CardHeader>
-//                 <CardContent className="space-y-4">
-//                   {items.length === 0 ? (
-//                     <div className="text-center text-gray-500 py-10">
-//                       <FileText className="w-10 h-10 mx-auto mb-3.opacity-40" />
-//                       <p>لم تقم بإضافة أي منتجات بعد</p>
-//                     </div>
-//                   ) : (
-//                     <>
-//                       <div className="border rounded-lg.max-h-52 overflow-auto">
-//                         <Table>
-//                           <TableHeader>
-//                             <TableRow>
-//                               <TableHead className="text-right">الصنف</TableHead>
-//                               <TableHead className="text-right">الكمية</TableHead>
-//                               <TableHead className="text-right">السعر</TableHead>
-//                               <TableHead className="text-right">الإجمالي</TableHead>
-//                             </TableRow>
-//                           </TableHeader>
-//                           <TableBody>
-//                             {items.map((item) => (
-//                               <TableRow key={item.id}>
-//                                 <TableCell className="text-right">{item.name}</TableCell>
-//                                 <TableCell className="text-right">{item.quantity}</TableCell>
-//                                 <TableCell className="text-right">{formatCurrency(item.price)}</TableCell>
-//                                 <TableCell className="text-right">
-//                                   {formatCurrency(item.price * item.quantity)}
-//                                 </TableCell>
-//                               </TableRow>
-//                             ))}
-//                           </TableBody>
-//                         </Table>
-//                       </div>
-
-//                       <div className="space-y-2 text-sm">
-//                         <div className="flex justify-between">
-//                           <span>المجموع الفرعي:</span>
-//                           <span>{formatCurrency(subtotal)}</span>
-//                         </div>
-//                         <div className="flex justify-between">
-//                           <span>الضريبة (15%):</span>
-//                           <span>{formatCurrency(tax)}</span>
-//                         </div>
-//                         <div className="border-t pt-2 flex justify-between font-semibold">
-//                           <span>الإجمالي:</span>
-//                           <span className="text-blue-600">{formatCurrency(total)}</span>
-//                         </div>
-//                       </div>
-
-                
-//                       </div>
-//                     </>
-//                   )}
-//                 </CardContent>
-//               </Card>
-//             </div>
-//           </div>
-//         </TabsContent>
-
-//         <TabsContent value="list" className="space-y-6">
-//           <Card>
-//             <CardHeader className="text-right">
-//               <CardTitle>قائمة عروض الأسعار</CardTitle>
-//               <CardDescription>أحدث عروض الأسعار التي تم إنشاؤها</CardDescription>
-//             </CardHeader>
-//             <CardContent>
-//               {quotations.length === 0 ? (
-//                 <div className="text-center text-gray-500 py-6">
-//                   <Users className="w-10 h-10 mx-auto mb-3.opacity-40" />
-//                   <p>لا توجد عروض أسعار مسجلة حتى الآن</p>
-//                 </div>
-//               ) : (
-//                 <div dir="rtl">
-//                   <Table>
-//                     <TableHeader>
-//                       <TableRow>
-//                         <TableHead className="text-right">رقم العرض</TableHead>
-//                         <TableHead className="text-right">العميل</TableHead>
-//                         <TableHead className="text-right">التاريخ</TableHead>
-//                         <TableHead className="text-right">الإجمالي</TableHead>
-//                         <TableHead className="text-right">الحالة</TableHead>
-//                       </TableRow>
-//                     </TableHeader>
-//                     <TableBody>
-//                       {quotations.map((q) => (
-//                         <TableRow key={q.id}>
-//                           <TableCell className="text-right">{q.id}</TableCell>
-//                           <TableCell className="text-right">{q.customerName}</TableCell>
-//                           <TableCell className="text-right">{q.date}</TableCell>
-//                           <TableCell className="text-right">{formatCurrency(q.total)}</TableCell>
-//                           <TableCell className="text-right">
-//                             <Badge variant="outline">{q.status}</Badge>
-//                           </TableCell>
-//                         </TableRow>
-//                       ))}
-//                     </TableBody>
-//                   </Table>
-//                 </div>
-//               )}
-//             </CardContent>
-//           </Card>
-//         </TabsContent>
-//       </Tabs>
-//     </div>
-//   );
-// }
-
-

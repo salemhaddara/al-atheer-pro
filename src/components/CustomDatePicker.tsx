@@ -33,7 +33,7 @@ const styles = `
     font-size: 0.875rem;
     font-weight: 600;
     color: #374151;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.1rem;
   }
 
   .custom-date-picker-container {
@@ -52,7 +52,7 @@ const styles = `
 
   .custom-date-picker-trigger {
     flex: 1;
-    padding: 0.75rem 1rem;
+    padding: 0.25rem 0.5rem;
     text-align: inherit;
     border-radius: 0.5rem;
     border: 2px solid;
@@ -62,8 +62,14 @@ const styles = `
     align-items: center;
     gap: 0.75rem;
     font-family: inherit;
-    font-size: inherit;
+    font-size: 1rem;
     cursor: pointer;
+  }
+
+  @media (min-width: 768px) {
+    .custom-date-picker-trigger {
+      font-size: 0.875rem;
+    }
   }
 
   .custom-date-picker[dir="rtl"] .custom-date-picker-trigger {
@@ -424,7 +430,6 @@ export default function CustomDatePicker({
                 date ? "filled" : "empty"
               }`}
             >
-              <span className="icon">📅</span>
               <span className="text">
                 {date ? format(date, "yyyy/MM/dd") : displayPlaceholder}
               </span>
@@ -436,7 +441,6 @@ export default function CustomDatePicker({
                 className="custom-date-picker-clear-btn"
                 title={translations.clear}
               >
-                <X size={18} />
               </button>
             )}
           </div>

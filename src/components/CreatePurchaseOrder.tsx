@@ -13,6 +13,7 @@ import { useUser } from '../contexts/UserContext';
 import { SearchableSelect } from './ui/searchable-select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { loadBanks } from '../data/banks';
+import CustomDatePicker from './CustomDatePicker';
 
 interface CartItem {
     id: string;
@@ -54,8 +55,8 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedSupplierId, setSelectedSupplierId] = useState<string>('');
     const [selectedWarehouse, setSelectedWarehouse] = useState('1');
-    const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().split('T')[0]);
-    const [dueDate, setDueDate] = useState('');
+    const [purchaseDate, setPurchaseDate] = useState<Date | undefined>(new Date());
+    const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
     const [notes, setNotes] = useState('');
     const [showExpiryDialog, setShowExpiryDialog] = useState(false);
     const [pendingProduct, setPendingProduct] = useState<typeof products[0] | null>(null);
@@ -260,8 +261,8 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
         const order = {
             supplierId: selectedSupplierId,
             supplierName: selectedSupplier.name,
-            date: purchaseDate,
-            dueDate: dueDate || purchaseDate,
+            date: purchaseDate ? purchaseDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            dueDate: dueDate ? dueDate.toISOString().split('T')[0] : (purchaseDate ? purchaseDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
             items: cart,
             subtotal,
             tax,
@@ -339,8 +340,12 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
                             </Select>
                         </div>
                         <div className="space-y-2">
-                            <Label>تاريخ الشراء</Label>
-                            <Input type="date" value={purchaseDate} onChange={(e) => setPurchaseDate(e.target.value)} />
+                            <CustomDatePicker
+                                label="تاريخ الشراء"
+                                date={purchaseDate}
+                                onChange={(date) => setPurchaseDate(date)}
+                                placeholder="اختر تاريخ الشراء"
+                            />
                         </div>
                     </div>
                     {selectedSupplier && (
@@ -377,37 +382,36 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
                     </Card>
 
                     {/* Products Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        {filteredProducts.map((product) => (
-                            <Card
-                                key={product.id}
-                                className="cursor-pointer hover:shadow-md transition-shadow"
-                                onClick={() => handleProductClick(product)}
-                            >
-                                <CardContent className="p-4">
-                                    <div className="aspect-square bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
-                                        <Package className="w-12 h-12 text-gray-400" />
-                                    </div>
-                                    <h4 className="text-sm mb-2">{product.name}</h4>
-                                    <div className="space-y-1">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-blue-600 font-medium">{formatCurrency(product.costPrice || product.price)}</span>
-                                            <Badge variant="outline" className="text-xs">
-                                                {product.barcode}
-                                            </Badge>
-                                        </div>
-                                        <p className="text-xs text-gray-500">المخزون: {product.stock}</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
-                        {filteredProducts.length === 0 && (
-                            <div className="col-span-full text-center py-12 text-gray-500">
-                                <Package className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                                <p>لا توجد منتجات</p>
-                            </div>
-                        )}
-                    </div>
+                    <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                 {filteredProducts.map((product) => (
+                   <Card
+                     key={product.id}
+                     className="cursor-pointer hover:shadow-md transition-shadow aspect-square flex flex-col"
+                     onClick={() => addProductToCart(product)}
+                   >
+                     <CardContent className="p-3 flex flex-col flex-1 justify-between h-full">
+                       <div className="flex-1 flex items-center justify-center bg-gray-100 rounded-lg mb-2">
+                         <Package className="w-10 h-10 text-gray-400" />
+                       </div>
+                       <div className="flex flex-col gap-1 min-h-0">
+                         <h4 className="text-xs font-medium line-clamp-2 leading-tight mb-1">{product.name}</h4>
+                         <div className="flex flex-col gap-1">
+                           <span className="text-blue-600 font-semibold text-xs">{formatCurrency(product.price)}</span>
+                           <Badge variant="outline" className="text-xs w-fit py-0.5">
+                             {product.stock}
+                           </Badge>
+                         </div>
+                       </div>
+                     </CardContent>
+                   </Card>
+                 ))}
+                 {filteredProducts.length === 0 && (
+                   <div className="col-span-full text-center py-12 text-gray-500">
+                     <Package className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                     <p>لا توجد منتجات</p>
+                   </div>
+                 )}
+               </div>
                 </div>
 
                 {/* Cart Section */}
@@ -639,8 +643,11 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
 
                                     {/* Additional Fields */}
                                     <div className="space-y-2">
-                                        <Label>تاريخ الاستحقاق (اختياري)</Label>
-                                        <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                                        <CustomDatePicker
+                                            label="تاريخ الاستحقاق (اختياري)"
+                                            date={dueDate}
+                                            onChange={setDueDate}
+                                        />
                                     </div>
 
                                     <div className="space-y-2">

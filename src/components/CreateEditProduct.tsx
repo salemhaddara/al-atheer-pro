@@ -562,9 +562,9 @@ export function CreateEditProduct({
 
                   {formData.pricingTiers && formData.pricingTiers.length > 0 && (
                     <div className="space-y-3 border rounded-lg p-4 bg-gray-50">
-                      {formData.pricingTiers
-                        .sort((a, b) => a.minQuantity - b.minQuantity)
-                        .map((tier, index) => (
+                      {(formData.pricingTiers as PricingTier[])
+                        .sort((a: PricingTier, b: PricingTier) => a.minQuantity - b.minQuantity)
+                        .map((tier: PricingTier, index: number) => (
                           <div key={index} className="grid grid-cols-3 gap-3 items-end bg-white p-3 rounded border">
                             <div className="space-y-1">
                               <Label className="text-xs">الحد الأدنى للكمية</Label>
@@ -610,7 +610,7 @@ export function CreateEditProduct({
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => {
-                                  const newTiers = (formData.pricingTiers || []).filter((_, i) => i !== index);
+                                  const newTiers = ((formData.pricingTiers || []) as PricingTier[]).filter((_: PricingTier, i: number) => i !== index);
                                   setFormData({ ...formData, pricingTiers: newTiers });
                                 }}
                               >
@@ -626,9 +626,9 @@ export function CreateEditProduct({
                     <div className="text-xs bg-blue-50 p-3 rounded border text-right">
                       <p className="text-gray-700 font-medium mb-2">ملخص الأسعار:</p>
                       <div className="space-y-1">
-                        {formData.pricingTiers
-                          .sort((a, b) => a.minQuantity - b.minQuantity)
-                          .map((tier, index) => {
+                        {(formData.pricingTiers as PricingTier[])
+                          .sort((a: PricingTier, b: PricingTier) => a.minQuantity - b.minQuantity)
+                          .map((tier: PricingTier, index: number) => {
                             const nextTier = formData.pricingTiers?.[index + 1];
                             const range = nextTier
                               ? `${tier.minQuantity} - ${nextTier.minQuantity - 1}`
