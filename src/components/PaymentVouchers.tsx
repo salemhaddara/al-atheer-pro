@@ -22,8 +22,10 @@ import {
   loadOtherRecipients,
   type PaymentVoucher
 } from '../data/vouchers';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export function PaymentVouchers() {
+  const { t, direction } = useLanguage();
   const [vouchers, setVouchers] = useState<PaymentVoucher[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | PaymentVoucher['status']>('all');
@@ -48,20 +50,20 @@ export function PaymentVouchers() {
 
   // Load suppliers from Purchases component (shared data structure)
   const suppliers = useMemo(() => [
-    { id: 'general', name: 'مورد عام', accountNumber: 'SUP-GEN', phone: '' },
+    { id: 'general', name: t('accounting.paymentVouchers.generalSupplier') || 'مورد عام', accountNumber: 'SUP-GEN', phone: '' },
     { id: '1', name: 'مورد المعدات المكتبية', accountNumber: 'SUP-001', phone: '0501234567' },
     { id: '2', name: 'مورد الأثاث', accountNumber: 'SUP-002', phone: '0507654321' },
     { id: '3', name: 'مورد الأجهزة الإلكترونية', accountNumber: 'SUP-003', phone: '0509876543' },
-  ], []);
+  ], [t]);
 
   // Load other recipients
   const otherRecipients = useMemo(() => loadOtherRecipients(), []);
 
   // Load safes
   const safes = useMemo(() => [
-    { id: 'main', name: 'الخزينة الرئيسية', balance: getSafeBalance('main') },
-    { id: 'pos', name: 'خزينة نقاط البيع', balance: getSafeBalance('pos') },
-  ], []);
+    { id: 'main', name: t('accounting.paymentVouchers.mainSafe') || 'الخزينة الرئيسية', balance: getSafeBalance('main') },
+    { id: 'pos', name: t('accounting.paymentVouchers.posSafe') || 'خزينة نقاط البيع', balance: getSafeBalance('pos') },
+  ], [t]);
 
   const filteredVouchers = useMemo(() => {
     return vouchers.filter(voucher => {
@@ -119,24 +121,24 @@ export function PaymentVouchers() {
   };
 
   const handleDelete = (id: string) => {
-    if (!confirm('هل أنت متأكد من حذف هذا السند؟')) return;
+    if (!confirm(t('accounting.paymentVouchers.deleteConfirm'))) return;
 
     if (deletePaymentVoucher(id)) {
       setVouchers(loadPaymentVouchers());
-      toast.success('تم حذف السند بنجاح');
+      toast.success(t('accounting.paymentVouchers.voucherDeleted'));
     } else {
-      toast.error('فشل حذف السند');
+      toast.error(t('accounting.paymentVouchers.deleteFailed'));
     }
   };
 
   const handleSave = () => {
     if (!formData.toName.trim() || formData.amount <= 0) {
-      toast.error('يرجى ملء جميع الحقول المطلوبة');
+      toast.error(t('accounting.paymentVouchers.fillRequiredFields'));
       return;
     }
 
     if (formData.paymentMethod === 'cash' && !formData.safeId) {
-      toast.error('يرجى اختيار الخزينة');
+      toast.error(t('accounting.paymentVouchers.selectSafe'));
       return;
     }
 
@@ -144,7 +146,7 @@ export function PaymentVouchers() {
     if (formData.paymentMethod === 'cash' && formData.safeId) {
       const safeBalance = getSafeBalance(formData.safeId);
       if (safeBalance < formData.amount) {
-        toast.error(`الرصيد غير كافي في الخزينة. المتاح: ${formatCurrency(safeBalance)}`);
+        toast.error(t('accounting.paymentVouchers.insufficientBalance').replace('{balance}', formatCurrency(safeBalance)));
         return;
       }
     }
@@ -168,9 +170,9 @@ export function PaymentVouchers() {
 
       if (updated) {
         setVouchers(loadPaymentVouchers());
-        toast.success('تم تحديث السند بنجاح');
+        toast.success(t('accounting.paymentVouchers.voucherUpdated'));
       } else {
-        toast.error('فشل تحديث السند');
+        toast.error(t('accounting.paymentVouchers.updateFailed'));
       }
     } else {
       // Create new voucher
@@ -203,7 +205,7 @@ export function PaymentVouchers() {
       if (formData.paymentMethod === 'cash' && formData.safeId) {
         const success = deductFromSafe(formData.safeId, formData.amount);
         if (!success) {
-          toast.error('فشل تحديث الخزينة');
+          toast.error(t('accounting.paymentVouchers.safeUpdateFailed'));
           return;
         }
       }
@@ -215,7 +217,7 @@ export function PaymentVouchers() {
       }
 
       setVouchers(loadPaymentVouchers());
-      toast.success('تم إنشاء سند الصرف بنجاح');
+      toast.success(t('accounting.paymentVouchers.voucherCreated'));
     }
 
     setIsDialogOpen(false);
@@ -251,16 +253,16 @@ export function PaymentVouchers() {
   }, [otherRecipients]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={direction}>
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1>سندات الصرف</h1>
-          <p className="text-gray-600">إدارة سندات دفع النقدية</p>
+        <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+          <h1>{t('accounting.paymentVouchers.title')}</h1>
+          <p className="text-gray-600">{t('accounting.paymentVouchers.subtitle')}</p>
         </div>
         <Button onClick={handleAddNew} className="gap-2">
           <Plus className="w-4 h-4" />
-          سند صرف جديد
+          {t('accounting.paymentVouchers.newVoucher')}
         </Button>
       </div>
 
@@ -269,24 +271,24 @@ export function PaymentVouchers() {
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="relative">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className={`absolute ${direction === 'rtl' ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400`} />
               <Input
-                placeholder="ابحث برقم السند أو المستفيد..."
+                placeholder={t('accounting.paymentVouchers.searchPlaceholder')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pr-10"
-                dir="rtl"
+                className={direction === 'rtl' ? 'pr-10' : 'pl-10'}
+                dir={direction}
               />
             </div>
             <Select value={filterStatus} onValueChange={(value: 'all' | PaymentVoucher['status']) => setFilterStatus(value)}>
               <SelectTrigger>
-                <SelectValue placeholder="تصفية حسب الحالة" />
+                <SelectValue placeholder={t('accounting.paymentVouchers.filterByStatus')} />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">جميع الحالات</SelectItem>
-                <SelectItem value="مُعتمد">مُعتمد</SelectItem>
-                <SelectItem value="قيد المراجعة">قيد المراجعة</SelectItem>
-                <SelectItem value="ملغي">ملغي</SelectItem>
+              <SelectContent dir={direction}>
+                <SelectItem value="all">{t('accounting.paymentVouchers.allStatuses')}</SelectItem>
+                <SelectItem value="مُعتمد">{t('accounting.statuses.approved')}</SelectItem>
+                <SelectItem value="قيد المراجعة">{t('accounting.statuses.underReview')}</SelectItem>
+                <SelectItem value="ملغي">{t('accounting.statuses.rejected')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -295,22 +297,22 @@ export function PaymentVouchers() {
 
       {/* Vouchers Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>قائمة سندات الصرف</CardTitle>
-          <CardDescription>جميع سندات دفع النقدية</CardDescription>
+        <CardHeader dir={direction}>
+          <CardTitle>{t('accounting.paymentVouchers.vouchersList')}</CardTitle>
+          <CardDescription>{t('accounting.paymentVouchers.vouchersListDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="border rounded-lg overflow-hidden">
-            <Table>
+            <Table dir={direction}>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-right">رقم السند</TableHead>
-                  <TableHead className="text-right">التاريخ</TableHead>
-                  <TableHead className="text-right">إلى</TableHead>
-                  <TableHead className="text-right">نوع الدفع</TableHead>
-                  <TableHead className="text-right">المبلغ</TableHead>
-                  <TableHead className="text-right">الحالة</TableHead>
-                  <TableHead className="text-right w-24">إجراءات</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.paymentVouchers.voucherNumber')}</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.paymentVouchers.date')}</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.paymentVouchers.to')}</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.paymentVouchers.paymentType')}</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.paymentVouchers.amount')}</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.paymentVouchers.status')}</TableHead>
+                  <TableHead className={`${direction === 'rtl' ? 'text-right' : 'text-left'} w-24`}>{t('accounting.paymentVouchers.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -328,14 +330,14 @@ export function PaymentVouchers() {
                           <p className="font-medium">{voucher.toName}</p>
                           {voucher.toType === 'supplier' && (
                             <Badge variant="outline" className="text-xs mt-1">
-                              مورد
+                              {t('accounting.paymentVouchers.supplier')}
                             </Badge>
                           )}
                         </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant={voucher.paymentMethod === 'cash' ? 'default' : 'secondary'}>
-                          {voucher.paymentMethod === 'cash' ? 'نقدي' : 'بطاقة'}
+                          {voucher.paymentMethod === 'cash' ? t('accounting.paymentVouchers.cash') : t('accounting.paymentVouchers.card')}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-red-600 font-semibold">
@@ -348,7 +350,10 @@ export function PaymentVouchers() {
                               voucher.status === 'قيد المراجعة' ? 'secondary' : 'destructive'
                           }
                         >
-                          {voucher.status}
+                          {voucher.status === 'مُعتمد' ? t('accounting.statuses.approved') :
+                           voucher.status === 'قيد المراجعة' ? t('accounting.statuses.underReview') :
+                           voucher.status === 'ملغي' ? t('accounting.statuses.rejected') :
+                           voucher.status}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -357,7 +362,7 @@ export function PaymentVouchers() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleEdit(voucher)}
-                            title="تعديل"
+                            title={t('accounting.paymentVouchers.editVoucher')}
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
@@ -365,7 +370,7 @@ export function PaymentVouchers() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDelete(voucher.id)}
-                            title="حذف"
+                            title={t('accounting.paymentVouchers.deleteVoucher')}
                             className="text-red-600 hover:text-red-700"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -378,7 +383,7 @@ export function PaymentVouchers() {
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-12 text-gray-500">
                       <FileText className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                      <p>لا توجد سندات صرف</p>
+                      <p>{t('accounting.paymentVouchers.noVouchers')}</p>
                     </TableCell>
                   </TableRow>
                 )}
@@ -390,26 +395,27 @@ export function PaymentVouchers() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl" dir="rtl">
-          <DialogHeader>
-            <DialogTitle>{editingVoucher ? 'تعديل سند الصرف' : 'سند صرف جديد'}</DialogTitle>
+        <DialogContent className="max-w-2xl" dir={direction}>
+          <DialogHeader dir={direction}>
+            <DialogTitle>{editingVoucher ? t('accounting.paymentVouchers.editVoucher') : t('accounting.paymentVouchers.newVoucherTitle')}</DialogTitle>
             <DialogDescription>
-              {editingVoucher ? 'تعديل بيانات سند الصرف' : 'إنشاء سند صرف جديد'}
+              {editingVoucher ? t('accounting.paymentVouchers.editVoucherDesc') : t('accounting.paymentVouchers.createVoucherDesc')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>التاريخ *</Label>
+                <Label>{t('accounting.paymentVouchers.dateLabel')}</Label>
                 <Input
                   type="date"
                   value={formData.date}
                   onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  dir="ltr"
                 />
               </div>
               <div className="space-y-2">
-                <Label>نوع الدفع *</Label>
+                <Label>{t('accounting.paymentVouchers.paymentTypeLabel')}</Label>
                 <Select
                   value={formData.paymentMethod}
                   onValueChange={(value: 'cash' | 'card') => setFormData({ ...formData, paymentMethod: value })}
@@ -417,16 +423,16 @@ export function PaymentVouchers() {
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cash">نقدي</SelectItem>
-                    <SelectItem value="card">بطاقة</SelectItem>
+                  <SelectContent dir={direction}>
+                    <SelectItem value="cash">{t('accounting.paymentVouchers.cash')}</SelectItem>
+                    <SelectItem value="card">{t('accounting.paymentVouchers.card')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>المستفيد *</Label>
+              <Label>{t('accounting.paymentVouchers.recipientLabel')}</Label>
               <Select
                 value={formData.toType}
                 onValueChange={(value: 'supplier' | 'other') => setFormData({ ...formData, toType: value, toId: '', toName: '' })}
@@ -434,16 +440,16 @@ export function PaymentVouchers() {
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="supplier">مورد</SelectItem>
-                  <SelectItem value="other">مستفيد آخر</SelectItem>
+                <SelectContent dir={direction}>
+                  <SelectItem value="supplier">{t('accounting.paymentVouchers.supplier')}</SelectItem>
+                  <SelectItem value="other">{t('accounting.paymentVouchers.otherRecipient')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {formData.toType === 'supplier' ? (
               <div className="space-y-2">
-                <Label>اختر المورد *</Label>
+                <Label>{t('accounting.paymentVouchers.selectSupplier')}</Label>
                 <SearchableSelect
                   options={supplierOptions}
                   value={formData.toId}
@@ -455,16 +461,17 @@ export function PaymentVouchers() {
                       toName: supplier?.name || ''
                     });
                   }}
-                  placeholder="ابحث عن المورد..."
-                  searchPlaceholder="ابحث بالاسم أو رقم الحساب..."
-                  emptyMessage="لا يوجد موردين"
+                  placeholder={t('accounting.paymentVouchers.supplierSearchPlaceholder')}
+                  searchPlaceholder={t('accounting.paymentVouchers.supplierSearchPlaceholder')}
+                  emptyMessage={t('accounting.paymentVouchers.noSuppliers')}
                   displayKey="name"
                   searchKeys={['name', 'accountNumber', 'phone']}
+                  dir={direction}
                 />
               </div>
             ) : (
               <div className="space-y-2">
-                <Label>اختر المستفيد *</Label>
+                <Label>{t('accounting.paymentVouchers.selectRecipient')}</Label>
                 <SearchableSelect
                   options={otherRecipientOptions}
                   value={formData.toId}
@@ -476,30 +483,32 @@ export function PaymentVouchers() {
                       toName: recipient?.name || ''
                     });
                   }}
-                  placeholder="ابحث عن المستفيد..."
-                  searchPlaceholder="ابحث بالاسم..."
-                  emptyMessage="لا توجد مستفيدين آخرين"
+                  placeholder={t('accounting.paymentVouchers.recipientSearchPlaceholder')}
+                  searchPlaceholder={t('accounting.paymentVouchers.recipientSearchPlaceholder')}
+                  emptyMessage={t('accounting.paymentVouchers.noRecipients')}
                   displayKey="name"
                   searchKeys={['name', 'description']}
+                  dir={direction}
                 />
               </div>
             )}
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>المبلغ *</Label>
+                <Label>{t('accounting.paymentVouchers.amountLabel')}</Label>
                 <Input
                   type="number"
                   value={formData.amount}
                   onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
-                  placeholder="0.00"
+                  placeholder={t('accounting.paymentVouchers.amountPlaceholder')}
                   step="0.01"
                   min="0"
+                  dir="ltr"
                 />
               </div>
               {formData.paymentMethod === 'cash' ? (
                 <div className="space-y-2">
-                  <Label>الخزينة *</Label>
+                  <Label>{t('accounting.paymentVouchers.safeLabel')}</Label>
                   <Select
                     value={formData.safeId}
                     onValueChange={(value) => setFormData({ ...formData, safeId: value })}
@@ -507,7 +516,7 @@ export function PaymentVouchers() {
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent dir={direction}>
                       {safes.map(safe => (
                         <SelectItem key={safe.id} value={safe.id}>
                           {safe.name} ({formatCurrency(safe.balance)})
@@ -518,34 +527,36 @@ export function PaymentVouchers() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <Label>الحساب البنكي</Label>
+                  <Label>{t('accounting.paymentVouchers.bankAccountLabel')}</Label>
                   <Input
                     value={formData.bankAccount}
                     onChange={(e) => setFormData({ ...formData, bankAccount: e.target.value })}
-                    placeholder="رقم الحساب البنكي"
-                    className="text-right"
+                    placeholder={t('accounting.paymentVouchers.bankAccountPlaceholder')}
+                    className={direction === 'rtl' ? 'text-right' : 'text-left'}
+                    dir={direction}
                   />
                 </div>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label>الوصف / الملاحظات</Label>
+              <Label>{t('accounting.paymentVouchers.descriptionLabel')}</Label>
               <Input
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="وصف السند (اختياري)"
-                className="text-right"
+                placeholder={t('accounting.paymentVouchers.descriptionPlaceholder')}
+                className={direction === 'rtl' ? 'text-right' : 'text-left'}
+                dir={direction}
               />
             </div>
           </div>
 
           <div className="flex gap-3 pt-4 border-t">
             <Button onClick={() => setIsDialogOpen(false)} variant="outline" className="flex-1">
-              إلغاء
+              {t('accounting.paymentVouchers.cancel')}
             </Button>
             <Button onClick={handleSave} className="flex-1">
-              {editingVoucher ? 'حفظ التعديلات' : 'إنشاء السند'}
+              {editingVoucher ? t('accounting.paymentVouchers.saveChanges') : t('accounting.paymentVouchers.createVoucher')}
             </Button>
           </div>
         </DialogContent>

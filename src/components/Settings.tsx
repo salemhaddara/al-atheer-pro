@@ -229,7 +229,7 @@ export function Settings() {
         <TabsContent value="company">
           <Card>
             <CardHeader>
-              <CardTitle>{t('settings.company.title')} / {t('settings.company.titleEn')}</CardTitle>
+              <CardTitle>{t('settings.company.title')}</CardTitle>
               <CardDescription>{t('settings.company.subtitle')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">

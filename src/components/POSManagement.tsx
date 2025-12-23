@@ -12,6 +12,7 @@ import { Textarea } from './ui/textarea';
 import { Store, Plus, Wallet, Lock, DollarSign, User, Building2, History, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useUser } from '../contexts/UserContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import {
   loadDrawers,
   getDrawer,
@@ -39,6 +40,7 @@ const branches = [
 ];
 
 export function POSManagement() {
+  const { t, direction } = useLanguage();
   const { currentUser } = useUser();
   const [drawers, setDrawers] = useState<Record<string, CashDrawer>>({});
   const [selectedDrawer, setSelectedDrawer] = useState<CashDrawer | null>(null);
@@ -84,11 +86,11 @@ export function POSManagement() {
 
   const handleCreatePOS = () => {
     if (!newPosId.trim()) {
-      toast.error('يرجى إدخال معرف نقطة البيع');
+      toast.error(t('posManagement.posIdRequired'));
       return;
     }
     if (!newBranchId) {
-      toast.error('يرجى اختيار الفرع');
+      toast.error(t('posManagement.branchRequired'));
       return;
     }
 
@@ -98,13 +100,13 @@ export function POSManagement() {
     const drawer = createOrUpdateDrawer(
       newPosId.trim(),
       newBranchId,
-      branch?.name || 'الفرع الرئيسي',
+      branch?.name || t('sidebar.mainBranch'),
       employee?.id,
       employee?.name
     );
 
     setDrawers(loadDrawers());
-    toast.success('تم إنشاء/تحديث نقطة البيع بنجاح');
+    toast.success(t('posManagement.posCreated'));
     setShowCreateDialog(false);
     setNewPosId('');
     setNewBranchId('');
@@ -116,13 +118,13 @@ export function POSManagement() {
 
     const counted = parseFloat(actualCounted);
     if (!counted || counted < 0) {
-      toast.error('يرجى إدخال المبلغ الفعلي');
+      toast.error(t('posManagement.closeDrawer.actualAmountRequired'));
       return;
     }
 
     const discrepancy = counted - selectedDrawer.currentBalance;
     if (discrepancy !== 0 && !discrepancyReason.trim()) {
-      toast.error('يرجى إدخال سبب الفارق');
+      toast.error(t('posManagement.closeDrawer.discrepancyReasonRequired'));
       return;
     }
 
@@ -130,19 +132,19 @@ export function POSManagement() {
       selectedDrawer.posId,
       counted,
       currentUser?.id || 'unknown',
-      currentUser?.name || 'غير محدد',
+      currentUser?.name || t('pos.notSpecified'),
       discrepancy !== 0 ? discrepancyReason : undefined
     );
 
     if (result.success) {
-      toast.success('تم إغلاق الدرج بنجاح');
+      toast.success(t('posManagement.closeDrawer.closedSuccessfully'));
       setDrawers(loadDrawers());
       setShowCloseDialog(false);
       setActualCounted('');
       setDiscrepancyReason('');
       setSelectedDrawer(null);
     } else {
-      toast.error(result.error || 'فشل إغلاق الدرج');
+      toast.error(result.error || t('posManagement.closeDrawer.closeFailed'));
     }
   };
 
@@ -151,7 +153,7 @@ export function POSManagement() {
 
     const amount = parseFloat(addMoneyAmount);
     if (!amount || amount <= 0) {
-      toast.error('يرجى إدخال مبلغ صحيح');
+      toast.error(t('posManagement.addMoney.validAmountRequired'));
       return;
     }
 
@@ -160,19 +162,19 @@ export function POSManagement() {
       amount,
       'manual_add',
       currentUser?.id || 'unknown',
-      currentUser?.name || 'غير محدد',
-      addMoneyNotes || 'إضافة يدوية'
+      currentUser?.name || t('pos.notSpecified'),
+      addMoneyNotes || t('pos.manualAdd')
     );
 
     if (success) {
-      toast.success(`تم إضافة ${formatCurrency(amount)} للدرج`);
+      toast.success(t('posManagement.addMoney.amountAdded').replace('{amount}', formatCurrency(amount)));
       setDrawers(loadDrawers());
       setShowAddMoneyDialog(false);
       setAddMoneyAmount('');
       setAddMoneyNotes('');
       setSelectedDrawer(null);
     } else {
-      toast.error('فشل إضافة المبلغ');
+      toast.error(t('posManagement.addMoney.addFailed'));
     }
   };
 
@@ -187,40 +189,40 @@ export function POSManagement() {
   }, [selectedDrawer]);
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={direction}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1>إدارة نقاط البيع والدرج النقدية</h1>
-          <p className="text-gray-600">إدارة نقاط البيع وتعيين الموظفين وإدارة الدرج النقدية</p>
+          <h1>{t('posManagement.title')}</h1>
+          <p className="text-gray-600">{t('posManagement.subtitle')}</p>
         </div>
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
               <Button className="gap-2">
                 <Plus className="w-4 h-4" />
-                إضافة نقطة بيع جديدة
+                {t('posManagement.addNewPOS')}
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md" dir="rtl">
+            <DialogContent className="max-w-md" dir={direction}>
               <DialogHeader>
-                <DialogTitle>إضافة/تعديل نقطة بيع</DialogTitle>
-                <DialogDescription>إنشاء نقطة بيع جديدة أو تحديث موجودة</DialogDescription>
+                <DialogTitle>{t('posManagement.addEditPOS')}</DialogTitle>
+                <DialogDescription>{t('posManagement.addEditPOSDesc')}</DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>معرف نقطة البيع *</Label>
+                  <Label>{t('posManagement.posId')} *</Label>
                   <Input
                     value={newPosId}
                     onChange={(e) => setNewPosId(e.target.value)}
-                    placeholder="pos-1, pos-2, ..."
+                    placeholder={t('posManagement.posIdPlaceholder')}
                     dir="ltr"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>الفرع *</Label>
+                  <Label>{t('posManagement.branchLabel')} *</Label>
                   <Select value={newBranchId} onValueChange={setNewBranchId}>
                     <SelectTrigger>
-                      <SelectValue placeholder="اختر الفرع" />
+                      <SelectValue placeholder={t('posManagement.selectBranch')} />
                     </SelectTrigger>
                     <SelectContent>
                       {branches.map(branch => (
@@ -232,13 +234,13 @@ export function POSManagement() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>الموظف المسؤول (اختياري)</Label>
-                  <Select value={newEmployeeId} onValueChange={setNewEmployeeId}>
+                  <Label>{t('posManagement.employeeLabel')}</Label>
+                  <Select value={newEmployeeId || 'none'} onValueChange={(value) => setNewEmployeeId(value === 'none' ? '' : value)}>
                     <SelectTrigger>
-                      <SelectValue placeholder="اختر الموظف" />
+                      <SelectValue placeholder={t('posManagement.selectEmployee')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">لا يوجد</SelectItem>
+                      <SelectItem value="none">{t('posManagement.noEmployee')}</SelectItem>
                       {employees.map(emp => (
                         <SelectItem key={emp.id} value={emp.id}>
                           {emp.name}
@@ -247,12 +249,12 @@ export function POSManagement() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex gap-2 justify-end">
+                <div className={`flex gap-2 ${direction === 'rtl' ? 'justify-end' : 'justify-start'}`}>
                   <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-                    إلغاء
+                    {t('posManagement.cancel')}
                   </Button>
                   <Button onClick={handleCreatePOS}>
-                    حفظ
+                    {t('posManagement.save')}
                   </Button>
                 </div>
               </div>
@@ -265,47 +267,47 @@ export function POSManagement() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <Store className="w-4 h-4 text-blue-600" />
-            <CardTitle className="text-sm">إجمالي نقاط البيع</CardTitle>
+            <CardTitle className="text-sm">{t('posManagement.stats.totalPOS')}</CardTitle>
           </CardHeader>
-          <CardContent className="text-right">
+          <CardContent className={direction === 'rtl' ? 'text-right' : 'text-left'}>
             <div className="text-2xl">{availableDrawers.length}</div>
-            <p className="text-xs text-gray-600 mt-1">نقطة بيع نشطة</p>
+            <p className="text-xs text-gray-600 mt-1">{t('posManagement.stats.activePOS')}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <Wallet className="w-4 h-4 text-green-600" />
-            <CardTitle className="text-sm">إجمالي الأرصدة</CardTitle>
+            <CardTitle className="text-sm">{t('posManagement.stats.totalBalances')}</CardTitle>
           </CardHeader>
-          <CardContent className="text-right">
+          <CardContent className={direction === 'rtl' ? 'text-right' : 'text-left'}>
             <div className="text-2xl">
               {formatCurrency(availableDrawers.reduce((sum, d) => sum + d.currentBalance, 0))}
             </div>
-            <p className="text-xs text-gray-600 mt-1">في جميع الدرج</p>
+            <p className="text-xs text-gray-600 mt-1">{t('posManagement.stats.inAllDrawers')}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <Lock className="w-4 h-4 text-orange-600" />
-            <CardTitle className="text-sm">الدرج المفتوحة</CardTitle>
+            <CardTitle className="text-sm">{t('posManagement.stats.openDrawers')}</CardTitle>
           </CardHeader>
-          <CardContent className="text-right">
+          <CardContent className={direction === 'rtl' ? 'text-right' : 'text-left'}>
             <div className="text-2xl">
               {availableDrawers.filter(d => d.status === 'open').length}
             </div>
-            <p className="text-xs text-gray-600 mt-1">درج مفتوح</p>
+            <p className="text-xs text-gray-600 mt-1">{t('posManagement.stats.openDrawer')}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <User className="w-4 h-4 text-purple-600" />
-            <CardTitle className="text-sm">الموظفين المعينين</CardTitle>
+            <CardTitle className="text-sm">{t('posManagement.stats.assignedEmployees')}</CardTitle>
           </CardHeader>
-          <CardContent className="text-right">
+          <CardContent className={direction === 'rtl' ? 'text-right' : 'text-left'}>
             <div className="text-2xl">
               {new Set(availableDrawers.filter(d => d.employeeId).map(d => d.employeeId)).size}
             </div>
-            <p className="text-xs text-gray-600 mt-1">موظف نشط</p>
+            <p className="text-xs text-gray-600 mt-1">{t('posManagement.stats.activeEmployee')}</p>
           </CardContent>
         </Card>
       </div>
@@ -313,22 +315,22 @@ export function POSManagement() {
       {/* POS Terminals Table */}
       <Card>
         <CardHeader>
-          <CardTitle>نقاط البيع والدرج النقدية</CardTitle>
-          <CardDescription>عرض وإدارة جميع نقاط البيع والدرج النقدية</CardDescription>
+          <CardTitle>{t('posManagement.table.title')}</CardTitle>
+          <CardDescription>{t('posManagement.table.subtitle')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <div dir="rtl">
+          <div dir={direction}>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-right">معرف نقطة البيع</TableHead>
-                  <TableHead className="text-right">الفرع</TableHead>
-                  <TableHead className="text-right">الموظف المسؤول</TableHead>
-                  <TableHead className="text-right">رصيد الافتتاح</TableHead>
-                  <TableHead className="text-right">الرصيد الحالي</TableHead>
-                  <TableHead className="text-right">نقد المبيعات</TableHead>
-                  <TableHead className="text-right">الحالة</TableHead>
-                  <TableHead className="text-right">إجراءات</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('posManagement.table.posId')}</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('posManagement.table.branch')}</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('posManagement.table.employee')}</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('posManagement.table.openingBalance')}</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('posManagement.table.currentBalance')}</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('posManagement.table.salesCash')}</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('posManagement.table.status')}</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('posManagement.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -345,7 +347,7 @@ export function POSManagement() {
                             {drawer.employeeName}
                           </div>
                         ) : (
-                          <span className="text-gray-400">غير معين</span>
+                          <span className="text-gray-400">{t('posManagement.table.notAssigned')}</span>
                         )}
                       </TableCell>
                       <TableCell className="text-blue-600 font-semibold">
@@ -359,11 +361,11 @@ export function POSManagement() {
                       </TableCell>
                       <TableCell>
                         <Badge variant={drawer.status === 'open' ? 'default' : 'secondary'}>
-                          {drawer.status === 'open' ? 'مفتوح' : 'مغلق'}
+                          {drawer.status === 'open' ? t('posManagement.table.open') : t('posManagement.table.closed')}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex gap-2 justify-end">
+                        <div className={`flex gap-2 ${direction === 'rtl' ? 'justify-end' : 'justify-start'}`}>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -371,7 +373,7 @@ export function POSManagement() {
                               setSelectedDrawer(drawer);
                               setShowAddMoneyDialog(true);
                             }}
-                            title="إضافة نقد"
+                            title={t('posManagement.table.addCash')}
                           >
                             <DollarSign className="w-4 h-4" />
                           </Button>
@@ -383,7 +385,7 @@ export function POSManagement() {
                                 setSelectedDrawer(drawer);
                                 setShowCloseDialog(true);
                               }}
-                              title="إغلاق الدرج"
+                              title={t('posManagement.table.closeDrawer')}
                             >
                               <Lock className="w-4 h-4" />
                             </Button>
@@ -395,7 +397,7 @@ export function POSManagement() {
                               setSelectedDrawer(drawer);
                               setShowHistoryDialog(true);
                             }}
-                            title="سجل الحركات"
+                            title={t('posManagement.table.transactionHistory')}
                           >
                             <History className="w-4 h-4" />
                           </Button>
@@ -406,7 +408,7 @@ export function POSManagement() {
                               setSelectedDrawer(drawer);
                               setShowReconciliationsDialog(true);
                             }}
-                            title="سجل الإغلاق"
+                            title={t('posManagement.table.closeHistory')}
                           >
                             <AlertCircle className="w-4 h-4" />
                           </Button>
@@ -419,8 +421,8 @@ export function POSManagement() {
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-12 text-gray-500">
                       <Store className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                      <p>لا توجد نقاط بيع مسجلة</p>
-                      <p className="text-sm mt-2">اضغط على "إضافة نقطة بيع جديدة" لإنشاء واحدة</p>
+                      <p>{t('posManagement.table.noPOS')}</p>
+                      <p className="text-sm mt-2">{t('posManagement.table.noPOSDesc')}</p>
                     </TableCell>
                   </TableRow>
                 )}
@@ -432,68 +434,68 @@ export function POSManagement() {
 
       {/* Close Drawer Dialog */}
       <Dialog open={showCloseDialog} onOpenChange={setShowCloseDialog}>
-        <DialogContent dir="rtl">
+        <DialogContent dir={direction}>
           <DialogHeader>
-            <DialogTitle>إغلاق درج النقدية</DialogTitle>
+            <DialogTitle>{t('posManagement.closeDrawer.title')}</DialogTitle>
             <DialogDescription>
-              {selectedDrawer && `نقطة البيع: ${selectedDrawer.posId} - ${selectedDrawer.branchName}`}
+              {selectedDrawer && t('posManagement.closeDrawer.posInfo').replace('{posId}', selectedDrawer.posId).replace('{branchName}', selectedDrawer.branchName)}
             </DialogDescription>
           </DialogHeader>
           {selectedDrawer && (
             <div className="space-y-4">
               <div className="p-4 bg-blue-50 rounded-lg space-y-2">
                 <div className="flex justify-between">
-                  <span>رصيد الافتتاح:</span>
+                  <span>{t('posManagement.closeDrawer.openingBalance')}</span>
                   <span className="font-semibold">{formatCurrency(selectedDrawer.openingBalance)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>نقد المبيعات:</span>
+                  <span>{t('posManagement.closeDrawer.salesCash')}</span>
                   <span className="font-semibold">
                     {formatCurrency(selectedDrawer.currentBalance - selectedDrawer.openingBalance)}
                   </span>
                 </div>
                 <div className="border-t pt-2 mt-2 flex justify-between text-lg">
-                  <span className="font-bold">المتوقع في الدرج:</span>
+                  <span className="font-bold">{t('posManagement.closeDrawer.expectedInDrawer')}</span>
                   <span className="font-bold text-green-600">{formatCurrency(selectedDrawer.currentBalance)}</span>
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>المبلغ الفعلي الموجود في الدرج *</Label>
+                <Label>{t('posManagement.closeDrawer.actualAmount')} *</Label>
                 <Input
                   type="number"
                   value={actualCounted}
                   onChange={(e) => setActualCounted(e.target.value)}
-                  placeholder="0.00"
+                  placeholder={t('posManagement.closeDrawer.actualAmountPlaceholder')}
                   step="0.01"
                   className="text-lg"
                 />
               </div>
               {actualCounted && parseFloat(actualCounted) !== selectedDrawer.currentBalance && (
                 <div className="space-y-2">
-                  <Label>سبب الفارق (مطلوب)</Label>
+                  <Label>{t('posManagement.closeDrawer.discrepancyReason')}</Label>
                   <Textarea
                     value={discrepancyReason}
                     onChange={(e) => setDiscrepancyReason(e.target.value)}
-                    placeholder="مثال: خطأ في العد، نقص نقد..."
+                    placeholder={t('posManagement.closeDrawer.discrepancyReasonPlaceholder')}
                     rows={3}
                   />
                   <div className="text-sm text-red-600">
-                    الفارق: {formatCurrency(parseFloat(actualCounted) - selectedDrawer.currentBalance)}
+                    {t('posManagement.closeDrawer.discrepancy')} {formatCurrency(parseFloat(actualCounted) - selectedDrawer.currentBalance)}
                   </div>
                 </div>
               )}
-              <div className="flex gap-2 justify-end">
+              <div className={`flex gap-2 ${direction === 'rtl' ? 'justify-end' : 'justify-start'}`}>
                 <Button variant="outline" onClick={() => {
                   setShowCloseDialog(false);
                   setActualCounted('');
                   setDiscrepancyReason('');
                   setSelectedDrawer(null);
                 }}>
-                  إلغاء
+                  {t('posManagement.cancel')}
                 </Button>
                 <Button onClick={handleCloseDrawer}>
-                  <Lock className="w-4 h-4 ml-2" />
-                  إغلاق الدرج
+                  <Lock className={`w-4 h-4 ${direction === 'rtl' ? 'mr-2' : 'ml-2'}`} />
+                  {t('pos.closeDrawer')}
                 </Button>
               </div>
             </div>
@@ -503,53 +505,53 @@ export function POSManagement() {
 
       {/* Add Money Dialog */}
       <Dialog open={showAddMoneyDialog} onOpenChange={setShowAddMoneyDialog}>
-        <DialogContent dir="rtl">
+        <DialogContent dir={direction}>
           <DialogHeader>
-            <DialogTitle>إضافة نقد للدرج</DialogTitle>
+            <DialogTitle>{t('posManagement.addMoney.title')}</DialogTitle>
             <DialogDescription>
-              {selectedDrawer && `نقطة البيع: ${selectedDrawer.posId} - ${selectedDrawer.branchName}`}
+              {selectedDrawer && t('posManagement.addMoney.posInfo').replace('{posId}', selectedDrawer.posId).replace('{branchName}', selectedDrawer.branchName)}
             </DialogDescription>
           </DialogHeader>
           {selectedDrawer && (
             <div className="space-y-4">
               <div className="p-4 bg-gray-50 rounded-lg">
                 <div className="flex justify-between mb-2">
-                  <span>الرصيد الحالي:</span>
+                  <span>{t('posManagement.addMoney.currentBalance')}</span>
                   <span className="font-bold text-green-600">{formatCurrency(selectedDrawer.currentBalance)}</span>
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>المبلغ</Label>
+                <Label>{t('posManagement.addMoney.amount')}</Label>
                 <Input
                   type="number"
                   value={addMoneyAmount}
                   onChange={(e) => setAddMoneyAmount(e.target.value)}
-                  placeholder="0.00"
+                  placeholder={t('posManagement.addMoney.amountPlaceholder')}
                   step="0.01"
                   min="0"
                 />
               </div>
               <div className="space-y-2">
-                <Label>ملاحظات (اختياري)</Label>
+                <Label>{t('posManagement.addMoney.notes')}</Label>
                 <Textarea
                   value={addMoneyNotes}
                   onChange={(e) => setAddMoneyNotes(e.target.value)}
-                  placeholder="مثال: نقد للصرف..."
+                  placeholder={t('posManagement.addMoney.notesPlaceholder')}
                   rows={3}
                 />
               </div>
-              <div className="flex gap-2 justify-end">
+              <div className={`flex gap-2 ${direction === 'rtl' ? 'justify-end' : 'justify-start'}`}>
                 <Button variant="outline" onClick={() => {
                   setShowAddMoneyDialog(false);
                   setAddMoneyAmount('');
                   setAddMoneyNotes('');
                   setSelectedDrawer(null);
                 }}>
-                  إلغاء
+                  {t('posManagement.cancel')}
                 </Button>
                 <Button onClick={handleAddMoney}>
-                  <DollarSign className="w-4 h-4 ml-2" />
-                  إضافة
+                  <DollarSign className={`w-4 h-4 ${direction === 'rtl' ? 'mr-2' : 'ml-2'}`} />
+                  {t('pos.add')}
                 </Button>
               </div>
             </div>
@@ -559,11 +561,11 @@ export function POSManagement() {
 
       {/* History Dialog */}
       <Dialog open={showHistoryDialog} onOpenChange={setShowHistoryDialog}>
-        <DialogContent className="max-w-4xl" dir="rtl">
+        <DialogContent className="max-w-4xl" dir={direction}>
           <DialogHeader>
-            <DialogTitle>سجل حركات الدرج</DialogTitle>
+            <DialogTitle>{t('posManagement.history.title')}</DialogTitle>
             <DialogDescription>
-              {selectedDrawer && `نقطة البيع: ${selectedDrawer.posId} - ${selectedDrawer.branchName}`}
+              {selectedDrawer && t('posManagement.history.posInfo').replace('{posId}', selectedDrawer.posId).replace('{branchName}', selectedDrawer.branchName)}
             </DialogDescription>
           </DialogHeader>
           {selectedDrawer && (
@@ -571,25 +573,25 @@ export function POSManagement() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-right">التاريخ</TableHead>
-                    <TableHead className="text-right">النوع</TableHead>
-                    <TableHead className="text-right">المبلغ</TableHead>
-                    <TableHead className="text-right">الوصف</TableHead>
-                    <TableHead className="text-right">المستخدم</TableHead>
+                    <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('posManagement.history.date')}</TableHead>
+                    <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('posManagement.history.type')}</TableHead>
+                    <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('posManagement.history.amount')}</TableHead>
+                    <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('posManagement.history.description')}</TableHead>
+                    <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('posManagement.history.user')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {drawerTransactions.map((txn) => (
                     <TableRow key={txn.id}>
-                      <TableCell>{new Date(txn.date).toLocaleDateString('ar-SA')}</TableCell>
+                      <TableCell>{new Date(txn.date).toLocaleDateString(direction === 'rtl' ? 'ar-SA' : 'en-US')}</TableCell>
                       <TableCell>
                         <Badge variant="outline">
-                          {txn.type === 'opening' ? 'فتح' :
-                           txn.type === 'sale' ? 'بيع' :
-                           txn.type === 'return' ? 'مرتجع' :
-                           txn.type === 'manual_add' ? 'إضافة يدوية' :
-                           txn.type === 'manual_deduct' ? 'خصم يدوي' :
-                           txn.type === 'closing' ? 'إغلاق' : txn.type}
+                          {txn.type === 'opening' ? t('posManagement.history.opening') :
+                           txn.type === 'sale' ? t('posManagement.history.sale') :
+                           txn.type === 'return' ? t('posManagement.history.return') :
+                           txn.type === 'manual_add' ? t('posManagement.history.manualAdd') :
+                           txn.type === 'manual_deduct' ? t('posManagement.history.manualDeduct') :
+                           txn.type === 'closing' ? t('posManagement.history.closing') : txn.type}
                         </Badge>
                       </TableCell>
                       <TableCell className={txn.amount >= 0 ? 'text-green-600' : 'text-red-600'}>
@@ -602,7 +604,7 @@ export function POSManagement() {
                   {drawerTransactions.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-8 text-gray-500">
-                        لا توجد حركات مسجلة
+                        {t('posManagement.history.noTransactions')}
                       </TableCell>
                     </TableRow>
                   )}
@@ -615,11 +617,11 @@ export function POSManagement() {
 
       {/* Reconciliations Dialog */}
       <Dialog open={showReconciliationsDialog} onOpenChange={setShowReconciliationsDialog}>
-        <DialogContent className="max-w-4xl" dir="rtl">
+        <DialogContent className="max-w-4xl" dir={direction}>
           <DialogHeader>
-            <DialogTitle>سجل إغلاق الدرج</DialogTitle>
+            <DialogTitle>{t('posManagement.reconciliations.title')}</DialogTitle>
             <DialogDescription>
-              {selectedDrawer && `نقطة البيع: ${selectedDrawer.posId} - ${selectedDrawer.branchName}`}
+              {selectedDrawer && t('posManagement.reconciliations.posInfo').replace('{posId}', selectedDrawer.posId).replace('{branchName}', selectedDrawer.branchName)}
             </DialogDescription>
           </DialogHeader>
           {selectedDrawer && (
@@ -627,20 +629,20 @@ export function POSManagement() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-right">التاريخ</TableHead>
-                    <TableHead className="text-right">رصيد الافتتاح</TableHead>
-                    <TableHead className="text-right">نقد المبيعات</TableHead>
-                    <TableHead className="text-right">المتوقع</TableHead>
-                    <TableHead className="text-right">الفعلي</TableHead>
-                    <TableHead className="text-right">الفارق</TableHead>
-                    <TableHead className="text-right">الحالة</TableHead>
-                    <TableHead className="text-right">المغلق بواسطة</TableHead>
+                    <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('posManagement.reconciliations.date')}</TableHead>
+                    <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('posManagement.reconciliations.openingBalance')}</TableHead>
+                    <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('posManagement.reconciliations.salesCash')}</TableHead>
+                    <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('posManagement.reconciliations.expected')}</TableHead>
+                    <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('posManagement.reconciliations.actual')}</TableHead>
+                    <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('posManagement.reconciliations.discrepancy')}</TableHead>
+                    <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('posManagement.reconciliations.status')}</TableHead>
+                    <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('posManagement.reconciliations.closedBy')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {drawerReconciliations.map((rec) => (
                     <TableRow key={rec.id}>
-                      <TableCell>{new Date(rec.date).toLocaleDateString('ar-SA')}</TableCell>
+                      <TableCell>{new Date(rec.date).toLocaleDateString(direction === 'rtl' ? 'ar-SA' : 'en-US')}</TableCell>
                       <TableCell>{formatCurrency(rec.openingBalance)}</TableCell>
                       <TableCell>{formatCurrency(rec.salesCash)}</TableCell>
                       <TableCell>{formatCurrency(rec.expectedBalance)}</TableCell>
@@ -650,7 +652,7 @@ export function POSManagement() {
                       </TableCell>
                       <TableCell>
                         <Badge variant={rec.status === 'closed' ? 'default' : 'destructive'}>
-                          {rec.status === 'closed' ? 'مطابق' : 'فارق'}
+                          {rec.status === 'closed' ? t('posManagement.reconciliations.matched') : t('posManagement.reconciliations.mismatched')}
                         </Badge>
                       </TableCell>
                       <TableCell>{rec.closedByName}</TableCell>
@@ -659,7 +661,7 @@ export function POSManagement() {
                   {drawerReconciliations.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center py-8 text-gray-500">
-                        لا توجد عمليات إغلاق مسجلة
+                        {t('posManagement.reconciliations.noReconciliations')}
                       </TableCell>
                     </TableRow>
                   )}

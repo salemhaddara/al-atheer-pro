@@ -1,26 +1,42 @@
+// React & Hooks
 import { useMemo, useState, useEffect } from 'react';
+
+// UI Components
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
+import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
-import { Search, ShoppingCart, CreditCard, Banknote, X, Plus, Minus, Trash2, Package, Briefcase, AlertTriangle, RotateCcw, User, Wallet, Lock as LockIcon, ChevronsUpDown, Edit2, Check } from 'lucide-react';
-import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
-import { Label } from './ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
-import { createSalesReturnJournalEntries, createMixedPaymentSalesJournalEntries, addJournalEntries } from '../data/journalEntries';
-import { reduceStock, increaseStock, getStock, } from '../data/inventory';
-import { addToSafe, deductFromSafe, } from '../data/safes';
-import { addToMainBank, addToBank, loadBanks } from '../data/banks';
-import { useUser } from '../contexts/UserContext';
 import { SearchableSelect } from './ui/searchable-select';
+
+// Icons
+import {
+  Search, ShoppingCart, CreditCard, Banknote, X, Plus, Minus, Trash2,
+  Package, Briefcase, AlertTriangle, RotateCcw, User, Wallet,
+  Lock as LockIcon, ChevronsUpDown, Edit2, Check
+} from 'lucide-react';
+
+// Utilities
+import { toast } from 'sonner';
 import { getPriceForQuantity, PricingTier } from '../utils/pricing';
+
+// Contexts
+import { useUser } from '../contexts/UserContext';
+import { useLanguage } from '../contexts/LanguageContext';
+
+// Data Management
+import { createSalesReturnJournalEntries, createMixedPaymentSalesJournalEntries, addJournalEntries } from '../data/journalEntries';
+import { reduceStock, increaseStock, getStock } from '../data/inventory';
+import { addToSafe, deductFromSafe } from '../data/safes';
+import { addToMainBank, addToBank, loadBanks } from '../data/banks';
 import {
   getDrawer,
   checkAndOpenDrawer,
@@ -33,37 +49,69 @@ import {
   type CashDrawer
 } from '../data/cashDrawers';
 
+// ============================================================================
+// Types & Interfaces
+// ============================================================================
+
 interface CartItem {
   id: string;
   name: string;
-  price: number; // Current price per unit (may change based on quantity)
+  price: number;
   quantity: number;
   barcode?: string;
-  type: 'product' | 'service'; // نوع العنصر: منتج أو خدمة
-  stock?: number; // المخزون (للمنتجات فقط)
-  costPrice?: number; // تكلفة الشراء (للمنتجات فقط)
-  basePrice?: number; // Base/default price
-  minSellPrice?: number; // Minimum allowed selling price
-  expiryDate?: string; // تاريخ انتهاء الصلاحية
-  pricingTiers?: PricingTier[]; // Quantity-based pricing tiers
-  minQuantity?: number; // Minimum quantity per client
-  maxQuantity?: number; // Maximum quantity per client
+  type: 'product' | 'service';
+  stock?: number;
+  costPrice?: number;
+  basePrice?: number;
+  minSellPrice?: number;
+  expiryDate?: string;
+  pricingTiers?: PricingTier[];
+  minQuantity?: number;
+  maxQuantity?: number;
 }
 
+// ============================================================================
+// Main Component
+// ============================================================================
+
 export function POS() {
+  // ========================================================================
+  // Contexts & Hooks
+  // ========================================================================
+  const { t, direction } = useLanguage();
   const { currentUser, isAdmin, hasAccessToWarehouse, hasPermission } = useUser();
+
+  // ========================================================================
+  // State Management - Cart & Items
+  // ========================================================================
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [itemType, setItemType] = useState<'product' | 'service' | 'return'>('product');
+  const [searchPopoverOpen, setSearchPopoverOpen] = useState(false);
+
+  // ========================================================================
+  // State Management - Warehouse & Customer
+  // ========================================================================
   const [selectedWarehouse, setSelectedWarehouse] = useState('1');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | undefined>(undefined);
+
+  // ========================================================================
+  // State Management - System Configuration
+  // ========================================================================
   const [systemType, setSystemType] = useState<'restaurant' | 'retail'>('retail');
+  const [priceModificationIncludesTax, setPriceModificationIncludesTax] = useState(true);
+
+  // ========================================================================
+  // State Management - Editing
+  // ========================================================================
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null);
   const [editingPriceValue, setEditingPriceValue] = useState<string>('');
   const [editingQuantityId, setEditingQuantityId] = useState<string | null>(null);
   const [editingQuantityValue, setEditingQuantityValue] = useState<string>('');
-  const [priceModificationIncludesTax, setPriceModificationIncludesTax] = useState(true);
 
-  // POS Terminal and Drawer Management
+  // ========================================================================
+  // State Management - POS Terminal & Drawer
+  // ========================================================================
   const [selectedPosId, setSelectedPosId] = useState<string>('pos-1');
   const [currentDrawer, setCurrentDrawer] = useState<CashDrawer | null>(null);
   const [showDrawerDialog, setShowDrawerDialog] = useState(false);
@@ -74,26 +122,28 @@ export function POS() {
   const [addMoneyAmount, setAddMoneyAmount] = useState('');
   const [addMoneyNotes, setAddMoneyNotes] = useState('');
 
-  // قائمة المستودعات
-  const warehouses = [
-    { id: '1', name: 'المستودع الرئيسي' },
-    { id: '2', name: 'مستودع الفرع الشمالي' },
-    { id: '3', name: 'مستودع الفرع الجنوبي' }
-  ];
+  // ========================================================================
+  // Computed Values - Warehouses
+  // ========================================================================
+  const warehouses = useMemo(() => [
+    { id: '1', name: t('purchases.mainWarehouse') },
+    { id: '2', name: t('purchases.northBranchWarehouse') },
+    { id: '3', name: t('purchases.southBranchWarehouse') }
+  ], [t]);
 
-  // تصفية المستودعات حسب الصلاحيات
   const availableWarehouses = useMemo(() => {
     if (isAdmin()) {
-      return warehouses; // الإدارة ترى كل المستودعات
+      return warehouses;
     }
-    // الموظف يرى فقط المستودع المخصص له
     if (currentUser?.assignedWarehouseId) {
       return warehouses.filter(w => w.id === currentUser.assignedWarehouseId);
     }
-    return []; // لا يوجد مستودع مخصص
-  }, [isAdmin, currentUser?.assignedWarehouseId]);
+    return [];
+  }, [isAdmin, currentUser?.assignedWarehouseId, warehouses]);
 
-  // تعيين المستودع الافتراضي للموظف
+  // ========================================================================
+  // Effects - Initialization
+  // ========================================================================
   useEffect(() => {
     if (!isAdmin() && currentUser?.assignedWarehouseId) {
       setSelectedWarehouse(currentUser.assignedWarehouseId);
@@ -119,7 +169,7 @@ export function POS() {
         createOrUpdateDrawer(
           posId,
           selectedWarehouse,
-          warehouse?.name || 'الفرع الرئيسي',
+          warehouse?.name || t('sidebar.mainBranch'),
           currentUser.id,
           currentUser.name
         );
@@ -192,14 +242,14 @@ export function POS() {
     };
   }, []);
 
-  // Mixed payment breakdown state
+  // ========================================================================
+  // State Management - Payment & Banking
+  // ========================================================================
   const [paymentBreakdown, setPaymentBreakdown] = useState<{ cash: number; card: number; credit: number; selectedBankId?: string }>({
     cash: 0,
     card: 0,
     credit: 0
   });
-
-  // Bank selection for card payments
   const [banks, setBanks] = useState<Array<{ id: string; name: string; balance: number }>>([]);
   const [showCardPaymentDialog, setShowCardPaymentDialog] = useState(false);
   const [cardPaymentAmount, setCardPaymentAmount] = useState(0);
@@ -268,7 +318,7 @@ export function POS() {
 
     // Check min quantity
     if (product.minQuantity && product.minQuantity > 1) {
-      toast.error(`الحد الأدنى للكمية: ${product.minQuantity}`);
+      toast.error(`${t('pos.minQuantity')}: ${product.minQuantity}`);
       return;
     }
     //test
@@ -280,13 +330,13 @@ export function POS() {
 
       // Check stock
       if (newQuantity > currentStock) {
-        toast.error(`الكمية المتاحة: ${currentStock} فقط`);
+        toast.error(`${t('pos.availableQuantity')}: ${currentStock} ${t('pos.only')}`);
         return;
       }
 
       // Check max quantity per client
       if (product.maxQuantity && newQuantity > product.maxQuantity) {
-        toast.error(`الحد الأعلى للكمية: ${product.maxQuantity}`);
+        toast.error(`${t('pos.maxQuantity')}: ${product.maxQuantity}`);
         return;
       }
 
@@ -441,7 +491,7 @@ export function POS() {
   const saveQuantityEdit = (id: string) => {
     const quantityValue = parseInt(editingQuantityValue);
     if (isNaN(quantityValue) || quantityValue < 1) {
-      toast.error('يرجى إدخال كمية صحيحة');
+      toast.error(t('pos.enterValidQuantity'));
       return;
     }
     setQuantityDirect(id, quantityValue);
@@ -463,7 +513,7 @@ export function POS() {
       if (item.id === id) {
         // Validate minimum selling price
         if (item.minSellPrice !== undefined && newPrice < item.minSellPrice) {
-          toast.error(`السعر الأدنى المسموح: ${formatCurrency(item.minSellPrice)}`);
+          toast.error(`${t('pos.minPriceAllowed')}: ${formatCurrency(item.minSellPrice)}`);
           return item;
         }
         return { ...item, price: newPrice };
@@ -485,7 +535,7 @@ export function POS() {
   const savePriceEdit = (id: string) => {
     const priceValue = parseFloat(editingPriceValue);
     if (isNaN(priceValue) || priceValue <= 0) {
-      toast.error('يرجى إدخال سعر صحيح');
+      toast.error(t('pos.enterValidPrice'));
       return;
     }
 
@@ -561,12 +611,12 @@ export function POS() {
 
   const handleCheckout = () => {
     if (cart.length === 0) {
-      toast.error('السلة فارغة');
+      toast.error(t('pos.cartEmpty'));
       return;
     }
 
     if (!selectedCustomer) {
-      toast.error('يرجى اختيار العميل قبل إتمام البيع');
+      toast.error(t('pos.selectCustomerBeforeSale'));
       return;
     }
 
@@ -575,7 +625,7 @@ export function POS() {
       if (item.type === 'product') {
         const currentStock = getStock(item.id, selectedWarehouse);
         if (currentStock < item.quantity) {
-          toast.error(`الكمية المتاحة من ${item.name}: ${currentStock} فقط`);
+          toast.error(`${t('pos.availableQuantity')} ${t('pos.from')} ${item.name}: ${currentStock} ${t('pos.only')}`);
           return;
         }
       }
@@ -584,14 +634,14 @@ export function POS() {
     // Validate payment breakdown matches total
     const paymentTotal = paymentBreakdown.cash + paymentBreakdown.card + paymentBreakdown.credit;
     if (Math.abs(paymentTotal - total) > 0.01) {
-      toast.error(`المبلغ المدخل (${formatCurrency(paymentTotal)}) لا يساوي الإجمالي (${formatCurrency(total)})`);
+      toast.error(t('pos.amountMismatch').replace('{entered}', formatCurrency(paymentTotal)).replace('{total}', formatCurrency(total)));
       return;
     }
 
     // Validate credit limit if there's credit payment
     if (paymentBreakdown.credit > 0) {
       if (selectedCustomer.currentBalance + paymentBreakdown.credit > selectedCustomer.creditLimit) {
-        toast.error('لا يمكن إتمام البيع: تم تجاوز حد الائتمان');
+        toast.error(t('pos.creditLimitExceeded'));
         return;
       }
     }
@@ -600,7 +650,7 @@ export function POS() {
     const invoiceNumber = `POS-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
 
     // Get cashier name (current user)
-    const cashierName = currentUser?.name || 'غير محدد';
+    const cashierName = currentUser?.name || t('pos.notSpecified');
 
     // Calculate COGS (Cost of Goods Sold) for products only
     let totalCOGS = 0;
@@ -615,7 +665,7 @@ export function POS() {
       if (item.type === 'product') {
         const success = reduceStock(item.id, selectedWarehouse, item.quantity);
         if (!success) {
-          toast.error(`فشل خصم المخزون لـ ${item.name}`);
+          toast.error(`${t('pos.stockDeductionFailed')} ${t('pos.for')} ${item.name}`);
           return;
         }
       }
@@ -629,11 +679,11 @@ export function POS() {
         'sale',
         currentUser?.id || 'unknown',
         cashierName,
-        `بيع نقدي - ${invoiceNumber}`,
+        `${t('pos.cashSale')} - ${invoiceNumber}`,
         invoiceNumber
       );
       if (!success) {
-        toast.error('فشل تحديث درج النقدية');
+        toast.error(t('pos.drawerUpdateFailed'));
         return;
       }
       // Refresh drawer state
@@ -643,7 +693,7 @@ export function POS() {
       // Fallback to main safe if no drawer
       const success = addToSafe('main', paymentBreakdown.cash);
       if (!success) {
-        toast.error('فشل تحديث الخزينة');
+        toast.error(t('pos.safeUpdateFailed'));
         return;
       }
     }
@@ -652,12 +702,12 @@ export function POS() {
     if (paymentBreakdown.card > 0) {
       const bankId = paymentBreakdown.selectedBankId;
       if (!bankId) {
-        toast.error('يرجى اختيار البنك للدفع بالبطاقة');
+        toast.error(t('pos.selectBankForCard'));
         return;
       }
       const success = addToBank(bankId, paymentBreakdown.card);
       if (!success) {
-        toast.error('فشل تحديث الحساب البنكي');
+        toast.error(t('pos.bankUpdateFailed'));
         return;
       }
     }
@@ -692,11 +742,11 @@ export function POS() {
 
     // Create payment summary message
     const paymentSummary = [];
-    if (paymentBreakdown.cash > 0) paymentSummary.push(`نقدي: ${formatCurrency(paymentBreakdown.cash)}`);
-    if (paymentBreakdown.card > 0) paymentSummary.push(`بطاقة: ${formatCurrency(paymentBreakdown.card)}`);
-    if (paymentBreakdown.credit > 0) paymentSummary.push(`آجل: ${formatCurrency(paymentBreakdown.credit)}`);
+    if (paymentBreakdown.cash > 0) paymentSummary.push(`${t('pos.cash')}: ${formatCurrency(paymentBreakdown.cash)}`);
+    if (paymentBreakdown.card > 0) paymentSummary.push(`${t('pos.card')}: ${formatCurrency(paymentBreakdown.card)}`);
+    if (paymentBreakdown.credit > 0) paymentSummary.push(`${t('pos.credit')}: ${formatCurrency(paymentBreakdown.credit)}`);
 
-    toast.success(`تمت عملية البيع بنجاح - ${invoiceNumber}\n${paymentSummary.join(' | ')}\nتم خصم ${cart.filter(i => i.type === 'product').reduce((sum, i) => sum + i.quantity, 0)} منتج من المخزون`);
+    toast.success(`${t('pos.saleCompleted')} - ${invoiceNumber}\n${paymentSummary.join(' | ')}\n${t('pos.productsDeducted').replace('{count}', cart.filter(i => i.type === 'product').reduce((sum, i) => sum + i.quantity, 0).toString())}`);
     clearCart();
     setPaymentBreakdown({ cash: 0, card: 0, credit: 0 });
   };
@@ -750,14 +800,14 @@ export function POS() {
         // Add product to cart
         addProductToCart(productByBarcode);
         setSearchTerm('');
-        toast.success(`تم إضافة ${productByBarcode.name} للسلة`);
+        toast.success(t('pos.productAdded').replace('{name}', productByBarcode.name));
       } else if (serviceByCode) {
         // Add service to cart
         addServiceToCart(serviceByCode);
         setSearchTerm('');
-        toast.success(`تم إضافة ${serviceByCode.name} للسلة`);
+        toast.success(t('pos.serviceAdded').replace('{name}', serviceByCode.name));
       } else {
-        toast.error('لم يتم العثور على منتج أو خدمة بهذا الباركود');
+        toast.error(t('pos.barcodeNotFound'));
       }
     }
   };
@@ -767,23 +817,24 @@ export function POS() {
     { id: '2', name: 'مؤسسة الريادة للخدمات', phone: '0502222222', address: 'جدة', creditLimit: 30000, currentBalance: 28500, graceDays: 20, status: 'تحذير', accountNumber: 'ACC-002' },
     { id: '3', name: 'شركة التميز للاستثمار', phone: '0503333333', address: 'الدمام', creditLimit: 80000, currentBalance: 12000, graceDays: 35, status: 'ممتاز', accountNumber: 'ACC-003' },
   ]);
+  // ========================================================================
+  // State Management - Customer & Returns
+  // ========================================================================
   const [isAddCustomerDialogOpen, setIsAddCustomerDialogOpen] = useState(false);
   const [newCustomerData, setNewCustomerData] = useState({
     name: '',
     phone: '',
     address: ''
   });
-
-  // Returns state
   const [activeTab, setActiveTab] = useState<'products' | 'services' | 'returns'>('products');
   const [returnItems, setReturnItems] = useState<CartItem[]>([]);
   const [returnInvoiceNumber, setReturnInvoiceNumber] = useState('');
   const [returnPaymentMethod, setReturnPaymentMethod] = useState<'cash' | 'card' | 'credit'>('cash');
   const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
 
-  // Item type selector for non-restaurant mode
-  const [itemType, setItemType] = useState<'product' | 'service' | 'return'>('product');
-  const [searchPopoverOpen, setSearchPopoverOpen] = useState(false);
+  // ========================================================================
+  // Computed Values & Helpers
+  // ========================================================================
 
   const selectedCustomer = useMemo(
     () => (selectedCustomerId ? creditCustomers.find(c => c.id === selectedCustomerId) : undefined),
@@ -793,11 +844,11 @@ export function POS() {
 
   const handleQuickAddCustomer = () => {
     if (!newCustomerData.name.trim()) {
-      toast.error('يرجى إدخال اسم العميل');
+      toast.error(t('pos.enterCustomerName'));
       return;
     }
     if (!newCustomerData.phone.trim()) {
-      toast.error('يرجى إدخال رقم الهاتف');
+      toast.error(t('pos.enterPhoneNumber'));
       return;
     }
 
@@ -817,13 +868,13 @@ export function POS() {
     setSelectedCustomerId(id);
     setIsAddCustomerDialogOpen(false);
     setNewCustomerData({ name: '', phone: '', address: '' });
-    toast.success('تم إضافة العميل بسرعة');
+    toast.success(t('pos.customerAddedQuickly'));
   };
 
   // Handle card payment simulation
   const handleCardPayment = () => {
     if (!paymentBreakdown.selectedBankId) {
-      toast.error('يرجى اختيار البنك أولاً');
+      toast.error(t('pos.selectBankForCard'));
       setShowCardPaymentDialog(false);
       return;
     }
@@ -839,7 +890,7 @@ export function POS() {
         setCardPaymentStatus('success');
         // Update payment breakdown to confirm the card payment
         updatePaymentBreakdown('card', cardPaymentAmount);
-        toast.success(`تمت معاملة البطاقة بنجاح - ${formatCurrency(cardPaymentAmount)}`);
+        toast.success(t('pos.cardTransactionSuccessful').replace('{amount}', formatCurrency(cardPaymentAmount)));
         // Auto-close after 2 seconds on success
         setTimeout(() => {
           setShowCardPaymentDialog(false);
@@ -847,26 +898,26 @@ export function POS() {
         }, 2000);
       } else {
         setCardPaymentStatus('failed');
-        toast.error('فشلت معاملة البطاقة - يرجى المحاولة مرة أخرى');
+        toast.error(t('pos.cardTransactionFailed'));
       }
     }, 2000);
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={direction}>
       {/* Header */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1>نقطة البيع (POS)</h1>
-            <p className="text-gray-600">نظام البيع السريع</p>
+        <div className={`flex items-center justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+          <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+            <h1>{t('pos.title')}</h1>
+            <p className="text-gray-600">{t('pos.subtitle')}</p>
           </div>
-          <div className="flex gap-4 items-center">
+          <div className={`flex gap-4 items-center ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
             {/* Cash Drawer Status */}
             {currentDrawer && (
               <div className="space-y-1">
-                <label className="text-sm text-gray-600">درج النقدية</label>
-                <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-md">
+                <label className="text-sm text-gray-600">{t('pos.cashDrawer')}</label>
+                <div className={`flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-md ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                   <Wallet className="w-4 h-4 text-green-600" />
                   <span className="text-sm font-semibold text-green-700">
                     {formatCurrency(currentDrawer.currentBalance)}
@@ -877,25 +928,25 @@ export function POS() {
                     className="h-6 px-2 text-xs"
                     onClick={() => setShowDrawerDialog(true)}
                   >
-                    إدارة
+                    {t('pos.manage')}
                   </Button>
                 </div>
               </div>
             )}
             {/* Cashier Info */}
             <div className="space-y-1">
-              <label className="text-sm text-gray-600">الكاشير المسؤول</label>
-              <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-md">
+              <label className="text-sm text-gray-600">{t('pos.responsibleCashier')}</label>
+              <div className={`flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-md ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                 <User className="w-4 h-4 text-blue-600" />
                 <span className="text-sm font-semibold text-blue-700">
-                  {currentUser?.name || 'غير محدد'}
+                  {currentUser?.name || t('pos.notSpecified')}
                 </span>
               </div>
             </div>
             {/* Warehouse Selection */}
             {availableWarehouses.length > 0 && (
               <div className="space-y-1">
-                <label className="text-sm text-gray-600">المستودع</label>
+                <label className="text-sm text-gray-600">{t('purchases.warehouse')}</label>
                 <Select
                   value={selectedWarehouse}
                   onValueChange={setSelectedWarehouse}
@@ -904,7 +955,7 @@ export function POS() {
                   <SelectTrigger className="w-48">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent dir={direction}>
                     {availableWarehouses.map((warehouse) => (
                       <SelectItem key={warehouse.id} value={warehouse.id}>
                         {warehouse.name}
@@ -920,48 +971,49 @@ export function POS() {
         {/* Customer Info Section - Only show in restaurant mode */}
         {systemType === 'restaurant' && (
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+            <CardContent className="pt-6" dir={direction}>
+              <div className={`flex flex-col md:flex-row gap-4 items-start md:items-center justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                 <div className="flex-1 w-full md:w-auto">
-                  <div className="flex items-center gap-2 mb-2">
-                    <label className="text-sm font-semibold text-gray-700">العميل:</label>
+                  <div className={`flex items-center gap-2 mb-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                    <label className="text-sm font-semibold text-gray-700">{t('pos.customer')}:</label>
                     <Button variant="link" className="text-sm p-0 h-auto" onClick={() => setIsAddCustomerDialogOpen(true)}>
-                      إضافة عميل سريع
+                      {t('pos.addCustomerQuick')}
                     </Button>
                   </div>
                   <SearchableSelect
                     options={creditCustomers}
                     value={selectedCustomerId}
                     onValueChange={setSelectedCustomerId}
-                    placeholder="ابحث عن العميل بالاسم أو رقم الحساب..."
-                    searchPlaceholder="ابحث بالاسم أو رقم الحساب أو الهاتف..."
-                    emptyMessage="لا يوجد عملاء"
+                    placeholder={t('pos.searchCustomerPlaceholder')}
+                    searchPlaceholder={t('pos.searchCustomerSearchPlaceholder')}
+                    emptyMessage={t('pos.noCustomers')}
                     className="w-full md:w-64"
                     displayKey="name"
                     searchKeys={['name', 'accountNumber', 'phone']}
+                    dir={direction}
                   />
                 </div>
 
                 {selectedCustomer ? (
                   <div className="flex-1 w-full md:w-auto">
-                    <div className="flex flex-wrap gap-4 items-center">
+                    <div className={`flex flex-wrap gap-4 items-center ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                       <div className="space-y-1">
-                        <div className="flex items-center gap-2">
+                        <div className={`flex items-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                           <span className="text-sm font-semibold text-gray-700">{selectedCustomer.name}</span>
                           <Badge variant="outline" className="text-xs">{selectedCustomer.status}</Badge>
                         </div>
-                        <div className="text-xs text-gray-600">
-                          <span>الهاتف: {selectedCustomer.phone || 'غير متوفر'}</span>
-                          {selectedCustomer.address && <span className="mr-2"> | العنوان: {selectedCustomer.address}</span>}
+                        <div className={`text-xs text-gray-600 ${direction === 'rtl' ? 'text-right' : 'text-left'}`}>
+                          <span>{t('pos.phone')}: {selectedCustomer.phone || t('pos.notAvailable')}</span>
+                          {selectedCustomer.address && <span className={direction === 'rtl' ? 'mr-2' : 'ml-2'}> | {t('pos.address')}: {selectedCustomer.address}</span>}
                         </div>
                       </div>
                       <div className="space-y-1 min-w-[200px]">
-                        <div className="flex justify-between text-xs text-gray-600">
-                          <span>الرصيد:</span>
+                        <div className={`flex justify-between text-xs text-gray-600 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                          <span>{t('pos.balance')}:</span>
                           <span className="font-semibold">{formatCurrency(selectedCustomer.currentBalance)}</span>
                         </div>
-                        <div className="flex justify-between text-xs text-gray-600">
-                          <span>الحد الائتماني:</span>
+                        <div className={`flex justify-between text-xs text-gray-600 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                          <span>{t('pos.creditLimit')}:</span>
                           <span className="font-semibold">{formatCurrency(selectedCustomer.creditLimit)}</span>
                         </div>
                         <div className="w-full bg-gray-200 h-1.5 rounded-full mt-1">
@@ -974,9 +1026,9 @@ export function POS() {
                     </div>
                   </div>
                 ) : (
-                  <div className="text-xs text-red-600 bg-red-50 p-2 rounded-lg flex items-center gap-2">
+                  <div className={`text-xs text-red-600 bg-red-50 p-2 rounded-lg flex items-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                     <AlertTriangle className="w-4 h-4" />
-                    لا يمكن إتمام أي عملية بيع بدون تحديد العميل
+                    {t('pos.customerRequired')}
                   </div>
                 )}
               </div>
@@ -991,13 +1043,14 @@ export function POS() {
           <div className="lg:col-span-2 space-y-4">
             {/* Search */}
             <Card>
-              <CardContent className="pt-6">
-                <Label className="mb-2 block">بحث المنتجات والخدمات</Label>
+              <CardContent className="pt-6" dir={direction}>
+                <Label className="mb-2 block">{t('pos.searchProductsServices')}</Label>
                 <div className="relative">
-                  <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <Search className={`absolute ${direction === 'rtl' ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5`} />
                   <Input
-                    placeholder="بحث بالاسم، الباركود، أو كود الخدمة... (اضغط Enter للبحث بالباركود/الكود)"
-                    className="pr-10"
+                    placeholder={t('pos.searchPlaceholder')}
+                    className={direction === 'rtl' ? 'pr-10' : 'pl-10'}
+                    dir={direction}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     onKeyDown={handleSearchEnter}
@@ -1007,19 +1060,19 @@ export function POS() {
             </Card>
 
             {/* Tabs for Products, Services, and Returns */}
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'products' | 'services' | 'returns')} className="w-full" dir="rtl">
-              <TabsList className="grid w-full grid-cols-3" dir="rtl">
-                <TabsTrigger value="products" className="gap-2">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'products' | 'services' | 'returns')} className="w-full" dir={direction}>
+              <TabsList className="grid w-full grid-cols-3" dir={direction}>
+                <TabsTrigger value="products" className={`gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                   <Package className="w-4 h-4" />
-                  المنتجات ({filteredProducts.length})
+                  {t('pos.products')} ({filteredProducts.length})
                 </TabsTrigger>
-                <TabsTrigger value="services" className="gap-2">
+                <TabsTrigger value="services" className={`gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                   <Briefcase className="w-4 h-4" />
-                  الخدمات ({filteredServices.length})
+                  {t('pos.services')} ({filteredServices.length})
                 </TabsTrigger>
-                <TabsTrigger value="returns" className="gap-2">
+                <TabsTrigger value="returns" className={`gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                   <RotateCcw className="w-4 h-4" />
-                  مرتجعات المبيعات
+                  {t('pos.salesReturns')}
                 </TabsTrigger>
               </TabsList>
 
@@ -1027,44 +1080,46 @@ export function POS() {
               <TabsContent value="products" className="mt-4">
                 {systemType === 'restaurant' ? (
                   // Grid view for restaurants
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {filteredProducts.map((product) => (
-                      <Card
-                        key={product.id}
-                        className="cursor-pointer hover:shadow-md transition-shadow"
-                        onClick={() => addProductToCart(product)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="aspect-square bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
-                            <Package className="w-12 h-12 text-gray-400" />
-                          </div>
-                          <h4 className="text-sm mb-2">{product.name}</h4>
-                          <div className="flex items-center justify-between">
-                            <span className="text-blue-600 font-medium">{formatCurrency(product.price)}</span>
-                            <Badge variant="outline" className="text-xs">
-                              متوفر: {product.stock}
+                  <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                  {filteredProducts.map((product) => (
+                    <Card
+                      key={product.id}
+                      className="cursor-pointer hover:shadow-md transition-shadow aspect-square flex flex-col"
+                      onClick={() => addProductToCart(product)}
+                    >
+                      <CardContent className="p-3 flex flex-col flex-1 justify-between h-full">
+                        <div className="flex-1 flex items-center justify-center bg-gray-100 rounded-lg mb-2">
+                          <Package className="w-10 h-10 text-gray-400" />
+                        </div>
+                        <div className="flex flex-col gap-1 min-h-0">
+                          <h4 className="text-xs font-medium line-clamp-2 leading-tight mb-1">{product.name}</h4>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-blue-600 font-semibold text-xs">{formatCurrency(product.price)}</span>
+                            <Badge variant="outline" className="text-xs w-fit py-0.5">
+                              {product.stock}
                             </Badge>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                    {filteredProducts.length === 0 && (
-                      <div className="col-span-full text-center py-12 text-gray-500">
-                        <Package className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                        <p>لا توجد منتجات</p>
-                      </div>
-                    )}
-                  </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  {filteredProducts.length === 0 && (
+                    <div className="col-span-full text-center py-12 text-gray-500">
+                      <Package className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                      <p>{t('openingInventory.noProducts')}</p>
+                    </div>
+                  )}
+                </div>
                 ) : (
                   // Table view for retail stores
                   <div className="border rounded-lg overflow-hidden">
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-gray-50">
-                          <TableHead className="text-right">المنتج</TableHead>
-                          <TableHead className="text-right">السعر</TableHead>
-                          <TableHead className="text-right">المخزون</TableHead>
-                          <TableHead className="text-right w-24">إجراءات</TableHead>
+                          <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('pos.product')}</TableHead>
+                          <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('pos.price')}</TableHead>
+                          <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('pos.stock')}</TableHead>
+                          <TableHead className={`${direction === 'rtl' ? 'text-right' : 'text-left'} w-24`}>{t('pos.actions')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1073,29 +1128,29 @@ export function POS() {
                             key={product.id}
                             className="cursor-pointer hover:bg-gray-50"
                           >
-                            <TableCell className="text-right">
-                              <div className="flex items-center gap-2">
+                            <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                              <div className={`flex items-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                                 <Package className="w-5 h-5 text-gray-400" />
                                 <span className="font-medium">{product.name}</span>
                               </div>
                             </TableCell>
-                            <TableCell className="text-right font-medium text-blue-600">
+                            <TableCell className={`${direction === 'rtl' ? 'text-right' : 'text-left'} font-medium text-blue-600`}>
                               {formatCurrency(product.price)}
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                               <Badge variant={product.stock > 0 ? 'outline' : 'destructive'} className="text-xs">
-                                {product.stock > 0 ? `متوفر: ${product.stock}` : 'غير متوفر'}
+                                {product.stock > 0 ? `${t('pos.available')}: ${product.stock}` : t('pos.notAvailable')}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => addProductToCart(product)}
-                                className="w-full"
+                                className={`w-full ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}
                               >
-                                <Plus className="w-4 h-4 ml-1" />
-                                إضافة
+                                <Plus className={`w-4 h-4 ${direction === 'rtl' ? 'mr-1' : 'ml-1'}`} />
+                                {t('pos.add')}
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -1104,7 +1159,7 @@ export function POS() {
                           <TableRow>
                             <TableCell colSpan={4} className="text-center py-12 text-gray-500">
                               <Package className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                              <p>لا توجد منتجات</p>
+                              <p>{t('pos.noProducts')}</p>
                             </TableCell>
                           </TableRow>
                         )}
@@ -1118,37 +1173,36 @@ export function POS() {
               <TabsContent value="services" className="mt-4">
                 {systemType === 'restaurant' ? (
                   // Grid view for restaurants
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {filteredServices.map((service) => (
-                      <Card
-                        key={service.id}
-                        className="cursor-pointer hover:shadow-md transition-shadow"
-                        onClick={() => addServiceToCart(service)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="aspect-square bg-blue-50 rounded-lg mb-3 flex items-center justify-center">
-                            <Briefcase className="w-12 h-12 text-blue-500" />
-                          </div>
-                          <div className="space-y-1 mb-2">
-                            <h4 className="text-sm font-medium">{service.name}</h4>
-                            <p className="text-xs text-gray-500">{service.code}</p>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-blue-600 font-medium">{formatCurrency(service.price)}</span>
-                            <Badge variant="secondary" className="text-xs">
-                              خدمة
+                  <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                  {filteredProducts.map((product) => (
+                    <Card
+                      key={product.id}
+                      className="cursor-pointer hover:shadow-md transition-shadow aspect-square flex flex-col"
+                      onClick={() => addProductToCart(product)}
+                    >
+                      <CardContent className="p-3 flex flex-col flex-1 justify-between h-full">
+                        <div className="flex-1 flex items-center justify-center bg-gray-100 rounded-lg mb-2">
+                          <Package className="w-10 h-10 text-gray-400" />
+                        </div>
+                        <div className="flex flex-col gap-1 min-h-0">
+                          <h4 className="text-xs font-medium line-clamp-2 leading-tight mb-1">{product.name}</h4>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-blue-600 font-semibold text-xs">{formatCurrency(product.price)}</span>
+                            <Badge variant="outline" className="text-xs w-fit py-0.5">
+                              {product.stock}
                             </Badge>
                           </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                    {filteredServices.length === 0 && (
-                      <div className="col-span-full text-center py-12 text-gray-500">
-                        <Briefcase className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                        <p>لا توجد خدمات</p>
-                      </div>
-                    )}
-                  </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  {filteredProducts.length === 0 && (
+                    <div className="col-span-full text-center py-12 text-gray-500">
+                      <Package className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                      <p>لا توجد خدمات</p>
+                    </div>
+                  )}
+                </div>
                 ) : (
                   // Table view for retail stores
                   <div className="border rounded-lg overflow-hidden">
@@ -1167,29 +1221,29 @@ export function POS() {
                             key={service.id}
                             className="cursor-pointer hover:bg-gray-50"
                           >
-                            <TableCell className="text-right">
-                              <div className="flex items-center gap-2">
+                            <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                              <div className={`flex items-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                                 <Briefcase className="w-5 h-5 text-blue-500" />
                                 <span className="font-medium">{service.name}</span>
                               </div>
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                               <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">
                                 {service.code}
                               </code>
                             </TableCell>
-                            <TableCell className="text-right font-medium text-blue-600">
+                            <TableCell className={`${direction === 'rtl' ? 'text-right' : 'text-left'} font-medium text-blue-600`}>
                               {formatCurrency(service.price)}
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => addServiceToCart(service)}
-                                className="w-full"
+                                className={`w-full ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}
                               >
-                                <Plus className="w-4 h-4 ml-1" />
-                                إضافة
+                                <Plus className={`w-4 h-4 ${direction === 'rtl' ? 'mr-1' : 'ml-1'}`} />
+                                {t('pos.add')}
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -1198,7 +1252,7 @@ export function POS() {
                           <TableRow>
                             <TableCell colSpan={4} className="text-center py-12 text-gray-500">
                               <Briefcase className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                              <p>لا توجد خدمات</p>
+                              <p>{t('pos.noServices')}</p>
                             </TableCell>
                           </TableRow>
                         )}
@@ -1212,33 +1266,33 @@ export function POS() {
               <TabsContent value="returns" className="mt-4">
                 <Card>
                   <CardHeader>
-                    <CardTitle>مرتجعات المبيعات</CardTitle>
+                    <CardTitle>{t('pos.returns')}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
-                      <Label>رقم الفاتورة الأصلية</Label>
+                      <Label>{t('pos.originalInvoiceNumber')}</Label>
                       <div className="flex gap-2">
                         <Input
                           placeholder="POS-2025-123456"
                           value={returnInvoiceNumber}
                           onChange={(e) => setReturnInvoiceNumber(e.target.value)}
                         />
-                        <Button onClick={() => setIsReturnDialogOpen(true)}>
-                          <Search className="w-4 h-4 ml-2" />
-                          البحث
+                        <Button onClick={() => setIsReturnDialogOpen(true)} className={direction === 'rtl' ? 'flex-row-reverse' : ''}>
+                          <Search className={`w-4 h-4 ${direction === 'rtl' ? 'mr-2' : 'ml-2'}`} />
+                          {t('pos.search')}
                         </Button>
                       </div>
                     </div>
 
                     {returnItems.length > 0 && (
                       <div className="space-y-2">
-                        <Label>المنتجات المراد إرجاعها</Label>
+                        <Label>{t('pos.productsToReturn')}</Label>
                         <div className="space-y-2 border rounded-lg p-3">
                           {returnItems.map((item) => (
                             <div key={item.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                               <div>
                                 <p className="font-medium">{item.name}</p>
-                                <p className="text-sm text-gray-600">الكمية: {item.quantity} × {formatCurrency(item.price)}</p>
+                                <p className="text-sm text-gray-600">{t('pos.quantity')}: {item.quantity} × {formatCurrency(item.price)}</p>
                               </div>
                               <div className="text-right">
                                 <p className="font-semibold">{formatCurrency(item.price * item.quantity)}</p>
@@ -1247,21 +1301,21 @@ export function POS() {
                           ))}
                           <Separator />
                           <div className="flex justify-between font-semibold">
-                            <span>المجموع:</span>
+                            <span>{t('pos.total')}:</span>
                             <span>{formatCurrency(returnItems.reduce((sum, item) => sum + (item.price * item.quantity), 0))}</span>
                           </div>
                         </div>
 
                         <div className="space-y-2">
-                          <Label>طريقة استرداد المبلغ</Label>
+                          <Label>{t('pos.refundMethod')}</Label>
                           <Select value={returnPaymentMethod} onValueChange={(v) => setReturnPaymentMethod(v as 'cash' | 'card' | 'credit')}>
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="cash">نقدي</SelectItem>
-                              <SelectItem value="card">بطاقة</SelectItem>
-                              <SelectItem value="credit">خصم من الحساب</SelectItem>
+                            <SelectContent dir={direction}>
+                              <SelectItem value="cash">{t('pos.cash')}</SelectItem>
+                              <SelectItem value="card">{t('pos.card')}</SelectItem>
+                              <SelectItem value="credit">{t('pos.deductFromAccount')}</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -1270,7 +1324,7 @@ export function POS() {
                           className="w-full"
                           onClick={() => {
                             if (!selectedCustomer) {
-                              toast.error('يرجى اختيار العميل');
+                              toast.error(t('pos.selectCustomerBeforeSale'));
                               return;
                             }
 
@@ -1299,12 +1353,12 @@ export function POS() {
                                 returnTotal,
                                 'return',
                                 currentUser?.id || 'unknown',
-                                currentUser?.name || 'غير محدد',
-                                `مرتجع نقدي - ${returnNumber}`,
+                                currentUser?.name || t('pos.notSpecified'),
+                                `${t('pos.cashReturn')} - ${returnNumber}`,
                                 returnNumber
                               );
                               if (!success) {
-                                toast.error('رصيد الدرج غير كافي');
+                                toast.error(t('pos.insufficientDrawerBalance'));
                                 return;
                               }
                               // Refresh drawer state
@@ -1314,7 +1368,7 @@ export function POS() {
                               // Fallback to main safe if no drawer
                               const success = deductFromSafe('main', returnTotal);
                               if (!success) {
-                                toast.error('رصيد الخزينة غير كافي');
+                                toast.error(t('pos.insufficientSafeBalance'));
                                 return;
                               }
                             }
@@ -1343,13 +1397,13 @@ export function POS() {
                               );
                             }
 
-                            toast.success(`تم إرجاع المنتجات بنجاح - ${returnNumber}\nتم إضافة ${returnItems.filter(i => i.type === 'product').reduce((sum, i) => sum + i.quantity, 0)} منتج للمخزون`);
+                            toast.success(`${t('pos.returnCompleted')} - ${returnNumber}\n${t('pos.productsAddedToStock').replace('{count}', returnItems.filter(i => i.type === 'product').reduce((sum, i) => sum + i.quantity, 0).toString())}`);
                             setReturnItems([]);
                             setReturnInvoiceNumber('');
                           }}
                         >
                           <RotateCcw className="w-4 h-4 ml-2" />
-                          إتمام عملية الإرجاع
+                          {t('pos.completeReturn')}
                         </Button>
                       </div>
                     )}
@@ -1357,7 +1411,7 @@ export function POS() {
                     {returnItems.length === 0 && (
                       <div className="text-center py-12 text-gray-500">
                         <RotateCcw className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                        <p>أدخل رقم الفاتورة للبحث عن المنتجات المراد إرجاعها</p>
+                        <p>{t('pos.enterInvoiceNumber')}</p>
                       </div>
                     )}
                   </CardContent>
@@ -1368,12 +1422,12 @@ export function POS() {
 
           {/* Cart Section - Restaurant Mode */}
           <div className="lg:col-span-1">
-            <Card className="sticky top-6">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
+            <Card className="sticky top-6" dir={direction}>
+              <CardHeader dir={direction}>
+                <div className={`flex items-center justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                  <CardTitle className={`flex items-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                     <ShoppingCart className="w-5 h-5" />
-                    السلة
+                    {t('pos.cart')}
                   </CardTitle>
                   {cart.length > 0 && (
                     <Button
@@ -1386,12 +1440,12 @@ export function POS() {
                   )}
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4" dir={direction}>
                 {cart.length === 0 ? (
                   <div className="text-center text-gray-500 py-12">
                     <ShoppingCart className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>السلة فارغة</p>
-                    <p className="text-sm mt-2">قم بإضافة منتجات للبدء</p>
+                    <p>{t('pos.cartEmpty')}</p>
+                    <p className="text-sm mt-2">{t('pos.cartEmptySubtext')}</p>
                   </div>
                 ) : (
                   <>
@@ -1530,17 +1584,17 @@ export function POS() {
 
                     {/* Totals */}
                     <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>المجموع الفرعي:</span>
+                      <div className={`flex justify-between text-sm ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                        <span>{t('pos.subtotal')}:</span>
                         <span>{formatCurrency(subtotal)}</span>
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span>الضريبة (15%):</span>
+                      <div className={`flex justify-between text-sm ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                        <span>{t('pos.tax')} (15%):</span>
                         <span>{formatCurrency(tax)}</span>
                       </div>
                       <Separator />
-                      <div className="flex justify-between">
-                        <span>المجموع الكلي:</span>
+                      <div className={`flex justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                        <span>{t('pos.total')}:</span>
                         <span className="text-xl text-blue-600">{formatCurrency(total)}</span>
                       </div>
                     </div>
@@ -1549,8 +1603,8 @@ export function POS() {
 
                     {/* Mixed Payment Methods */}
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <label className="text-sm font-semibold">طرق الدفع المختلطة</label>
+                      <div className={`flex items-center justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                        <label className="text-sm font-semibold">{t('pos.mixedPaymentMethods')}</label>
                         {paymentTotal > 0 && Math.abs(paymentTotal - total) < 0.01 && (
                           <Button
                             variant="ghost"
@@ -1558,21 +1612,21 @@ export function POS() {
                             className="h-7 text-xs"
                             onClick={() => {
                               saveDefaultPaymentPreferences(paymentBreakdown);
-                              toast.success('تم حفظ التفضيلات الافتراضية');
+                              toast.success(t('pos.preferencesSaved'));
                             }}
-                            title="حفظ هذا التوزيع كافتراضي"
+                            title={t('pos.saveAsDefault')}
                           >
-                            حفظ كافتراضي
+                            {t('pos.saveAsDefault')}
                           </Button>
                         )}
                       </div>
 
                       {/* Cash Payment */}
                       <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <label className="text-sm flex items-center gap-2">
+                        <div className={`flex items-center justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                          <label className={`text-sm flex items-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                             <Banknote className="w-4 h-4 text-green-600" />
-                            نقدي
+                            {t('pos.cash')}
                           </label>
                           {paymentRemaining > 0 && (
                             <Button
@@ -1581,7 +1635,7 @@ export function POS() {
                               className="h-6 text-xs"
                               onClick={() => fillRemaining('cash')}
                             >
-                              تعبئة المتبقي
+                              {t('pos.fillRemaining')}
                             </Button>
                           )}
                         </div>
@@ -1590,7 +1644,8 @@ export function POS() {
                           placeholder="0.00"
                           value={paymentBreakdown.cash > 0 ? paymentBreakdown.cash : ''}
                           onChange={(e) => updatePaymentBreakdown('cash', parseFloat(e.target.value) || 0)}
-                          className="text-right"
+                          className={direction === 'rtl' ? 'text-right' : 'text-left'}
+                          dir="ltr"
                           min="0"
                           step="0.01"
                         />
@@ -1598,10 +1653,10 @@ export function POS() {
 
                       {/* Card Payment */}
                       <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <label className="text-sm flex items-center gap-2">
+                        <div className={`flex items-center justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                          <label className={`text-sm flex items-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                             <CreditCard className="w-4 h-4 text-blue-600" />
-                            بطاقة ائتمان
+                            {t('pos.creditCard')}
                           </label>
                           {paymentRemaining > 0 && (
                             <Button
@@ -1610,7 +1665,7 @@ export function POS() {
                               className="h-6 text-xs"
                               onClick={() => fillRemaining('card')}
                             >
-                              تعبئة المتبقي
+                              {t('pos.fillRemaining')}
                             </Button>
                           )}
                         </div>
@@ -1642,7 +1697,7 @@ export function POS() {
                               className="gap-2"
                             >
                               <CreditCard className="w-4 h-4" />
-                              محاكاة الدفع
+                              {t('pos.simulatePayment')}
                             </Button>
                           )}
                         </div>
@@ -1661,7 +1716,7 @@ export function POS() {
                               <SelectContent>
                                 {banks.map((bank) => (
                                   <SelectItem key={bank.id} value={bank.id}>
-                                    {bank.name} - الرصيد: {formatCurrency(bank.balance)}
+                                    {bank.name} - {t('pos.balance')}: {formatCurrency(bank.balance)}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
@@ -1672,10 +1727,10 @@ export function POS() {
 
                       {/* Credit Payment */}
                       <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <label className="text-sm flex items-center gap-2">
+                        <div className={`flex items-center justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                          <label className={`text-sm flex items-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                             <CreditCard className="w-4 h-4 text-orange-600" />
-                            بيع آجل (على الحساب)
+                            {t('pos.creditSale')}
                           </label>
                           {paymentRemaining > 0 && (
                             <Button
@@ -1684,7 +1739,7 @@ export function POS() {
                               className="h-6 text-xs"
                               onClick={() => fillRemaining('credit')}
                             >
-                              تعبئة المتبقي
+                              {t('pos.fillRemaining')}
                             </Button>
                           )}
                         </div>
@@ -1693,7 +1748,8 @@ export function POS() {
                           placeholder="0.00"
                           value={paymentBreakdown.credit > 0 ? paymentBreakdown.credit : ''}
                           onChange={(e) => updatePaymentBreakdown('credit', parseFloat(e.target.value) || 0)}
-                          className="text-right"
+                          className={direction === 'rtl' ? 'text-right' : 'text-left'}
+                          dir="ltr"
                           min="0"
                           step="0.01"
                         />
@@ -1701,21 +1757,21 @@ export function POS() {
 
                       {/* Payment Summary */}
                       <div className="space-y-2 rounded-lg border p-3 bg-gray-50 text-sm">
-                        <div className="flex justify-between">
-                          <span>المبلغ المدخل:</span>
+                        <div className={`flex justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                          <span>{t('pos.enteredAmount')}:</span>
                           <span className={Math.abs(paymentTotal - total) < 0.01 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>
                             {formatCurrency(paymentTotal)}
                           </span>
                         </div>
-                        <div className="flex justify-between">
-                          <span>الإجمالي المطلوب:</span>
+                        <div className={`flex justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                          <span>{t('pos.requiredTotal')}:</span>
                           <span className="font-semibold">{formatCurrency(total)}</span>
                         </div>
                         <Separator />
-                        <div className="flex justify-between">
-                          <span>المتبقي:</span>
+                        <div className={`flex justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                          <span>{t('pos.remaining')}:</span>
                           <span className={paymentRemaining > 0 ? 'text-orange-600 font-semibold' : paymentRemaining < 0 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}>
-                            {formatCurrency(Math.abs(paymentRemaining))} {paymentRemaining > 0 ? '(ناقص)' : paymentRemaining < 0 ? '(زائد)' : '(مكتمل)'}
+                            {formatCurrency(Math.abs(paymentRemaining))} {paymentRemaining > 0 ? `(${t('pos.minus')})` : paymentRemaining < 0 ? `(${t('pos.plus')})` : `(${t('pos.complete')})`}
                           </span>
                         </div>
                       </div>
@@ -1724,23 +1780,23 @@ export function POS() {
                       {paymentBreakdown.credit > 0 && (
                         <div className="space-y-2 rounded-lg border p-3 bg-yellow-50 text-sm text-gray-700">
                           {!selectedCustomer && (
-                            <div className="flex items-center gap-2 text-red-600">
+                            <div className={`flex items-center gap-2 text-red-600 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                               <AlertTriangle className="w-4 h-4" />
-                              يجب اختيار عميل للمتابعة بالبيع الآجل
+                              {t('pos.selectCustomerForCreditSale')}
                             </div>
                           )}
                           {selectedCustomer && (
                             <>
-                              <div className="flex items-center justify-between">
-                                <span>المتاح بعد هذا الطلب:</span>
+                              <div className={`flex items-center justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                                <span>{t('pos.availableAfterOrder')}:</span>
                                 <span className="font-semibold">
                                   {formatCurrency(selectedCustomer.creditLimit - (selectedCustomer.currentBalance + paymentBreakdown.credit))}
                                 </span>
                               </div>
                               {selectedCustomer.currentBalance + paymentBreakdown.credit > selectedCustomer.creditLimit && (
-                                <div className="flex items-center gap-2 text-red-600 text-xs">
+                                <div className={`flex items-center gap-2 text-red-600 text-xs ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                                   <AlertTriangle className="w-4 h-4" />
-                                  هذا الطلب يتجاوز الحد الائتماني للعميل
+                                  {t('pos.orderExceedsCreditLimit')}
                                 </div>
                               )}
                             </>
@@ -1755,8 +1811,8 @@ export function POS() {
                       size="lg"
                       onClick={handleCheckout}
                     >
-                      <CreditCard className="w-5 h-5 ml-2" />
-                      إتمام عملية البيع
+                      <CreditCard className={`w-5 h-5 ${direction === 'rtl' ? 'mr-2' : 'ml-2'}`} />
+                      {t('pos.completeSale')}
                     </Button>
                   </>
                 )}
@@ -1780,29 +1836,29 @@ export function POS() {
 
                       {/* Type Selector */}
                       <div className="w-32 flex-shrink-0">
-                        <Label className="mb-2 block">نوع العنصر</Label>
+                        <Label className="mb-2 block">{t('pos.itemType')}</Label>
 
                         <Select value={itemType} onValueChange={(v) => setItemType(v as 'product' | 'service' | 'return')}>
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent dir={direction}>
                             <SelectItem value="product">
-                              <div className="flex items-center gap-2">
+                              <div className={`flex items-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                                 <Package className="w-4 h-4" />
-                                منتج
+                                {t('pos.product')}
                               </div>
                             </SelectItem>
                             <SelectItem value="service">
-                              <div className="flex items-center gap-2">
+                              <div className={`flex items-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                                 <Briefcase className="w-4 h-4" />
-                                خدمة
+                                {t('pos.service')}
                               </div>
                             </SelectItem>
                             <SelectItem value="return">
-                              <div className="flex items-center gap-2">
+                              <div className={`flex items-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                                 <RotateCcw className="w-4 h-4" />
-                                مرتجع
+                                {t('pos.return')}
                               </div>
                             </SelectItem>
                           </SelectContent>
@@ -1811,25 +1867,25 @@ export function POS() {
 
                       {/* Search Field with Dropdown */}
                       <div className="flex-1">
-                        <Label className="mb-2 block">بحث</Label>
+                        <Label className="mb-2 block">{t('pos.search')}</Label>
                         <Popover open={searchPopoverOpen} onOpenChange={setSearchPopoverOpen}>
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
                               role="combobox"
                               aria-expanded={searchPopoverOpen}
-                              className="w-full justify-between"
+                              className={`w-full justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}
                             >
                               <span className="text-muted-foreground">
-                                {itemType === 'product' ? 'ابحث بالاسم أو أدخل الباركود...' : itemType === 'service' ? 'ابحث بالاسم أو الكود...' : 'ابحث عن فاتورة...'}
+                                {itemType === 'product' ? t('pos.searchProductPlaceholder') : itemType === 'service' ? t('pos.searchServicePlaceholder') : t('pos.searchInvoicePlaceholder')}
                               </span>
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              <ChevronsUpDown className={`${direction === 'rtl' ? 'mr-2' : 'ml-2'} h-4 w-4 shrink-0 opacity-50`} />
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]" align="start" dir="rtl">
+                          <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]" align={direction === 'rtl' ? 'end' : 'start'} dir={direction}>
                             <Command shouldFilter={false}>
                               <CommandInput
-                                placeholder={itemType === 'product' ? 'ابحث بالاسم أو أدخل الباركود...' : itemType === 'service' ? 'ابحث بالاسم أو الكود...' : 'ابحث عن فاتورة...'}
+                                placeholder={itemType === 'product' ? t('pos.searchProductPlaceholder') : itemType === 'service' ? t('pos.searchServicePlaceholder') : t('pos.searchInvoicePlaceholder')}
                                 value={searchTerm}
                                 onValueChange={(value) => {
                                   setSearchTerm(value);
@@ -1850,19 +1906,19 @@ export function POS() {
                                     if (productByBarcode) {
                                       const currentStock = getStock(productByBarcode.id, selectedWarehouse);
                                       if (currentStock <= 0) {
-                                        toast.error('المنتج غير متوفر في المخزون');
-                                        setSearchTerm('');
-                                        return;
-                                      }
-                                      addProductToCart(productByBarcode);
+                                      toast.error(t('pos.productNotInStock'));
                                       setSearchTerm('');
-                                      setSearchPopoverOpen(false);
-                                      toast.success(`تم إضافة ${productByBarcode.name} للسلة`);
-                                    } else if (serviceByCode) {
-                                      addServiceToCart(serviceByCode);
-                                      setSearchTerm('');
-                                      setSearchPopoverOpen(false);
-                                      toast.success(`تم إضافة ${serviceByCode.name} للسلة`);
+                                      return;
+                                    }
+                                    addProductToCart(productByBarcode);
+                                    setSearchTerm('');
+                                    setSearchPopoverOpen(false);
+                                    toast.success(t('pos.productAdded').replace('{name}', productByBarcode.name));
+                                  } else if (serviceByCode) {
+                                    addServiceToCart(serviceByCode);
+                                    setSearchTerm('');
+                                    setSearchPopoverOpen(false);
+                                    toast.success(t('pos.serviceAdded').replace('{name}', serviceByCode.name));
                                     }
                                   }
                                 }}
@@ -1870,9 +1926,9 @@ export function POS() {
                               />
                               <CommandList>
                                 <CommandEmpty>
-                                  {itemType === 'product' && 'لا توجد منتجات'}
-                                  {itemType === 'service' && 'لا توجد خدمات'}
-                                  {itemType === 'return' && 'أدخل رقم الفاتورة'}
+                                  {itemType === 'product' && t('pos.noProducts')}
+                                  {itemType === 'service' && t('pos.noServices')}
+                                  {itemType === 'return' && t('pos.enterInvoiceNumber')}
                                 </CommandEmpty>
                                 <CommandGroup>
                                   {itemType === 'product' && filteredProducts.map((product) => (
@@ -1883,7 +1939,7 @@ export function POS() {
                                         addProductToCart(product);
                                         setSearchTerm('');
                                         setSearchPopoverOpen(false);
-                                        toast.success(`تم إضافة ${product.name} للسلة`);
+                                        toast.success(t('pos.productAdded').replace('{name}', product.name));
                                       }}
                                       className="cursor-pointer"
                                     >
@@ -1893,7 +1949,7 @@ export function POS() {
                                           <div className="flex items-center gap-2 mt-1">
                                             <span className="text-xs text-gray-600">{formatCurrency(product.price)}</span>
                                             <Badge variant={product.stock > 0 ? 'outline' : 'destructive'} className="text-xs">
-                                              {product.stock > 0 ? `متوفر: ${product.stock}` : 'غير متوفر'}
+                                              {product.stock > 0 ? `${t('pos.available')}: ${product.stock}` : t('pos.notAvailable')}
                                             </Badge>
                                           </div>
                                           {product.barcode && (
@@ -1912,7 +1968,7 @@ export function POS() {
                                         addServiceToCart(service);
                                         setSearchTerm('');
                                         setSearchPopoverOpen(false);
-                                        toast.success(`تم إضافة ${service.name} للسلة`);
+                                        toast.success(t('pos.serviceAdded').replace('{name}', service.name));
                                       }}
                                       className="cursor-pointer"
                                     >
@@ -1949,9 +2005,9 @@ export function POS() {
               <Card className="sticky top-6">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
+                    <CardTitle className={`flex items-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                       <ShoppingCart className="w-5 h-5" />
-                      السلة
+                      {t('pos.cart')}
                     </CardTitle>
                     {cart.length > 0 && (
                       <Button
@@ -1964,12 +2020,12 @@ export function POS() {
                     )}
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent dir={direction}>
                   {cart.length === 0 ? (
                     <div className="text-center text-gray-500 py-12">
                       <ShoppingCart className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      <p>السلة فارغة</p>
-                      <p className="text-sm mt-2">قم بإضافة منتجات للبدء</p>
+                      <p>{t('pos.cartEmpty')}</p>
+                      <p className="text-sm mt-2">{t('pos.cartEmptySubtext')}</p>
                     </div>
                   ) : (
                     <ScrollArea className="h-[600px]">
@@ -2118,18 +2174,18 @@ export function POS() {
                 <CardContent className="pt-6">
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <label className="text-sm font-semibold text-gray-700">العميل:</label>
+                      <label className="text-sm font-semibold text-gray-700">{t('pos.customer')}:</label>
                       <Button variant="link" className="text-sm p-0 h-auto" onClick={() => setIsAddCustomerDialogOpen(true)}>
-                        إضافة عميل سريع
+                        {t('pos.addCustomerQuick')}
                       </Button>
                     </div>
                     <SearchableSelect
                       options={creditCustomers}
                       value={selectedCustomerId}
                       onValueChange={setSelectedCustomerId}
-                      placeholder="ابحث عن العميل..."
-                      searchPlaceholder="ابحث بالاسم أو رقم الحساب..."
-                      emptyMessage="لا يوجد عملاء"
+                      placeholder={t('pos.searchCustomerPlaceholder')}
+                      searchPlaceholder={t('pos.searchCustomerSearchPlaceholder')}
+                      emptyMessage={t('pos.noCustomers')}
                       className="w-full"
                       displayKey="name"
                       searchKeys={['name', 'accountNumber', 'phone']}
@@ -2141,7 +2197,7 @@ export function POS() {
                           <Badge variant="outline" className="text-xs">{selectedCustomer.status}</Badge>
                         </div>
                         <div className="flex justify-between text-xs text-gray-600">
-                          <span>الرصيد:</span>
+                          <span>{t('pos.balance')}:</span>
                           <span className="font-semibold">{formatCurrency(selectedCustomer.currentBalance)}</span>
                         </div>
                         <div className="flex justify-between text-xs text-gray-600">
@@ -2170,14 +2226,14 @@ export function POS() {
                   {cart.length === 0 ? (
                     <div className="text-center text-gray-500 py-8">
                       <CreditCard className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      <p className="text-sm">أضف عناصر للسلة للبدء</p>
+                      <p className="text-sm">{t('pos.cartEmptySubtext')}</p>
                     </div>
                   ) : (
                     <>
                       {/* Totals */}
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
-                          <span>المجموع الفرعي:</span>
+                          <span>{t('pos.subtotal')}:</span>
                           <span>{formatCurrency(subtotal)}</span>
                         </div>
                         <div className="flex justify-between text-sm">
@@ -2186,7 +2242,7 @@ export function POS() {
                         </div>
                         <Separator />
                         <div className="flex justify-between">
-                          <span>المجموع الكلي:</span>
+                          <span>{t('pos.total')}:</span>
                           <span className="text-xl text-blue-600">{formatCurrency(total)}</span>
                         </div>
                       </div>
@@ -2204,11 +2260,11 @@ export function POS() {
                               className="h-7 text-xs"
                               onClick={() => {
                                 saveDefaultPaymentPreferences(paymentBreakdown);
-                                toast.success('تم حفظ التفضيلات الافتراضية');
+                                toast.success(t('pos.preferencesSaved'));
                               }}
-                              title="حفظ هذا التوزيع كافتراضي"
+                              title={t('pos.saveAsDefault')}
                             >
-                              حفظ كافتراضي
+                              {t('pos.saveAsDefault')}
                             </Button>
                           )}
                         </div>
@@ -2218,7 +2274,7 @@ export function POS() {
                           <div className="flex items-center justify-between">
                             <label className="text-sm flex items-center gap-2">
                               <Banknote className="w-4 h-4 text-green-600" />
-                              نقدي
+                              {t('pos.cash')}
                             </label>
                             {paymentRemaining > 0 && (
                               <Button
@@ -2227,7 +2283,7 @@ export function POS() {
                                 className="h-6 text-xs"
                                 onClick={() => fillRemaining('cash')}
                               >
-                                تعبئة المتبقي
+                                {t('pos.fillRemaining')}
                               </Button>
                             )}
                           </div>
@@ -2247,7 +2303,7 @@ export function POS() {
                           <div className="flex items-center justify-between">
                             <label className="text-sm flex items-center gap-2">
                               <CreditCard className="w-4 h-4 text-blue-600" />
-                              بطاقة ائتمان
+                              {t('pos.creditCard')}
                             </label>
                             {paymentRemaining > 0 && (
                               <Button
@@ -2256,7 +2312,7 @@ export function POS() {
                                 className="h-6 text-xs"
                                 onClick={() => fillRemaining('card')}
                               >
-                                تعبئة المتبقي
+                                {t('pos.fillRemaining')}
                               </Button>
                             )}
                           </div>
@@ -2288,7 +2344,7 @@ export function POS() {
                                 className="gap-2"
                               >
                                 <CreditCard className="w-4 h-4" />
-                                محاكاة الدفع
+                                {t('pos.simulatePayment')}
                               </Button>
                             )}
                           </div>
@@ -2307,7 +2363,7 @@ export function POS() {
                                 <SelectContent>
                                   {banks.map((bank) => (
                                     <SelectItem key={bank.id} value={bank.id}>
-                                      {bank.name} - الرصيد: {formatCurrency(bank.balance)}
+                                      {bank.name} - {t('pos.balance')}: {formatCurrency(bank.balance)}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -2321,7 +2377,7 @@ export function POS() {
                           <div className="flex items-center justify-between">
                             <label className="text-sm flex items-center gap-2">
                               <CreditCard className="w-4 h-4 text-orange-600" />
-                              بيع آجل (على الحساب)
+                              {t('pos.creditSale')}
                             </label>
                             {paymentRemaining > 0 && (
                               <Button
@@ -2330,7 +2386,7 @@ export function POS() {
                                 className="h-6 text-xs"
                                 onClick={() => fillRemaining('credit')}
                               >
-                                تعبئة المتبقي
+                                {t('pos.fillRemaining')}
                               </Button>
                             )}
                           </div>
@@ -2354,14 +2410,14 @@ export function POS() {
                             </span>
                           </div>
                           <div className="flex justify-between">
-                            <span>الإجمالي المطلوب:</span>
+                            <span>{t('pos.requiredTotal')}:</span>
                             <span className="font-semibold">{formatCurrency(total)}</span>
                           </div>
                           <Separator />
                           <div className="flex justify-between">
-                            <span>المتبقي:</span>
+                            <span>{t('pos.remaining')}:</span>
                             <span className={paymentRemaining > 0 ? 'text-orange-600 font-semibold' : paymentRemaining < 0 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}>
-                              {formatCurrency(Math.abs(paymentRemaining))} {paymentRemaining > 0 ? '(ناقص)' : paymentRemaining < 0 ? '(زائد)' : '(مكتمل)'}
+                              {formatCurrency(Math.abs(paymentRemaining))} {paymentRemaining > 0 ? `(${t('pos.minus')})` : paymentRemaining < 0 ? `(${t('pos.plus')})` : `(${t('pos.complete')})`}
                             </span>
                           </div>
                         </div>
@@ -2402,7 +2458,7 @@ export function POS() {
                         onClick={handleCheckout}
                       >
                         <CreditCard className="w-5 h-5 ml-2" />
-                        إتمام عملية البيع
+                        {t('pos.completeSale')}
                       </Button>
                     </>
                   )}
@@ -2414,22 +2470,22 @@ export function POS() {
       )}
 
       <Dialog open={isAddCustomerDialogOpen} onOpenChange={setIsAddCustomerDialogOpen}>
-        <DialogContent dir="rtl">
+        <DialogContent dir={direction}>
           <DialogHeader>
             <DialogTitle>إضافة عميل سريع</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>اسم العميل</Label>
+              <Label>{t('pos.customerName')}</Label>
               <Input
-                placeholder="اسم العميل"
+                placeholder={t('pos.customerName')}
                 value={newCustomerData.name}
                 onChange={(e) => setNewCustomerData({ ...newCustomerData, name: e.target.value })}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>رقم الهاتف</Label>
+                <Label>{t('pos.phone')}</Label>
                 <Input
                   placeholder="05xxxxxxxx"
                   value={newCustomerData.phone}
@@ -2437,17 +2493,17 @@ export function POS() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>العنوان</Label>
+                <Label>{t('pos.address')}</Label>
                 <Input
-                  placeholder="عنوان العميل"
+                  placeholder={t('pos.customerAddress')}
                   value={newCustomerData.address}
                   onChange={(e) => setNewCustomerData({ ...newCustomerData, address: e.target.value })}
                 />
               </div>
             </div>
             <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setIsAddCustomerDialogOpen(false)}>إلغاء</Button>
-              <Button onClick={handleQuickAddCustomer}>حفظ العميل</Button>
+              <Button variant="outline" onClick={() => setIsAddCustomerDialogOpen(false)}>{t('pos.cancel')}</Button>
+              <Button onClick={handleQuickAddCustomer}>{t('pos.saveCustomer')}</Button>
             </div>
           </div>
         </DialogContent>
@@ -2457,10 +2513,10 @@ export function POS() {
       <Dialog open={isReturnDialogOpen} onOpenChange={setIsReturnDialogOpen}>
         <DialogContent dir="rtl" className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>إضافة منتجات للإرجاع</DialogTitle>
+            <DialogTitle>{t('pos.addProductsForReturn')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-gray-600">اختر المنتجات المراد إرجاعها من الفاتورة {returnInvoiceNumber}</p>
+            <p className="text-sm text-gray-600">{t('pos.selectProductsToReturn').replace('{invoiceNumber}', returnInvoiceNumber)}</p>
             <div className="space-y-2 max-h-96 overflow-y-auto">
               {filteredProducts.map((product) => (
                 <div key={product.id} className="flex items-center justify-between p-3 border rounded-lg">
@@ -2497,10 +2553,10 @@ export function POS() {
               ))}
             </div>
             <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setIsReturnDialogOpen(false)}>إلغاء</Button>
+              <Button variant="outline" onClick={() => setIsReturnDialogOpen(false)}>{t('pos.cancel')}</Button>
               <Button onClick={() => {
                 if (returnItems.length === 0) {
-                  toast.error('يرجى إضافة منتجات للإرجاع');
+                  toast.error(t('pos.addProductsForReturnError'));
                   return;
                 }
                 setIsReturnDialogOpen(false);
@@ -2512,7 +2568,7 @@ export function POS() {
 
       {/* Cash Drawer Management Dialog */}
       <Dialog open={showDrawerDialog} onOpenChange={setShowDrawerDialog}>
-        <DialogContent className="max-w-2xl" dir="rtl">
+        <DialogContent className="max-w-2xl" dir={direction}>
           <DialogHeader>
             <DialogTitle>إدارة درج النقدية</DialogTitle>
           </DialogHeader>
@@ -2521,31 +2577,31 @@ export function POS() {
               {/* Drawer Info */}
               <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
                 <div>
-                  <label className="text-sm text-gray-600">الفرع</label>
+                  <label className="text-sm text-gray-600">{t('pos.branch')}</label>
                   <p className="font-semibold">{currentDrawer.branchName}</p>
                 </div>
                 <div>
-                  <label className="text-sm text-gray-600">الموظف المسؤول</label>
-                  <p className="font-semibold">{currentDrawer.employeeName || 'غير محدد'}</p>
+                  <label className="text-sm text-gray-600">{t('pos.responsibleEmployee')}</label>
+                  <p className="font-semibold">{currentDrawer.employeeName || t('pos.notSpecified')}</p>
                 </div>
                 <div>
-                  <label className="text-sm text-gray-600">رصيد الافتتاح</label>
+                  <label className="text-sm text-gray-600">{t('pos.openingBalance')}</label>
                   <p className="font-semibold text-blue-600">{formatCurrency(currentDrawer.openingBalance)}</p>
                 </div>
                 <div>
-                  <label className="text-sm text-gray-600">الرصيد الحالي</label>
+                  <label className="text-sm text-gray-600">{t('pos.currentBalance')}</label>
                   <p className="font-semibold text-green-600">{formatCurrency(currentDrawer.currentBalance)}</p>
                 </div>
                 <div>
-                  <label className="text-sm text-gray-600">نقد المبيعات</label>
+                  <label className="text-sm text-gray-600">{t('pos.cashSales')}</label>
                   <p className="font-semibold">
                     {formatCurrency(currentDrawer.currentBalance - currentDrawer.openingBalance)}
                   </p>
                 </div>
                 <div>
-                  <label className="text-sm text-gray-600">الحالة</label>
+                  <label className="text-sm text-gray-600">{t('pos.status')}</label>
                   <Badge variant={currentDrawer.status === 'open' ? 'default' : 'secondary'}>
-                    {currentDrawer.status === 'open' ? 'مفتوح' : 'مغلق'}
+                    {currentDrawer.status === 'open' ? t('pos.open') : t('pos.closed')}
                   </Badge>
                 </div>
               </div>
@@ -2561,7 +2617,7 @@ export function POS() {
                   className="flex-1"
                 >
                   <Plus className="w-4 h-4 ml-2" />
-                  إضافة نقد
+                  {t('pos.addCash')}
                 </Button>
                 {currentDrawer.status === 'open' && (
                   <Button
@@ -2572,8 +2628,8 @@ export function POS() {
                     }}
                     className="flex-1"
                   >
-                    <LockIcon className="w-4 h-4 ml-2" />
-                    إغلاق الدرج
+                    <LockIcon className={`w-4 h-4 ${direction === 'rtl' ? 'mr-2' : 'ml-2'}`} />
+                    {t('pos.closeDrawer')}
                   </Button>
                 )}
               </div>
@@ -2584,13 +2640,13 @@ export function POS() {
 
       {/* Add Money Dialog */}
       <Dialog open={showAddMoneyDialog} onOpenChange={setShowAddMoneyDialog}>
-        <DialogContent dir="rtl">
+        <DialogContent dir={direction}>
           <DialogHeader>
-            <DialogTitle>إضافة نقد للدرج</DialogTitle>
+            <DialogTitle>{t('pos.addCashToDrawer')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>المبلغ</Label>
+              <Label>{t('pos.amount')}</Label>
               <Input
                 type="number"
                 value={addMoneyAmount}
@@ -2598,14 +2654,16 @@ export function POS() {
                 placeholder="0.00"
                 step="0.01"
                 min="0"
+                dir="ltr"
               />
             </div>
             <div className="space-y-2">
-              <Label>ملاحظات (اختياري)</Label>
+              <Label>{t('pos.notesOptional')}</Label>
               <Input
                 value={addMoneyNotes}
                 onChange={(e) => setAddMoneyNotes(e.target.value)}
-                placeholder="مثال: نقد للصرف..."
+                placeholder={t('pos.notesExample')}
+                dir={direction}
               />
             </div>
             <div className="flex gap-2 justify-end">
@@ -2614,16 +2672,16 @@ export function POS() {
                 setAddMoneyAmount('');
                 setAddMoneyNotes('');
               }}>
-                إلغاء
+                {t('pos.cancel')}
               </Button>
               <Button onClick={() => {
                 const amount = parseFloat(addMoneyAmount);
                 if (!amount || amount <= 0) {
-                  toast.error('يرجى إدخال مبلغ صحيح');
+                  toast.error(t('pos.enterValidAmount'));
                   return;
                 }
                 if (!currentDrawer) {
-                  toast.error('الدرج غير متاح');
+                  toast.error(t('pos.drawerNotAvailable'));
                   return;
                 }
                 const success = addToDrawer(
@@ -2632,21 +2690,21 @@ export function POS() {
                   'manual_add',
                   currentUser?.id || 'unknown',
                   currentUser?.name || 'غير محدد',
-                  addMoneyNotes || 'إضافة يدوية',
+                  addMoneyNotes || t('pos.manualAdd'),
                   undefined
                 );
                 if (success) {
-                  toast.success(`تم إضافة ${formatCurrency(amount)} للدرج`);
+                  toast.success(t('pos.amountAddedToDrawer').replace('{amount}', formatCurrency(amount)));
                   const updatedDrawer = getDrawer(currentDrawer.posId);
                   setCurrentDrawer(updatedDrawer);
                   setShowAddMoneyDialog(false);
                   setAddMoneyAmount('');
                   setAddMoneyNotes('');
                 } else {
-                  toast.error('فشل إضافة المبلغ');
+                  toast.error(t('pos.failedToAddAmount'));
                 }
               }}>
-                إضافة
+                {t('pos.add')}
               </Button>
             </div>
           </div>
@@ -2655,26 +2713,26 @@ export function POS() {
 
       {/* Close Drawer Dialog */}
       <Dialog open={showCloseDrawerDialog} onOpenChange={setShowCloseDrawerDialog}>
-        <DialogContent dir="rtl">
+        <DialogContent dir={direction}>
           <DialogHeader>
-            <DialogTitle>إغلاق درج النقدية</DialogTitle>
+            <DialogTitle>{t('pos.closeCashDrawer')}</DialogTitle>
           </DialogHeader>
           {currentDrawer && (
             <div className="space-y-4">
               <div className="p-4 bg-blue-50 rounded-lg space-y-2">
-                <div className="flex justify-between">
-                  <span>رصيد الافتتاح:</span>
+                <div className={`flex justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                  <span>{t('pos.openingBalance')}:</span>
                   <span className="font-semibold">{formatCurrency(currentDrawer.openingBalance)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>نقد المبيعات:</span>
+                <div className={`flex justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                  <span>{t('pos.cashSales')}:</span>
                   <span className="font-semibold">
                     {formatCurrency(currentDrawer.currentBalance - currentDrawer.openingBalance)}
                   </span>
                 </div>
                 <Separator />
-                <div className="flex justify-between text-lg">
-                  <span className="font-bold">المتوقع في الدرج:</span>
+                <div className={`flex justify-between text-lg ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                  <span className="font-bold">{t('pos.expectedInDrawer')}:</span>
                   <span className="font-bold text-green-600">{formatCurrency(currentDrawer.currentBalance)}</span>
                 </div>
               </div>
@@ -2691,14 +2749,15 @@ export function POS() {
               </div>
               {actualCounted && parseFloat(actualCounted) !== currentDrawer.currentBalance && (
                 <div className="space-y-2">
-                  <Label>سبب الفارق (مطلوب)</Label>
+                  <Label>{t('pos.discrepancyReasonRequired')}</Label>
                   <Input
                     value={discrepancyReason}
                     onChange={(e) => setDiscrepancyReason(e.target.value)}
-                    placeholder="مثال: خطأ في العد، نقص نقد..."
+                    placeholder={t('pos.discrepancyReasonExample')}
+                    dir={direction}
                   />
-                  <div className="text-sm text-red-600">
-                    الفارق: {formatCurrency(parseFloat(actualCounted) - currentDrawer.currentBalance)}
+                  <div className={`text-sm text-red-600 ${direction === 'rtl' ? 'text-right' : 'text-left'}`}>
+                    {t('pos.discrepancy')}: {formatCurrency(parseFloat(actualCounted) - currentDrawer.currentBalance)}
                   </div>
                 </div>
               )}
@@ -2713,12 +2772,12 @@ export function POS() {
                 <Button onClick={() => {
                   const counted = parseFloat(actualCounted);
                   if (!counted || counted < 0) {
-                    toast.error('يرجى إدخال المبلغ الفعلي');
+                    toast.error(t('pos.enterActualAmount'));
                     return;
                   }
                   const discrepancy = counted - currentDrawer.currentBalance;
                   if (discrepancy !== 0 && !discrepancyReason.trim()) {
-                    toast.error('يرجى إدخال سبب الفارق');
+                    toast.error(t('pos.enterDiscrepancyReason'));
                     return;
                   }
                   const result = closeDrawer(
@@ -2729,18 +2788,18 @@ export function POS() {
                     discrepancy !== 0 ? discrepancyReason : undefined
                   );
                   if (result.success) {
-                    toast.success('تم إغلاق الدرج بنجاح');
+                    toast.success(t('pos.drawerClosedSuccessfully'));
                     const updatedDrawer = getDrawer(currentDrawer.posId);
                     setCurrentDrawer(updatedDrawer);
                     setShowCloseDrawerDialog(false);
                     setActualCounted('');
                     setDiscrepancyReason('');
                   } else {
-                    toast.error(result.error || 'فشل إغلاق الدرج');
+                    toast.error(result.error || t('pos.failedToCloseDrawer'));
                   }
                 }}>
-                  <LockIcon className="w-4 h-4 ml-2" />
-                  إغلاق الدرج
+                  <LockIcon className={`w-4 h-4 ${direction === 'rtl' ? 'mr-2' : 'ml-2'}`} />
+                  {t('pos.closeDrawer')}
                 </Button>
               </div>
             </div>
@@ -2754,7 +2813,7 @@ export function POS() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CreditCard className="w-5 h-5" />
-              محاكاة آلة الدفع بالبطاقة
+              {t('pos.simulateCardPayment')}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -2765,12 +2824,13 @@ export function POS() {
                     <CreditCard className="w-16 h-16 text-blue-600" />
                   </div>
                   <p className="text-lg font-semibold">المبلغ: {formatCurrency(cardPaymentAmount)}</p>
-                  <p className="text-sm text-gray-600">البنك المحدد: {banks.find(b => b.id === paymentBreakdown.selectedBankId)?.name || 'غير محدد'}</p>
+                  <p className="text-sm text-gray-600">{t('pos.selectedBank')}: {banks.find(b => b.id === paymentBreakdown.selectedBankId)?.name || t('pos.notSpecified')}</p>
                 </div>
                 <div className="space-y-2">
-                  <Label>رقم البطاقة (محاكاة)</Label>
+                  <Label>{t('pos.cardNumberSimulate')}</Label>
                   <Input
                     placeholder="1234 5678 9012 3456"
+                    dir="ltr"
                     className="text-center font-mono text-lg tracking-widest"
                     maxLength={19}
                     onKeyDown={(e) => {
@@ -2780,7 +2840,7 @@ export function POS() {
                       }
                     }}
                   />
-                  <p className="text-xs text-gray-500 text-center">أدخل رقم البطاقة ثم اضغط Enter للبدء</p>
+                  <p className="text-xs text-gray-500 text-center">{t('pos.enterCardNumberHint')}</p>
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -2791,14 +2851,14 @@ export function POS() {
                       setCardPaymentStatus('idle');
                     }}
                   >
-                    إلغاء
+                    {t('pos.cancel')}
                   </Button>
                   <Button
-                    className="flex-1 gap-2"
+                    className={`flex-1 gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}
                     onClick={handleCardPayment}
                   >
                     <CreditCard className="w-4 h-4" />
-                    بدء المعاملة
+                    {t('pos.startTransaction')}
                   </Button>
                 </div>
               </>
@@ -2808,8 +2868,8 @@ export function POS() {
               <div className="text-center space-y-4 py-8">
                 <div className="mx-auto w-24 h-24 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                 <div className="space-y-2">
-                  <p className="text-lg font-semibold">جاري معالجة الدفع...</p>
-                  <p className="text-sm text-gray-600">يرجى الانتظار</p>
+                  <p className="text-lg font-semibold">{t('pos.processingPayment')}</p>
+                  <p className="text-sm text-gray-600">{t('pos.pleaseWait')}</p>
                 </div>
               </div>
             )}
@@ -2820,9 +2880,9 @@ export function POS() {
                   <Check className="w-12 h-12 text-green-600" />
                 </div>
                 <div className="space-y-2">
-                  <p className="text-lg font-semibold text-green-600">تمت المعاملة بنجاح</p>
-                  <p className="text-sm text-gray-600">المبلغ: {formatCurrency(cardPaymentAmount)}</p>
-                  <p className="text-xs text-gray-500">تم إضافة المبلغ إلى البنك المحدد</p>
+                  <p className="text-lg font-semibold text-green-600">{t('pos.transactionSuccessful')}</p>
+                  <p className="text-sm text-gray-600">{t('pos.amount')}: {formatCurrency(cardPaymentAmount)}</p>
+                  <p className="text-xs text-gray-500">{t('pos.amountAddedToBank')}</p>
                 </div>
                 <Button
                   className="w-full"
@@ -2831,7 +2891,7 @@ export function POS() {
                     setCardPaymentStatus('idle');
                   }}
                 >
-                  موافق
+                  {t('pos.ok')}
                 </Button>
               </div>
             )}
@@ -2842,8 +2902,8 @@ export function POS() {
                   <X className="w-12 h-12 text-red-600" />
                 </div>
                 <div className="space-y-2">
-                  <p className="text-lg font-semibold text-red-600">فشلت المعاملة</p>
-                  <p className="text-sm text-gray-600">يرجى المحاولة مرة أخرى</p>
+                  <p className="text-lg font-semibold text-red-600">{t('pos.transactionFailed')}</p>
+                  <p className="text-sm text-gray-600">{t('pos.pleaseTryAgain')}</p>
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -2854,13 +2914,13 @@ export function POS() {
                       setCardPaymentStatus('idle');
                     }}
                   >
-                    إلغاء
+                    {t('pos.cancel')}
                   </Button>
                   <Button
                     className="flex-1"
                     onClick={handleCardPayment}
                   >
-                    إعادة المحاولة
+                    {t('pos.retry')}
                   </Button>
                 </div>
               </div>

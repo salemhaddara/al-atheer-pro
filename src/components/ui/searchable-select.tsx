@@ -38,6 +38,7 @@ interface SearchableSelectProps {
   className?: string;
   displayKey?: 'name' | 'accountNumber' | 'phone'; // What to display in the input
   searchKeys?: string[]; // Keys to search in (default: ['name', 'accountNumber', 'phone'])
+  dir?: 'rtl' | 'ltr'; // Direction for RTL/LTR support
 }
 
 export function SearchableSelect({
@@ -50,7 +51,8 @@ export function SearchableSelect({
   disabled = false,
   className,
   displayKey = 'name',
-  searchKeys = ['name', 'accountNumber', 'phone']
+  searchKeys = ['name', 'accountNumber', 'phone'],
+  dir = 'rtl'
 }: SearchableSelectProps) {
   const [open, setOpen] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState('');
@@ -98,10 +100,10 @@ export function SearchableSelect({
               <span className="text-muted-foreground">{placeholder}</span>
             )}
           </div>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <ChevronsUpDown className={`${dir === 'rtl' ? 'mr-2' : 'ml-2'} h-4 w-4 shrink-0 opacity-50`} />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]" align="start" dir="rtl">
+      <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]" align={dir === 'rtl' ? 'end' : 'start'} dir={dir}>
         <Command shouldFilter={false}>
           <CommandInput 
             placeholder={searchPlaceholder} 
@@ -125,7 +127,7 @@ export function SearchableSelect({
                 >
                   <Check
                     className={cn(
-                      'ml-2 h-4 w-4',
+                      `${dir === 'rtl' ? 'mr-2' : 'ml-2'} h-4 w-4`,
                       value === option.id ? 'opacity-100' : 'opacity-0'
                     )}
                   />

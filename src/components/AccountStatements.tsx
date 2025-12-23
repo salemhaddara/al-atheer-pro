@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { loadAccounts, getAccountByCode, type Account } from '../data/chartOfAccounts';
 import { getAllJournalEntries, type JournalEntry } from '../data/journalEntries';
 import { SearchableSelect } from './ui/searchable-select';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface AccountTransaction {
   date: string;
@@ -23,6 +24,7 @@ interface AccountTransaction {
 }
 
 export function AccountStatements() {
+  const { t, direction } = useLanguage();
   const [accounts] = useState<Account[]>(loadAccounts());
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0]);
@@ -167,16 +169,16 @@ export function AccountStatements() {
 
   const handleExport = () => {
     if (!selectedAccount) {
-      toast.error('يرجى اختيار حساب أولاً');
+      toast.error(t('accounting.accountStatements.selectAccountFirst'));
       return;
     }
 
     // Simple CSV export
     const csvContent = [
-      ['كشف حساب', selectedAccount.name, `(${selectedAccount.code})`],
-      ['من', startDate, 'إلى', endDate],
+      [t('accounting.accountStatements.title'), selectedAccount.name, `(${selectedAccount.code})`],
+      [t('accounting.accountStatements.fromDate'), startDate, t('accounting.accountStatements.toDate'), endDate],
       [],
-      ['التاريخ', 'الوصف', 'المرجع', 'مدين', 'دائن', 'الرصيد'],
+      [t('accounting.accountStatements.date'), t('accounting.accountStatements.description'), t('accounting.accountStatements.reference'), t('accounting.accountStatements.debit'), t('accounting.accountStatements.credit'), t('accounting.accountStatements.balance')],
       ...transactions.map(t => [
         formatDate(t.date),
         t.description,
@@ -186,15 +188,15 @@ export function AccountStatements() {
         t.balance.toFixed(2)
       ]),
       [],
-      ['الإجمالي', '', '', totals.totalDebit.toFixed(2), totals.totalCredit.toFixed(2), totals.closingBalance.toFixed(2)]
+      [t('accounting.accountStatements.total'), '', '', totals.totalDebit.toFixed(2), totals.totalCredit.toFixed(2), totals.closingBalance.toFixed(2)]
     ].map(row => row.join(',')).join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `كشف_حساب_${selectedAccount.code}_${startDate}_${endDate}.csv`;
+    link.download = t('accounting.accountStatements.exportFileName').replace('{code}', selectedAccount.code).replace('{startDate}', startDate).replace('{endDate}', endDate) + '.csv';
     link.click();
-    toast.success('تم تصدير الكشف بنجاح');
+    toast.success(t('accounting.accountStatements.exportSuccess'));
   };
 
   // Prepare accounts for SearchableSelect
@@ -210,21 +212,21 @@ export function AccountStatements() {
   }, [accounts]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={direction}>
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1>كشوفات الحسابات</h1>
-          <p className="text-gray-600">عرض حركات وأرصدة الحسابات</p>
+        <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+          <h1>{t('accounting.accountStatements.title')}</h1>
+          <p className="text-gray-600">{t('accounting.accountStatements.subtitle')}</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={handlePrint} variant="outline" className="gap-2">
             <Printer className="w-4 h-4" />
-            طباعة
+            {t('accounting.accountStatements.print')}
           </Button>
           <Button onClick={handleExport} variant="outline" className="gap-2">
             <Download className="w-4 h-4" />
-            تصدير
+            {t('accounting.accountStatements.export')}
           </Button>
         </div>
       </div>
@@ -234,39 +236,42 @@ export function AccountStatements() {
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label>اختر الحساب *</Label>
+              <Label>{t('accounting.accountStatements.selectAccount')}</Label>
               <SearchableSelect
                 options={accountOptions}
                 value={selectedAccountId}
                 onValueChange={setSelectedAccountId}
-                placeholder="ابحث عن الحساب بالاسم أو الرمز..."
-                searchPlaceholder="ابحث بالاسم أو الرمز..."
-                emptyMessage="لا يوجد حسابات"
+                placeholder={t('accounting.accountStatements.selectAccountPlaceholder')}
+                searchPlaceholder={t('accounting.accountStatements.searchPlaceholder')}
+                emptyMessage={t('accounting.accountStatements.noAccounts')}
                 displayKey="name"
                 searchKeys={['name', 'accountNumber']}
+                dir={direction}
               />
             </div>
             <div className="space-y-2">
-              <Label>من تاريخ</Label>
+              <Label>{t('accounting.accountStatements.fromDate')}</Label>
               <div className="relative">
-                <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Calendar className={`absolute ${direction === 'rtl' ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400`} />
                 <Input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="pr-10"
+                  className={direction === 'rtl' ? 'pr-10' : 'pl-10'}
+                  dir="ltr"
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label>إلى تاريخ</Label>
+              <Label>{t('accounting.accountStatements.toDate')}</Label>
               <div className="relative">
-                <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Calendar className={`absolute ${direction === 'rtl' ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400`} />
                 <Input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="pr-10"
+                  className={direction === 'rtl' ? 'pr-10' : 'pl-10'}
+                  dir="ltr"
                 />
               </div>
             </div>
@@ -277,16 +282,16 @@ export function AccountStatements() {
       {/* Statement */}
       {selectedAccount && (
         <Card>
-          <CardHeader>
+          <CardHeader dir={direction}>
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>كشف حساب: {selectedAccount.name}</CardTitle>
+              <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                <CardTitle>{t('accounting.accountStatements.statementTitle').replace('{name}', selectedAccount.name)}</CardTitle>
                 <CardDescription>
-                  الرمز: {selectedAccount.code} | النوع: {selectedAccount.type} | الطبيعة: {selectedAccount.nature}
+                  {t('accounting.accountStatements.code')}: {selectedAccount.code} | {t('accounting.accountStatements.type')}: {selectedAccount.type} | {t('accounting.accountStatements.nature')}: {selectedAccount.nature}
                 </CardDescription>
               </div>
               <Badge variant="outline" className="text-lg px-4 py-2">
-                {selectedAccount.isActive ? 'نشط' : 'معطل'}
+                {selectedAccount.isActive ? t('accounting.accountActive') : t('accounting.accountInactive')}
               </Badge>
             </div>
           </CardHeader>
@@ -294,19 +299,19 @@ export function AccountStatements() {
             {/* Summary */}
             <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
               <div className="text-center">
-                <p className="text-sm text-gray-600 mb-1">الرصيد الافتتاحي</p>
+                <p className="text-sm text-gray-600 mb-1">{t('accounting.accountStatements.openingBalance')}</p>
                 <p className={`text-lg font-bold ${openingBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {formatCurrency(openingBalance)}
                 </p>
               </div>
               <div className="text-center">
-                <p className="text-sm text-gray-600 mb-1">إجمالي المدين</p>
+                <p className="text-sm text-gray-600 mb-1">{t('accounting.accountStatements.totalDebit')}</p>
                 <p className="text-lg font-bold text-blue-600">
                   {formatCurrency(totals.totalDebit)}
                 </p>
               </div>
               <div className="text-center">
-                <p className="text-sm text-gray-600 mb-1">إجمالي الدائن</p>
+                <p className="text-sm text-gray-600 mb-1">{t('accounting.accountStatements.totalCredit')}</p>
                 <p className="text-lg font-bold text-purple-600">
                   {formatCurrency(totals.totalCredit)}
                 </p>
@@ -315,22 +320,22 @@ export function AccountStatements() {
 
             {/* Transactions Table */}
             <div className="border rounded-lg overflow-hidden">
-              <Table>
+              <Table dir={direction}>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-right">التاريخ</TableHead>
-                    <TableHead className="text-right">الوصف</TableHead>
-                    <TableHead className="text-right">المرجع</TableHead>
-                    <TableHead className="text-right">مدين</TableHead>
-                    <TableHead className="text-right">دائن</TableHead>
-                    <TableHead className="text-right">الرصيد</TableHead>
+                    <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.accountStatements.date')}</TableHead>
+                    <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.accountStatements.description')}</TableHead>
+                    <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.accountStatements.reference')}</TableHead>
+                    <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.accountStatements.debit')}</TableHead>
+                    <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.accountStatements.credit')}</TableHead>
+                    <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.accountStatements.balance')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {/* Opening Balance Row */}
                   <TableRow className="bg-blue-50 font-semibold">
                     <TableCell>{formatDate(startDate)}</TableCell>
-                    <TableCell>الرصيد الافتتاحي</TableCell>
+                    <TableCell>{t('accounting.accountStatements.openingBalanceRow')}</TableCell>
                     <TableCell>-</TableCell>
                     <TableCell>
                       {openingBalance > 0 ? formatCurrency(openingBalance) : '-'}
@@ -368,7 +373,7 @@ export function AccountStatements() {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                        لا توجد حركات في الفترة المحددة
+                        {t('accounting.accountStatements.noTransactions')}
                       </TableCell>
                     </TableRow>
                   )}
@@ -376,8 +381,8 @@ export function AccountStatements() {
                   {/* Totals Row */}
                   {transactions.length > 0 && (
                     <TableRow className="bg-gray-100 font-bold">
-                      <TableCell colSpan={3} className="text-right">
-                        الإجمالي
+                      <TableCell colSpan={3} className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                        {t('accounting.accountStatements.total')}
                       </TableCell>
                       <TableCell className="text-blue-600">
                         {formatCurrency(totals.totalDebit)}
@@ -394,8 +399,8 @@ export function AccountStatements() {
                   {/* Closing Balance Row */}
                   {transactions.length > 0 && (
                     <TableRow className="bg-green-50 font-bold">
-                      <TableCell colSpan={3} className="text-right">
-                        الرصيد الختامي
+                      <TableCell colSpan={3} className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                        {t('accounting.accountStatements.closingBalance')}
                       </TableCell>
                       <TableCell>
                         {totals.closingBalance > 0 ? formatCurrency(totals.closingBalance) : '-'}
@@ -419,7 +424,7 @@ export function AccountStatements() {
         <Card>
           <CardContent className="py-12 text-center">
             <FileText className="w-16 h-16 mx-auto mb-4 text-gray-400" />
-            <p className="text-gray-500">يرجى اختيار حساب لعرض كشفه</p>
+            <p className="text-gray-500">{t('accounting.accountStatements.selectAccountMessage')}</p>
           </CardContent>
         </Card>
       )}

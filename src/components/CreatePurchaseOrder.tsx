@@ -14,6 +14,7 @@ import { SearchableSelect } from './ui/searchable-select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 import { loadBanks } from '../data/banks';
 import CustomDatePicker from './CustomDatePicker';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface CartItem {
     id: string;
@@ -50,6 +51,7 @@ interface CreatePurchaseOrderProps {
 }
 
 export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: CreatePurchaseOrderProps) {
+    const { t, direction } = useLanguage();
     const { isAdmin, currentUser } = useUser();
     const [cart, setCart] = useState<CartItem[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -63,11 +65,11 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
     const [expiryDate, setExpiryDate] = useState('');
 
     // قائمة المستودعات
-    const warehouses = [
-        { id: '1', name: 'المستودع الرئيسي' },
-        { id: '2', name: 'مستودع الفرع الشمالي' },
-        { id: '3', name: 'مستودع الفرع الجنوبي' }
-    ];
+    const warehouses = useMemo(() => [
+        { id: '1', name: t('purchases.mainWarehouse') },
+        { id: '2', name: t('purchases.northBranchWarehouse') },
+        { id: '3', name: t('purchases.southBranchWarehouse') }
+    ], [t]);
 
     // تصفية المستودعات حسب الصلاحيات
     const availableWarehouses = useMemo(() => {
@@ -172,7 +174,7 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
             setShowExpiryDialog(false);
             setPendingProduct(null);
             setExpiryDate('');
-            toast.success(`تم إضافة ${pendingProduct.name} للسلة`);
+            toast.success(t('purchases.createOrder.productAdded').replace('{name}', pendingProduct.name));
         }
     };
 
@@ -223,7 +225,7 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
                 handleProductClick(productByBarcode);
                 setSearchTerm('');
             } else {
-                toast.error('لم يتم العثور على منتج بهذا الباركود');
+                toast.error(t('purchases.createOrder.productNotFound'));
             }
         }
     };
@@ -237,24 +239,26 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
 
     const handleSaveOrder = () => {
         if (!selectedSupplier) {
-            toast.error('يرجى اختيار المورد');
+            toast.error(t('purchases.createOrder.selectSupplierError'));
             return;
         }
 
         if (cart.length === 0) {
-            toast.error('السلة فارغة');
+            toast.error(t('purchases.createOrder.cartEmptyError'));
             return;
         }
 
         // Validate payment breakdown matches total
         if (Math.abs(paymentTotal - total) > 0.01) {
-            toast.error(`المبلغ المدخل (${formatCurrency(paymentTotal)}) لا يساوي الإجمالي (${formatCurrency(total)})`);
+            toast.error(t('purchases.createOrder.amountMismatch')
+                .replace('{entered}', formatCurrency(paymentTotal))
+                .replace('{total}', formatCurrency(total)));
             return;
         }
 
         // Validate bank selection if bank withdrawal is used
         if (paymentBreakdown.bankWithdrawal > 0 && !selectedBankId) {
-            toast.error('يرجى اختيار البنك للصرف');
+            toast.error(t('purchases.createOrder.selectBankError'));
             return;
         }
 
@@ -276,32 +280,32 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
         };
 
         onSave(order);
-        toast.success('تم إنشاء طلب الشراء بنجاح');
+        toast.success(t('purchases.createOrder.orderCreated'));
         onBack();
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6" dir={direction}>
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
+            <div className={`flex items-center justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                <div className={`flex items-center gap-4 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                     <Button variant="ghost" onClick={onBack} className="gap-2">
-                        <ArrowRight className="w-4 h-4" />
-                        رجوع
+                        {direction === 'rtl' ? <ArrowRight className="w-4 h-4" /> : <ArrowRight className="w-4 h-4 rotate-180" />}
+                        {t('purchases.createOrder.back')}
                     </Button>
-                    <div>
-                        <h1>إنشاء طلب شراء جديد</h1>
-                        <p className="text-gray-600">إضافة منتجات من الموردين</p>
+                    <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                        <h1>{t('purchases.createOrder.title')}</h1>
+                        <p className="text-gray-600">{t('purchases.createOrder.subtitle')}</p>
                     </div>
                 </div>
             </div>
 
             {/* Supplier Info Section */}
             <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-6" dir={direction}>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-2">
-                            <Label>المورد (مطلوب)</Label>
+                            <Label>{t('purchases.createOrder.supplierRequired')}</Label>
                             <SearchableSelect
                                 options={suppliers.map(s => ({
                                     id: s.id,
@@ -313,15 +317,16 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
                                 }))}
                                 value={selectedSupplierId}
                                 onValueChange={setSelectedSupplierId}
-                                placeholder="ابحث عن المورد بالاسم أو رقم الحساب..."
-                                searchPlaceholder="ابحث بالاسم أو رقم الحساب أو الهاتف..."
-                                emptyMessage="لا يوجد موردين"
+                                placeholder={t('purchases.createOrder.supplierPlaceholder')}
+                                searchPlaceholder={t('purchases.createOrder.supplierSearchPlaceholder')}
+                                emptyMessage={t('purchases.createOrder.noSuppliers')}
                                 displayKey="name"
                                 searchKeys={['name', 'accountNumber', 'phone', 'contact']}
+                                dir={direction}
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label>المستودع</Label>
+                            <Label>{t('purchases.warehouse')}</Label>
                             <Select
                                 value={selectedWarehouse}
                                 onValueChange={setSelectedWarehouse}
@@ -330,7 +335,7 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
                                 <SelectTrigger>
                                     <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent dir={direction}>
                                     {availableWarehouses.map((warehouse) => (
                                         <SelectItem key={warehouse.id} value={warehouse.id}>
                                             {warehouse.name}
@@ -341,21 +346,21 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
                         </div>
                         <div className="space-y-2">
                             <CustomDatePicker
-                                label="تاريخ الشراء"
+                                label={t('purchases.createOrder.purchaseDate')}
                                 date={purchaseDate}
                                 onChange={(date) => setPurchaseDate(date)}
-                                placeholder="اختر تاريخ الشراء"
+                                placeholder={t('purchases.createOrder.purchaseDatePlaceholder')}
                             />
                         </div>
                     </div>
                     {selectedSupplier && (
                         <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                            <div className="flex items-center justify-between">
-                                <div>
+                            <div className={`flex items-center justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                                <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                                     <p className="font-semibold">{selectedSupplier.name}</p>
-                                    <p className="text-sm text-gray-600">الهاتف: {selectedSupplier.phone}</p>
+                                    <p className="text-sm text-gray-600">{t('purchases.createOrder.phone')}: {selectedSupplier.phone}</p>
                                 </div>
-                                <Badge variant="outline">مورد</Badge>
+                                <Badge variant="outline">{t('purchases.createOrder.supplier')}</Badge>
                             </div>
                         </div>
                     )}
@@ -367,12 +372,13 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
                 <div className="lg:col-span-2 space-y-4">
                     {/* Search */}
                     <Card>
-                        <CardContent className="pt-6">
+                        <CardContent className="pt-6" dir={direction}>
                             <div className="relative">
-                                <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                                <Search className={`absolute ${direction === 'rtl' ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5`} />
                                 <Input
-                                    placeholder="بحث بالاسم أو الباركود... (اضغط Enter للبحث بالباركود)"
-                                    className="pr-10"
+                                    placeholder={t('purchases.createOrder.searchPlaceholder')}
+                                    className={direction === 'rtl' ? 'pr-10' : 'pl-10'}
+                                    dir={direction}
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     onKeyDown={handleSearchEnter}
@@ -387,7 +393,7 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
                    <Card
                      key={product.id}
                      className="cursor-pointer hover:shadow-md transition-shadow aspect-square flex flex-col"
-                     onClick={() => addProductToCart(product)}
+                     onClick={() => handleProductClick(product)}
                    >
                      <CardContent className="p-3 flex flex-col flex-1 justify-between h-full">
                        <div className="flex-1 flex items-center justify-center bg-gray-100 rounded-lg mb-2">
@@ -408,7 +414,7 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
                  {filteredProducts.length === 0 && (
                    <div className="col-span-full text-center py-12 text-gray-500">
                      <Package className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                     <p>لا توجد منتجات</p>
+                     <p>{t('purchases.createOrder.noProducts')}</p>
                    </div>
                  )}
                </div>
@@ -416,12 +422,12 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
 
                 {/* Cart Section */}
                 <div className="lg:col-span-1">
-                    <Card className="sticky top-6">
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <CardTitle className="flex items-center gap-2">
+                    <Card className="sticky top-6" dir={direction}>
+                        <CardHeader dir={direction}>
+                            <div className={`flex items-center justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                                <CardTitle className={`flex items-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                                     <ShoppingCart className="w-5 h-5" />
-                                    السلة
+                                    {t('purchases.createOrder.cart')}
                                 </CardTitle>
                                 {cart.length > 0 && (
                                     <Button
@@ -434,12 +440,12 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
                                 )}
                             </div>
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent className="space-y-4" dir={direction}>
                             {cart.length === 0 ? (
                                 <div className="text-center text-gray-500 py-12">
                                     <ShoppingCart className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                                    <p>السلة فارغة</p>
-                                    <p className="text-sm mt-2">قم بإضافة منتجات للبدء</p>
+                                    <p>{t('purchases.createOrder.cartEmpty')}</p>
+                                    <p className="text-sm mt-2">{t('purchases.createOrder.cartEmptySubtext')}</p>
                                 </div>
                             ) : (
                                 <>
@@ -453,7 +459,7 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
                                                         <p className="text-sm font-medium truncate">{item.name}</p>
                                                         <p className="text-sm text-gray-600">{formatCurrency(item.price)}</p>
                                                         {item.expiryDate && (
-                                                            <p className="text-xs text-gray-500 mt-1">تاريخ الانتهاء: {new Date(item.expiryDate).toLocaleDateString('ar-SA')}</p>
+                                                            <p className="text-xs text-gray-500 mt-1">{t('purchases.createOrder.expiryDate')}: {new Date(item.expiryDate).toLocaleDateString(direction === 'rtl' ? 'ar-SA' : 'en-US')}</p>
                                                         )}
                                                     </div>
                                                     <div className="flex items-center gap-2">
@@ -492,17 +498,17 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
 
                                     {/* Totals */}
                                     <div className="space-y-2">
-                                        <div className="flex justify-between text-sm">
-                                            <span>المجموع الفرعي:</span>
+                                        <div className={`flex justify-between text-sm ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                                            <span>{t('purchases.createOrder.subtotal')}:</span>
                                             <span>{formatCurrency(subtotal)}</span>
                                         </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span>الضريبة (15%):</span>
+                                        <div className={`flex justify-between text-sm ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                                            <span>{t('purchases.createOrder.tax')}:</span>
                                             <span>{formatCurrency(tax)}</span>
                                         </div>
                                         <Separator />
-                                        <div className="flex justify-between">
-                                            <span>المجموع الكلي:</span>
+                                        <div className={`flex justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                                            <span>{t('purchases.createOrder.total')}:</span>
                                             <span className="text-xl text-blue-600">{formatCurrency(total)}</span>
                                         </div>
                                     </div>
@@ -511,16 +517,16 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
 
                                     {/* Mixed Payment Methods */}
                                     <div className="space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <label className="text-sm font-semibold">طرق الدفع المختلطة</label>
+                                        <div className={`flex items-center justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                                            <label className="text-sm font-semibold">{t('purchases.createOrder.mixedPaymentMethods')}</label>
                                         </div>
 
                                         {/* Cash Payment */}
                                         <div className="space-y-2">
-                                            <div className="flex items-center justify-between">
-                                                <label className="text-sm flex items-center gap-2">
+                                            <div className={`flex items-center justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                                                <label className={`text-sm flex items-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                                                     <Banknote className="w-4 h-4 text-green-600" />
-                                                    نقدي
+                                                    {t('purchases.createOrder.cash')}
                                                 </label>
                                                 {paymentRemaining > 0 && (
                                                     <Button
@@ -529,7 +535,7 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
                                                         className="h-6 text-xs"
                                                         onClick={() => fillRemaining('cash')}
                                                     >
-                                                        تعبئة المتبقي
+                                                        {t('purchases.createOrder.fillRemaining')}
                                                     </Button>
                                                 )}
                                             </div>
@@ -538,7 +544,8 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
                                                 placeholder="0.00"
                                                 value={paymentBreakdown.cash > 0 ? paymentBreakdown.cash : ''}
                                                 onChange={(e) => updatePaymentBreakdown('cash', parseFloat(e.target.value) || 0)}
-                                                className="text-right"
+                                                className={direction === 'rtl' ? 'text-right' : 'text-left'}
+                                                dir="ltr"
                                                 min="0"
                                                 step="0.01"
                                             />
@@ -546,10 +553,10 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
 
                                         {/* Credit Payment */}
                                         <div className="space-y-2">
-                                            <div className="flex items-center justify-between">
-                                                <label className="text-sm flex items-center gap-2">
+                                            <div className={`flex items-center justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                                                <label className={`text-sm flex items-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                                                     <CreditCard className="w-4 h-4 text-orange-600" />
-                                                    آجل (على الحساب)
+                                                    {t('purchases.createOrder.credit')}
                                                 </label>
                                                 {paymentRemaining > 0 && (
                                                     <Button
@@ -558,7 +565,7 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
                                                         className="h-6 text-xs"
                                                         onClick={() => fillRemaining('credit')}
                                                     >
-                                                        تعبئة المتبقي
+                                                        {t('purchases.createOrder.fillRemaining')}
                                                     </Button>
                                                 )}
                                             </div>
@@ -567,7 +574,8 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
                                                 placeholder="0.00"
                                                 value={paymentBreakdown.credit > 0 ? paymentBreakdown.credit : ''}
                                                 onChange={(e) => updatePaymentBreakdown('credit', parseFloat(e.target.value) || 0)}
-                                                className="text-right"
+                                                className={direction === 'rtl' ? 'text-right' : 'text-left'}
+                                                dir="ltr"
                                                 min="0"
                                                 step="0.01"
                                             />
@@ -575,10 +583,10 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
 
                                         {/* Bank Withdrawal Payment */}
                                         <div className="space-y-2">
-                                            <div className="flex items-center justify-between">
-                                                <label className="text-sm flex items-center gap-2">
+                                            <div className={`flex items-center justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                                                <label className={`text-sm flex items-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
                                                     <Wallet className="w-4 h-4 text-purple-600" />
-                                                    صرف من بنك
+                                                    {t('purchases.createOrder.bankWithdrawal')}
                                                 </label>
                                                 {paymentRemaining > 0 && (
                                                     <Button
@@ -587,7 +595,7 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
                                                         className="h-6 text-xs"
                                                         onClick={() => fillRemaining('bankWithdrawal')}
                                                     >
-                                                        تعبئة المتبقي
+                                                        {t('purchases.createOrder.fillRemaining')}
                                                     </Button>
                                                 )}
                                             </div>
@@ -596,7 +604,8 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
                                                 placeholder="0.00"
                                                 value={paymentBreakdown.bankWithdrawal > 0 ? paymentBreakdown.bankWithdrawal : ''}
                                                 onChange={(e) => updatePaymentBreakdown('bankWithdrawal', parseFloat(e.target.value) || 0)}
-                                                className="text-right mb-2"
+                                                className={`${direction === 'rtl' ? 'text-right' : 'text-left'} mb-2`}
+                                                dir="ltr"
                                                 min="0"
                                                 step="0.01"
                                             />
@@ -606,12 +615,12 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
                                                     onValueChange={setSelectedBankId}
                                                 >
                                                     <SelectTrigger>
-                                                        <SelectValue placeholder="اختر البنك" />
+                                                        <SelectValue placeholder={t('purchases.createOrder.selectBank')} />
                                                     </SelectTrigger>
-                                                    <SelectContent>
+                                                    <SelectContent dir={direction}>
                                                         {banks.map((bank) => (
                                                             <SelectItem key={bank.id} value={bank.id}>
-                                                                {bank.name} - الرصيد: {formatCurrency(bank.balance)}
+                                                                {bank.name} - {t('purchases.createOrder.bankBalance')}: {formatCurrency(bank.balance)}
                                                             </SelectItem>
                                                         ))}
                                                     </SelectContent>
@@ -621,21 +630,21 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
 
                                         {/* Payment Summary */}
                                         <div className="space-y-2 rounded-lg border p-3 bg-gray-50 text-sm">
-                                            <div className="flex justify-between">
-                                                <span>المبلغ المدخل:</span>
+                                            <div className={`flex justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                                                <span>{t('purchases.createOrder.enteredAmount')}:</span>
                                                 <span className={Math.abs(paymentTotal - total) < 0.01 ? 'text-green-600 font-semibold' : 'text-red-600 font-semibold'}>
                                                     {formatCurrency(paymentTotal)}
                                                 </span>
                                             </div>
-                                            <div className="flex justify-between">
-                                                <span>الإجمالي المطلوب:</span>
+                                            <div className={`flex justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                                                <span>{t('purchases.createOrder.requiredTotal')}:</span>
                                                 <span className="font-semibold">{formatCurrency(total)}</span>
                                             </div>
                                             <Separator />
-                                            <div className="flex justify-between">
-                                                <span>المتبقي:</span>
+                                            <div className={`flex justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+                                                <span>{t('purchases.createOrder.remaining')}:</span>
                                                 <span className={paymentRemaining > 0 ? 'text-orange-600 font-semibold' : paymentRemaining < 0 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold'}>
-                                                    {formatCurrency(Math.abs(paymentRemaining))} {paymentRemaining > 0 ? '(ناقص)' : paymentRemaining < 0 ? '(زائد)' : '(مكتمل)'}
+                                                    {formatCurrency(Math.abs(paymentRemaining))} {paymentRemaining > 0 ? `(${t('purchases.createOrder.minus')})` : paymentRemaining < 0 ? `(${t('purchases.createOrder.plus')})` : `(${t('purchases.createOrder.complete')})`}
                                                 </span>
                                             </div>
                                         </div>
@@ -644,15 +653,15 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
                                     {/* Additional Fields */}
                                     <div className="space-y-2">
                                         <CustomDatePicker
-                                            label="تاريخ الاستحقاق (اختياري)"
+                                            label={t('purchases.createOrder.dueDate')}
                                             date={dueDate}
                                             onChange={setDueDate}
                                         />
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label>ملاحظات (اختياري)</Label>
-                                        <Input placeholder="ملاحظات إضافية" value={notes} onChange={(e) => setNotes(e.target.value)} />
+                                        <Label>{t('purchases.createOrder.notes')}</Label>
+                                        <Input placeholder={t('purchases.createOrder.notesPlaceholder')} value={notes} onChange={(e) => setNotes(e.target.value)} dir={direction} />
                                     </div>
 
                                     {/* Save Button */}
@@ -662,8 +671,8 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
                                         onClick={handleSaveOrder}
                                         disabled={!selectedSupplier || cart.length === 0}
                                     >
-                                        <ShoppingCart className="w-5 h-5 ml-2" />
-                                        حفظ طلب الشراء
+                                        <ShoppingCart className={`w-5 h-5 ${direction === 'rtl' ? 'mr-2' : 'ml-2'}`} />
+                                        {t('purchases.createOrder.saveOrder')}
                                     </Button>
                                 </>
                             )}
@@ -674,40 +683,41 @@ export function CreatePurchaseOrder({ suppliers, products, onBack, onSave }: Cre
 
             {/* Expiry Date Dialog */}
             <Dialog open={showExpiryDialog} onOpenChange={setShowExpiryDialog}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>إضافة منتج للسلة</DialogTitle>
+                <DialogContent dir={direction}>
+                    <DialogHeader dir={direction}>
+                        <DialogTitle>{t('purchases.createOrder.addToCart')}</DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-4 py-4">
+                    <div className="space-y-4 py-4" dir={direction}>
                         {pendingProduct && (
                             <>
-                                <div>
-                                    <p className="text-sm font-medium">المنتج: {pendingProduct.name}</p>
-                                    <p className="text-xs text-gray-500">السعر: {formatCurrency(pendingProduct.costPrice || pendingProduct.price)}</p>
+                                <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                                    <p className="text-sm font-medium">{t('purchases.createOrder.product')}: {pendingProduct.name}</p>
+                                    <p className="text-xs text-gray-500">{t('purchases.createOrder.price')}: {formatCurrency(pendingProduct.costPrice || pendingProduct.price)}</p>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>تاريخ انتهاء الصلاحية (اختياري)</Label>
+                                    <Label>{t('purchases.createOrder.expiryDateOptional')}</Label>
                                     <Input
                                         type="date"
                                         value={expiryDate}
                                         onChange={(e) => setExpiryDate(e.target.value)}
-                                        placeholder="اختر التاريخ"
+                                        placeholder={t('purchases.createOrder.expiryDatePlaceholder')}
+                                        dir="ltr"
                                     />
-                                    <p className="text-xs text-gray-500">يمكنك ترك هذا الحقل فارغاً إذا لم يكن للمنتج تاريخ انتهاء</p>
+                                    <p className="text-xs text-gray-500">{t('purchases.createOrder.expiryDateHint')}</p>
                                 </div>
                             </>
                         )}
                     </div>
-                    <DialogFooter>
+                    <DialogFooter dir={direction} className={direction === 'rtl' ? 'flex-row-reverse' : ''}>
                         <Button variant="outline" onClick={() => {
                             setShowExpiryDialog(false);
                             setPendingProduct(null);
                             setExpiryDate('');
                         }}>
-                            إلغاء
+                            {t('purchases.createOrder.cancel')}
                         </Button>
                         <Button onClick={confirmAddProduct}>
-                            إضافة للسلة
+                            {t('purchases.createOrder.addToCartButton')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

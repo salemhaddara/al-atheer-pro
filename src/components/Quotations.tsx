@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
 import { getStock } from '../data/inventory';
 import { useUser } from '../contexts/UserContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { SearchableSelect } from './ui/searchable-select';
 import { getPriceForQuantity, PricingTier } from '../utils/pricing';
 
@@ -52,19 +53,12 @@ interface Quotations {
   customerName: string;
   date: string;
   total: number;
-  status: 'مسودة' | 'مرسل';
+  status: 'draft' | 'sent';
   items?: CartItem[];
 }
 
-export function Quotations({
-  language,
-  direction,
-  translations
-}: {
-  language: string;
-  direction: 'ltr' | 'rtl';
-  translations: Record<string, string>;
-}) {
+export function Quotations() {
+  const { t, direction } = useLanguage();
   const { currentUser, isAdmin } = useUser();
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -244,7 +238,7 @@ export function Quotations({
 
   const saveQuotation = () => {
     if (!selectedCustomer) {
-      toast.error('يرجى اختيار العميل');
+      toast.error(t('quotations.selectCustomer'));
       return;
     }
 
@@ -282,7 +276,7 @@ export function Quotations({
             }
           : q
       ));
-      toast.success('تم تحديث عرض السعر بنجاح');
+      toast.success(t('quotations.quotationUpdated'));
       setEditingQuotationId(null);
     } else {
       // Create new quotation
@@ -291,12 +285,12 @@ export function Quotations({
         customerName: selectedCustomer.name,
         date: new Date().toISOString(),
         total: total,
-        status: 'مسودة',
+        status: 'draft',
         items: [...cart]
       };
       
       setQuotations([...quotations, newQuotation]);
-      toast.success('تم حفظ عرض السعر بنجاح');
+      toast.success(t('quotations.quotationSaved'));
     }
     
     // Clear cart and customer selection
@@ -325,13 +319,13 @@ export function Quotations({
     // Switch to new tab
     setMainTab('new');
     
-    toast.success('تم تحميل عرض السعر للتعديل');
+    toast.success(t('quotations.quotationLoaded'));
   };
 
   const deleteQuotation = (quotationId: string) => {
-    if (window.confirm('هل أنت متأكد من حذف هذا عرض السعر؟')) {
+    if (window.confirm(t('quotations.deleteConfirm'))) {
       setQuotations(quotations.filter(q => q.id !== quotationId));
-      toast.success('تم حذف عرض السعر بنجاح');
+      toast.success(t('quotations.quotationDeleted'));
       
       // If deleting the quotation being edited, clear editing mode
       if (editingQuotationId === quotationId) {
@@ -367,7 +361,7 @@ export function Quotations({
     const inventoryStock = getStock(product.id, selectedWarehouse);
     const currentStock = inventoryStock > 0 ? inventoryStock : (product.stock || 0);
     if (currentStock <= 0) {
-      toast.error('المنتج غير متوفر في المخزون');
+      toast.error(t('quotations.productNotInStock'));
       return;
     }
 
@@ -660,7 +654,7 @@ export function Quotations({
         const inventoryStock = getStock(productByBarcode.id, selectedWarehouse);
         const currentStock = inventoryStock > 0 ? inventoryStock : (productByBarcode.stock || 0);
         if (currentStock <= 0) {
-          toast.error('المنتج غير متوفر في المخزون');
+          toast.error(t('quotations.productNotInStock'));
           setSearchTerm('');
           return;
         }
@@ -668,12 +662,12 @@ export function Quotations({
         // Add product to cart
         addProductToCart(productByBarcode);
         setSearchTerm('');
-        toast.success(`تم إضافة ${productByBarcode.name} للسلة`);
+        toast.success(t('quotations.productAdded').replace('{name}', productByBarcode.name));
       } else if (serviceByCode) {
         // Add service to cart
         addServiceToCart(serviceByCode);
         setSearchTerm('');
-        toast.success(`تم إضافة ${serviceByCode.name} للسلة`);
+        toast.success(t('quotations.serviceAdded').replace('{name}', serviceByCode.name));
       } else {
         toast.error('لم يتم العثور على منتج أو خدمة بهذا الباركود');
       }
@@ -682,7 +676,7 @@ export function Quotations({
 
   const handleQuickAddCustomer = () => {
     if (!newCustomerData.name.trim()) {
-      toast.error('يرجى إدخال اسم العميل');
+      toast.error(t('quotations.enterCustomerName'));
       return;
     }
     if (!newCustomerData.phone.trim()) {
@@ -706,35 +700,35 @@ export function Quotations({
     setSelectedCustomerId(id);
     setIsAddCustomerDialogOpen(false);
     setNewCustomerData({ name: '', phone: '', address: '' });
-    toast.success('تم إضافة العميل بسرعة');
+    toast.success(t('quotations.customerAddedQuickly'));
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={direction}>
       {/* Header */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1>عروض الأسعار</h1>
-            <p className="text-gray-600">نظام عروض الأسعار</p>
+            <h1>{t('quotations.title')}</h1>
+            <p className="text-gray-600">{t('quotations.subtitle')}</p>
           </div>
           <div className="flex gap-4 items-center">
             {/* Cash Drawer Status */}
          
             {/* Cashier Info */}
             <div className="space-y-1">
-              <label className="text-sm text-gray-600">الكاشير المسؤول</label>
+              <label className="text-sm text-gray-600">{t('pos.responsibleCashier')}</label>
               <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-md">
                 <User className="w-4 h-4 text-blue-600" />
                 <span className="text-sm font-semibold text-blue-700">
-                  {currentUser?.name || 'غير محدد'}
+                  {currentUser?.name || t('pos.notSpecified')}
                 </span>
               </div>
             </div>
             {/* Warehouse Selection */}
             {availableWarehouses.length > 0 && (
               <div className="space-y-1">
-                <label className="text-sm text-gray-600">المستودع</label>
+                <label className="text-sm text-gray-600">{t('pos.warehouse')}</label>
                 <Select
                   value={selectedWarehouse}
                   onValueChange={setSelectedWarehouse}
@@ -763,18 +757,18 @@ export function Quotations({
               <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
                 <div className="flex-1 w-full md:w-auto">
                   <div className="flex items-center gap-2 mb-2">
-                    <label className="text-sm font-semibold text-gray-700">العميل:</label>
+                    <label className="text-sm font-semibold text-gray-700">{t('quotations.customer')}:</label>
                     <Button variant="link" className="text-sm p-0 h-auto" onClick={() => setIsAddCustomerDialogOpen(true)}>
-                      إضافة عميل سريع
+                      {t('quotations.addCustomerQuick')}
                     </Button>
                   </div>
                   <SearchableSelect
                     options={creditCustomers}
                     value={selectedCustomerId}
                     onValueChange={setSelectedCustomerId}
-                    placeholder="ابحث عن العميل بالاسم أو رقم الحساب..."
-                    searchPlaceholder="ابحث بالاسم أو رقم الحساب أو الهاتف..."
-                    emptyMessage="لا يوجد عملاء"
+                    placeholder={t('quotations.searchCustomerPlaceholder')}
+                    searchPlaceholder={t('pos.searchCustomerSearchPlaceholder')}
+                    emptyMessage={t('pos.noCustomers')}
                     className="w-full md:w-64"
                     displayKey="name"
                     searchKeys={['name', 'accountNumber', 'phone']}
@@ -783,7 +777,7 @@ export function Quotations({
                 {!selectedCustomer && (
                   <div className="text-xs text-red-600 bg-red-50 p-2 rounded-lg flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4" />
-                    لا يمكن إتمام أي عملية بيع بدون تحديد العميل
+                    {t('quotations.customerRequired')}
                   </div>
                 )}
               </div>
@@ -793,15 +787,15 @@ export function Quotations({
       </div>
 
       {/* Main Tabs */}
-      <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as 'new' | 'list')} className="w-full" dir="rtl">
-        <TabsList className="grid w-full grid-cols-2 mb-6" dir="rtl">
+      <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as 'new' | 'list')} className="w-full" dir={direction}>
+        <TabsList className="grid w-full grid-cols-2 mb-6" dir={direction}>
           <TabsTrigger value="new" className="gap-2">
             <Plus className="w-4 h-4" />
-            عرض سعر جديد
+            {t('quotations.newQuotation')}
           </TabsTrigger>
           <TabsTrigger value="list" className="gap-2">
             <Package className="w-4 h-4" />
-            قائمة العروض ({quotations.length})
+            {t('quotations.quotationList')} ({quotations.length})
           </TabsTrigger>
         </TabsList>
 
@@ -814,12 +808,12 @@ export function Quotations({
             {/* Search */}
             <Card>
               <CardContent className="pt-6">
-                <Label className="mb-2 block">بحث المنتجات والخدمات</Label>
+                <Label className="mb-2 block">{t('quotations.searchProductsServices')}</Label>
                 <div className="relative">
-                  <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <Search className={`absolute ${direction === 'rtl' ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5`} />
                   <Input
-                    placeholder="بحث بالاسم، الباركود، أو كود الخدمة... (اضغط Enter للبحث بالباركود/الكود)"
-                    className="pr-10"
+                    placeholder={t('quotations.searchPlaceholder')}
+                    className={direction === 'rtl' ? 'pr-10' : 'pl-10'}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     onKeyDown={handleSearchEnter}
@@ -829,13 +823,13 @@ export function Quotations({
             </Card>
 
             {/* Tabs for Products, Services, and Returns */}
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'products' | 'services' | 'returns')} className="w-full" dir="rtl">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'products' | 'services' | 'returns')} className="w-full" dir={direction}>
               {/* Products Tab */}
               <TabsContent value="products" className="mt-4">
                 {systemType === 'restaurant' ? (
                <div className="space-y-4">
                <div className="flex items-center justify-between">
-                 <h3 className="text-lg font-semibold">المنتجات ({filteredProducts.length})</h3>
+                 <h3 className="text-lg font-semibold">{t('quotations.products')} ({filteredProducts.length})</h3>
                </div>
                <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
                  {filteredProducts.map((product) => (
@@ -863,7 +857,7 @@ export function Quotations({
                  {filteredProducts.length === 0 && (
                    <div className="col-span-full text-center py-12 text-gray-500">
                      <Package className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                     <p>لا توجد منتجات</p>
+                     <p>{t('quotations.noProducts')}</p>
                    </div>
                  )}
                </div>
@@ -874,10 +868,10 @@ export function Quotations({
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-gray-50">
-                          <TableHead className="text-right">المنتج</TableHead>
-                          <TableHead className="text-right">السعر</TableHead>
-                          <TableHead className="text-right">المخزون</TableHead>
-                          <TableHead className="text-right w-24">إجراءات</TableHead>
+                          <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('quotations.product')}</TableHead>
+                          <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('quotations.price')}</TableHead>
+                          <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('quotations.stock')}</TableHead>
+                          <TableHead className={`${direction === 'rtl' ? 'text-right' : 'text-left'} w-24`}>{t('quotations.actions')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -886,29 +880,29 @@ export function Quotations({
                             key={product.id}
                             className="cursor-pointer hover:bg-gray-50"
                           >
-                            <TableCell className="text-right">
+                            <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                               <div className="flex items-center gap-2">
                                 <Package className="w-5 h-5 text-gray-400" />
                                 <span className="font-medium">{product.name}</span>
                               </div>
                             </TableCell>
-                            <TableCell className="text-right font-medium text-blue-600">
+                            <TableCell className={`${direction === 'rtl' ? 'text-right' : 'text-left'} font-medium text-blue-600`}>
                               {formatCurrency(product.price)}
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                               <Badge variant={product.stock > 0 ? 'outline' : 'destructive'} className="text-xs">
-                                {product.stock > 0 ? `متوفر: ${product.stock}` : 'غير متوفر'}
+                                {product.stock > 0 ? `${t('quotations.available')}: ${product.stock}` : t('quotations.notAvailable')}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => addProductToCart(product)}
                                 className="w-full"
                               >
-                                <Plus className="w-4 h-4 ml-1" />
-                                إضافة
+                                <Plus className={`w-4 h-4 ${direction === 'rtl' ? 'mr-1' : 'ml-1'}`} />
+                                {t('quotations.add')}
                               </Button>
                             </TableCell>
                           </TableRow>
@@ -917,7 +911,7 @@ export function Quotations({
                           <TableRow>
                             <TableCell colSpan={4} className="text-center py-12 text-gray-500">
                               <Package className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                              <p>لا توجد منتجات</p>
+                              <p>{t('quotations.noProducts')}</p>
                             </TableCell>
                           </TableRow>
                         )}
@@ -937,7 +931,7 @@ export function Quotations({
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <ShoppingCart className="w-5 h-5" />
-                    السلة
+                    {t('quotations.cart')}
                   </CardTitle>
                   {cart.length > 0 && (
                     <Button
@@ -954,8 +948,8 @@ export function Quotations({
                 {cart.length === 0 ? (
                   <div className="text-center text-gray-500 py-12">
                     <ShoppingCart className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>السلة فارغة</p>
-                    <p className="text-sm mt-2">قم بإضافة منتجات للبدء</p>
+                    <p>{t('quotations.cartEmpty')}</p>
+                    <p className="text-sm mt-2">{t('quotations.cartEmptySubtext')}</p>
                   </div>
                 ) : (
                   <>
@@ -1096,16 +1090,16 @@ export function Quotations({
                     {/* Totals */}
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span>المجموع الفرعي:</span>
+                        <span>{t('quotations.subtotal')}:</span>
                         <span>{formatCurrency(subtotal)}</span>
                       </div>
                       <div className="flex justify-between text-sm">
-                        <span>الضريبة (15%):</span>
+                        <span>{t('quotations.tax')} (15%):</span>
                         <span>{formatCurrency(tax)}</span>
                       </div>
                       <Separator />
                       <div className="flex justify-between">
-                        <span>المجموع الكلي:</span>
+                        <span>{t('quotations.total')}:</span>
                         <span className="text-xl text-blue-600">{formatCurrency(total)}</span>
                       </div>
                     </div>
@@ -1123,17 +1117,17 @@ export function Quotations({
                           onClick={saveQuotation}
                           disabled={!selectedCustomer || cart.length === 0}
                         >
-                          {editingQuotationId ? 'تحديث عرض السعر' : 'حفظ عرض السعر'}
+                          {editingQuotationId ? t('quotations.updateQuotation') : t('quotations.saveQuotation')}
                         </Button>
 
-                        <div className="flex gap-2 justify-between">
+                        <div className={`flex gap-2 ${direction === 'rtl' ? 'justify-between' : 'justify-start'}`}>
                           <Button variant="outline" className="flex-1 gap-2">
                             <Printer className="w-4 h-4" />
-                            طباعة
+                            {t('pos.print')}
                           </Button>
                           <Button variant="outline" className="flex-1 gap-2">
                             <Download className="w-4 h-4" />
-                            تصدير PDF
+                            {t('pos.export')}
                           </Button>
                         </div>
                       </div>
@@ -1203,10 +1197,10 @@ export function Quotations({
                               <span className="text-muted-foreground">
                                 {itemType === 'product' ? 'ابحث بالاسم أو أدخل الباركود...' : itemType === 'service' ? 'ابحث بالاسم أو الكود...' : 'ابحث عن فاتورة...'}
                               </span>
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              <ChevronsUpDown className={`${direction === 'rtl' ? 'mr-2' : 'ml-2'} h-4 w-4 shrink-0 opacity-50`} />
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]" align="start" dir="rtl">
+                          <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]" align="start" dir={direction}>
                             <Command shouldFilter={false}>
                               <CommandInput
                                 placeholder={itemType === 'product' ? 'ابحث بالاسم أو أدخل الباركود...' : itemType === 'service' ? 'ابحث بالاسم أو الكود...' : 'ابحث عن فاتورة...'}
@@ -1232,19 +1226,19 @@ export function Quotations({
                                       const inventoryStock = getStock(productByBarcode.id, selectedWarehouse);
                                       const currentStock = inventoryStock > 0 ? inventoryStock : (productByBarcode.stock || 0);
                                       if (currentStock <= 0) {
-                                        toast.error('المنتج غير متوفر في المخزون');
+                                        toast.error(t('quotations.productNotInStock'));
                                         setSearchTerm('');
                                         return;
                                       }
                                       addProductToCart(productByBarcode);
                                       setSearchTerm('');
                                       setSearchPopoverOpen(false);
-                                      toast.success(`تم إضافة ${productByBarcode.name} للسلة`);
+                                      toast.success(t('quotations.productAdded').replace('{name}', productByBarcode.name));
                                     } else if (serviceByCode) {
                                       addServiceToCart(serviceByCode);
                                       setSearchTerm('');
                                       setSearchPopoverOpen(false);
-                                      toast.success(`تم إضافة ${serviceByCode.name} للسلة`);
+                                      toast.success(t('quotations.serviceAdded').replace('{name}', serviceByCode.name));
                                     }
                                   }
                                 }}
@@ -1475,18 +1469,18 @@ export function Quotations({
                 <CardContent className="pt-6">
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <label className="text-sm font-semibold text-gray-700">العميل:</label>
+                      <label className="text-sm font-semibold text-gray-700">{t('quotations.customer')}:</label>
                       <Button variant="link" className="text-sm p-0 h-auto" onClick={() => setIsAddCustomerDialogOpen(true)}>
-                        إضافة عميل سريع
+                        {t('quotations.addCustomerQuick')}
                       </Button>
                     </div>
                     <SearchableSelect
                       options={creditCustomers}
                       value={selectedCustomerId}
                       onValueChange={setSelectedCustomerId}
-                      placeholder="ابحث عن العميل..."
-                      searchPlaceholder="ابحث بالاسم أو رقم الحساب..."
-                      emptyMessage="لا يوجد عملاء"
+                      placeholder={t('pos.searchCustomerPlaceholder')}
+                      searchPlaceholder={t('quotations.searchCustomerPlaceholder')}
+                      emptyMessage={t('pos.noCustomers')}
                       className="w-full"
                       displayKey="name"
                       searchKeys={['name', 'accountNumber', 'phone']}
@@ -1565,59 +1559,59 @@ export function Quotations({
         {/* List Tab */}
         <TabsContent value="list" className="space-y-6">
           <Card>
-            <CardHeader className="text-right">
-              <CardTitle>قائمة عروض الأسعار</CardTitle>
-              <CardDescription>أحدث عروض الأسعار التي تم إنشاؤها</CardDescription>
+            <CardHeader className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+              <CardTitle>{t('quotations.quotationList')}</CardTitle>
+              <CardDescription>{t('quotations.subtitle')}</CardDescription>
             </CardHeader>
             <CardContent>
               {quotations.length === 0 ? (
                 <div className="text-center text-gray-500 py-12">
                   <Package className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                  <p>لا توجد عروض أسعار مسجلة حتى الآن</p>
+                  <p>{t('quotations.quotationList')} - {t('quotations.noProducts')}</p>
                   <Button 
                     variant="outline" 
                     className="mt-4"
                     onClick={() => setMainTab('new')}
                   >
-                    <Plus className="w-4 h-4 ml-2" />
-                    إنشاء عرض سعر جديد
+                    <Plus className={`w-4 h-4 ${direction === 'rtl' ? 'mr-2' : 'ml-2'}`} />
+                    {t('quotations.createNewQuotation')}
                   </Button>
                 </div>
               ) : (
-                <div dir="rtl">
+                <div dir={direction}>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-right">رقم العرض</TableHead>
-                        <TableHead className="text-right">العميل</TableHead>
-                        <TableHead className="text-right">التاريخ</TableHead>
-                        <TableHead className="text-right">الإجمالي</TableHead>
-                        <TableHead className="text-right">الحالة</TableHead>
-                        <TableHead className="text-center">إجراءات</TableHead>
+                        <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('quotations.quotationNumber')}</TableHead>
+                        <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('quotations.customer')}</TableHead>
+                        <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('quotations.date')}</TableHead>
+                        <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('quotations.totalAmount')}</TableHead>
+                        <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('quotations.status')}</TableHead>
+                        <TableHead className="text-center">{t('quotations.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {quotations.map((q) => (
                         <TableRow key={q.id}>
-                          <TableCell className="text-right font-mono">#{q.id.slice(-6)}</TableCell>
-                          <TableCell className="text-right font-medium">{q.customerName}</TableCell>
-                          <TableCell className="text-right">
-                            {new Date(q.date).toLocaleDateString('ar-SA', {
+                          <TableCell className={`${direction === 'rtl' ? 'text-right' : 'text-left'} font-mono`}>#{q.id.slice(-6)}</TableCell>
+                          <TableCell className={`${direction === 'rtl' ? 'text-right' : 'text-left'} font-medium`}>{q.customerName}</TableCell>
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                            {new Date(q.date).toLocaleDateString(direction === 'rtl' ? 'ar-SA' : 'en-US', {
                               year: 'numeric',
                               month: 'long',
                               day: 'numeric'
                             })}
                           </TableCell>
-                          <TableCell className="text-right font-semibold text-blue-600">
+                          <TableCell className={`${direction === 'rtl' ? 'text-right' : 'text-left'} font-semibold text-blue-600`}>
                             {formatCurrency(q.total)}
                           </TableCell>
-                          <TableCell className="text-right">
-                            <Badge variant={q.status === 'مسودة' ? 'secondary' : 'default'}>
-                              {q.status}
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                            <Badge variant={q.status === 'draft' ? 'secondary' : 'default'}>
+                              {q.status === 'draft' ? t('quotations.draft') : t('quotations.sent')}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex gap-2 justify-end">
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                            <div className={`flex gap-2 ${direction === 'rtl' ? 'justify-end' : 'justify-start'}`}>
                               <Button variant="outline" size="sm">
                                 <Printer className="w-4 h-4" />
                               </Button>
@@ -1628,7 +1622,7 @@ export function Quotations({
                                 variant="outline" 
                                 size="sm"
                                 onClick={() => editQuotation(q)}
-                                title="تعديل عرض السعر"
+                                title={t('quotations.updateQuotation')}
                               >
                                 <Edit2 className="w-4 h-4" />
                               </Button>
@@ -1636,7 +1630,7 @@ export function Quotations({
                                 variant="outline" 
                                 size="sm"
                                 onClick={() => deleteQuotation(q.id)}
-                                title="حذف عرض السعر"
+                                title={t('quotations.remove')}
                                 className="text-red-600 hover:text-red-700 hover:bg-red-50"
                               >
                                 <Trash2 className="w-4 h-4" />

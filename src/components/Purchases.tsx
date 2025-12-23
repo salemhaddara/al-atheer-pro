@@ -13,17 +13,19 @@ import { CreatePurchaseOrder } from './CreatePurchaseOrder';
 import { reduceStock } from '../data/inventory';
 import { addJournalEntries, createPurchaseReturnJournalEntries } from '../data/journalEntries';
 import { useUser } from '../contexts/UserContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export function Purchases() {
+  const { t, direction } = useLanguage();
   const { currentUser, isAdmin, hasAccessToWarehouse } = useUser();
   const [showCreateOrder, setShowCreateOrder] = useState(false);
   const [selectedWarehouse, setSelectedWarehouse] = useState('1');
 
   // قائمة المستودعات
   const warehouses = [
-    { id: '1', name: 'المستودع الرئيسي' },
-    { id: '2', name: 'مستودع الفرع الشمالي' },
-    { id: '3', name: 'مستودع الفرع الجنوبي' }
+    { id: '1', name: t('purchases.mainWarehouse') || 'المستودع الرئيسي' },
+    { id: '2', name: t('purchases.northBranchWarehouse') || 'مستودع الفرع الشمالي' },
+    { id: '3', name: t('purchases.southBranchWarehouse') || 'مستودع الفرع الجنوبي' }
   ];
 
   // تصفية المستودعات حسب الصلاحيات
@@ -184,7 +186,7 @@ export function Purchases() {
     };
 
     setPurchaseOrders([newOrder, ...purchaseOrders]);
-    toast.success(`تم إنشاء طلب الشراء ${orderId} بنجاح`);
+    toast.success(t('purchases.purchaseOrderCreated').replace('{orderId}', orderId));
   };
 
   // Show create order screen
@@ -200,29 +202,29 @@ export function Purchases() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={direction}>
       {/* Header */}
       <div className="space-y-4">
       <div className="flex items-center justify-between">
-          <div>
-            <h1>المشتريات</h1>
-            <p className="text-gray-600">نظام إدارة المشتريات والموردين</p>
+          <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+            <h1>{t('purchases.title')}</h1>
+            <p className="text-gray-600">{t('purchases.subtitle')}</p>
           </div>
-          <div className="flex gap-4 items-center">
+          <div className="flex gap-4 items-end">
             {/* User Info */}
             <div className="space-y-1">
-              <label className="text-sm text-gray-600">المستخدم المسؤول</label>
+              <label className="text-sm text-gray-600">{t('purchases.responsibleUser')}</label>
               <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-md">
                 <User className="w-4 h-4 text-blue-600" />
                 <span className="text-sm font-semibold text-blue-700">
-                  {currentUser?.name || 'غير محدد'}
+                  {currentUser?.name || t('purchases.notSpecified')}
                 </span>
               </div>
             </div>
             {/* Warehouse Selection */}
             {availableWarehouses.length > 0 && (
               <div className="space-y-1">
-                <label className="text-sm text-gray-600">المستودع</label>
+                <label className="text-sm text-gray-600">{t('purchases.warehouse')}</label>
                 <Select
                   value={selectedWarehouse}
                   onValueChange={setSelectedWarehouse}
@@ -231,7 +233,7 @@ export function Purchases() {
                   <SelectTrigger className="w-48">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent dir={direction}>
                     {availableWarehouses.map((warehouse) => (
                       <SelectItem key={warehouse.id} value={warehouse.id}>
                         {warehouse.name}
@@ -239,12 +241,16 @@ export function Purchases() {
                     ))}
                   </SelectContent>
                 </Select>
-        </div>
+              </div>
             )}
-        <Button className="gap-2 shrink-0" onClick={() => setShowCreateOrder(true)}>
-          <Plus className="w-4 h-4" />
-          طلب شراء جديد
-        </Button>
+            {/* New Purchase Order Button */}
+            <div className="space-y-1">
+              <div className="h-5"></div>
+              <Button className="gap-2 shrink-0" onClick={() => setShowCreateOrder(true)}>
+                <Plus className="w-4 h-4" />
+                {t('purchases.newPurchaseOrder')}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -254,113 +260,117 @@ export function Purchases() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <ShoppingBag className="w-4 h-4 text-blue-600" />
-            <CardTitle className="text-sm">إجمالي المشتريات</CardTitle>
+            <CardTitle className="text-sm">{t('purchases.totalPurchases')}</CardTitle>
           </CardHeader>
-          <CardContent className="text-right">
+          <CardContent className={direction === 'rtl' ? 'text-right' : 'text-left'}>
             <div className="text-2xl">{formatCurrency(120750)}</div>
-            <p className="text-xs text-gray-600 mt-1">هذا الشهر</p>
+            <p className="text-xs text-gray-600 mt-1">{t('purchases.thisMonth')}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <FileText className="w-4 h-4 text-purple-600" />
-            <CardTitle className="text-sm">عدد الطلبات</CardTitle>
+            <CardTitle className="text-sm">{t('purchases.ordersCount')}</CardTitle>
           </CardHeader>
-          <CardContent className="text-right">
+          <CardContent className={direction === 'rtl' ? 'text-right' : 'text-left'}>
             <div className="text-2xl">18</div>
-            <p className="text-xs text-gray-600 mt-1">طلب نشط</p>
+            <p className="text-xs text-gray-600 mt-1">{t('purchases.activeOrder')}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <Package className="w-4 h-4 text-orange-600" />
-            <CardTitle className="text-sm">قيد الانتظار</CardTitle>
+            <CardTitle className="text-sm">{t('purchases.pending')}</CardTitle>
           </CardHeader>
-          <CardContent className="text-right">
+          <CardContent className={direction === 'rtl' ? 'text-right' : 'text-left'}>
             <div className="text-2xl">{formatCurrency(20700)}</div>
-            <p className="text-xs text-gray-600 mt-1">1 طلب</p>
+            <p className="text-xs text-gray-600 mt-1">1 {t('purchases.activeOrder')}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <Users2 className="w-4 h-4 text-green-600" />
-            <CardTitle className="text-sm">عدد الموردين</CardTitle>
+            <CardTitle className="text-sm">{t('purchases.suppliersCount')}</CardTitle>
           </CardHeader>
-          <CardContent className="text-right">
+          <CardContent className={direction === 'rtl' ? 'text-right' : 'text-left'}>
             <div className="text-2xl">12</div>
-            <p className="text-xs text-gray-600 mt-1">مورد نشط</p>
+            <p className="text-xs text-gray-600 mt-1">{t('purchases.activeSupplier')}</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Main Content */}
-      <Tabs defaultValue="orders" className="w-full">
-        <TabsList>
-          <TabsTrigger value="orders">طلبات الشراء</TabsTrigger>
-          <TabsTrigger value="suppliers">الموردين</TabsTrigger>
-          <TabsTrigger value="received">المستلمات</TabsTrigger>
-          <TabsTrigger value="returns">مرتجع المشتريات</TabsTrigger>
+      <Tabs defaultValue="orders" className="w-full" dir={direction}>
+        <TabsList dir={direction}>
+          <TabsTrigger value="orders">{t('purchases.orders')}</TabsTrigger>
+          <TabsTrigger value="suppliers">{t('purchases.suppliers')}</TabsTrigger>
+          <TabsTrigger value="received">{t('purchases.received')}</TabsTrigger>
+          <TabsTrigger value="returns">{t('purchases.returns')}</TabsTrigger>
         </TabsList>
 
         {/* Purchase Orders */}
         <TabsContent value="orders" className="space-y-4">
           <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
+            <CardHeader dir={direction}>
+              <div className={`flex items-center justify-between ${direction === 'rtl' ? 'flex-row-reverse' : ''}`}>
+              <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                  <CardTitle>{t('purchases.ordersTitle')}</CardTitle>
+                  <CardDescription>{t('purchases.ordersDesc')}</CardDescription>
+                </div>
                 <Button variant="outline" size="sm" className="gap-2">
                   <Download className="w-4 h-4" />
-                  تصدير
+                  {t('purchases.export')}
                 </Button>
-                <div className="text-right">
-                  <CardTitle>طلبات الشراء</CardTitle>
-                  <CardDescription>عرض وإدارة جميع طلبات الشراء</CardDescription>
-                </div>
+               
               </div>
             </CardHeader>
             <CardContent>
               <div className="mb-4">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input placeholder="بحث في الطلبات..." className="pl-10 text-right" dir="rtl" />
+                  <Search className={`absolute ${direction === 'rtl' ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4`} />
+                  <Input placeholder={t('purchases.searchOrders')} className={direction === 'rtl' ? 'pr-10 text-right' : 'pl-10 text-left'} dir={direction} />
                 </div>
               </div>
-              <div dir="rtl">
-                <Table>
+              <div dir={direction}>
+                <Table dir={direction}>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-right">رقم الطلب</TableHead>
-                      <TableHead className="text-right">التاريخ</TableHead>
-                      <TableHead className="text-right">المورد</TableHead>
-                      <TableHead className="text-right">العناصر</TableHead>
-                      <TableHead className="text-right">المبلغ</TableHead>
-                      <TableHead className="text-right">الإجمالي</TableHead>
-                      <TableHead className="text-right">تاريخ الاستحقاق</TableHead>
-                      <TableHead className="text-right">الحالة</TableHead>
-                      <TableHead className="text-right">إجراءات</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.orderNumber')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.date')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.supplier')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.items')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.amount')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.total')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.dueDate')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.status')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {purchaseOrders.map((order) => (
                       <TableRow key={order.id}>
-                        <TableCell className="text-right">{order.id}</TableCell>
-                        <TableCell className="text-right">{order.date}</TableCell>
-                        <TableCell className="text-right">{order.supplier}</TableCell>
-                        <TableCell className="text-right">{(order as any).itemsCount ?? order.items}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(order.amount)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(order.total)}</TableCell>
-                        <TableCell className="text-right">{order.dueDate}</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{order.id}</TableCell>
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{order.date}</TableCell>
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{order.supplier}</TableCell>
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{(order as any).itemsCount ?? order.items}</TableCell>
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{formatCurrency(order.amount)}</TableCell>
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{formatCurrency(order.total)}</TableCell>
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{order.dueDate}</TableCell>
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                           <Badge
                             variant={
-                              order.status === 'مستلم' ? 'default' :
-                                order.status === 'قيد الانتظار' ? 'secondary' :
+                              order.status === 'مستلم' || order.status === 'Received' ? 'default' :
+                                order.status === 'قيد الانتظار' || order.status === 'Pending' ? 'secondary' :
                                   'outline'
                             }
                           >
-                            {order.status}
+                            {order.status === 'مستلم' ? t('purchases.receivedStatus') :
+                             order.status === 'قيد الانتظار' ? t('purchases.pendingStatus') :
+                             order.status === 'مستلم جزئياً' ? t('purchases.partiallyReceivedStatus') :
+                             order.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                           <Button variant="ghost" size="sm">
                             <Eye className="w-4 h-4" />
                           </Button>
@@ -377,48 +387,49 @@ export function Purchases() {
         {/* Suppliers */}
         <TabsContent value="suppliers" className="space-y-4">
           <Card>
-            <CardHeader>
+            <CardHeader dir={direction}>
               <div className="flex items-center justify-between">
+              <div className="text-right">
+                  <CardTitle>{t('purchases.suppliersManagement')}</CardTitle>
+                  <CardDescription>{t('purchases.suppliersDesc')}</CardDescription>
+                </div>
                 <Button size="sm" className="gap-2">
                   <Plus className="w-4 h-4" />
-                  مورد جديد
+                  {t('purchases.newSupplier')}
                 </Button>
-                <div className="text-right">
-                  <CardTitle>إدارة الموردين</CardTitle>
-                  <CardDescription>عرض ومتابعة بيانات الموردين</CardDescription>
-                </div>
+               
               </div>
             </CardHeader>
             <CardContent>
-              <div dir="rtl">
-                <Table>
+              <div dir={direction}>
+                <Table dir={direction}>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-right">اسم المورد</TableHead>
-                      <TableHead className="text-right">جهة الاتصال</TableHead>
-                      <TableHead className="text-right">الهاتف</TableHead>
-                      <TableHead className="text-right">البريد الإلكتروني</TableHead>
-                      <TableHead className="text-right">إجمالي المشتريات</TableHead>
-                      <TableHead className="text-right">التق��يم</TableHead>
-                      <TableHead className="text-right">إجراءات</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.supplierName')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.contact')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.phone')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.email')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.totalPurchasesLabel')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.rating')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {suppliers.map((supplier) => (
                       <TableRow key={supplier.id}>
-                        <TableCell className="text-right">{supplier.name}</TableCell>
-                        <TableCell className="text-right">{supplier.contact}</TableCell>
-                        <TableCell className="text-right">{supplier.phone}</TableCell>
-                        <TableCell className="text-right">{supplier.email}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(supplier.totalPurchases)}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center gap-1 justify-end">
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{supplier.name}</TableCell>
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{supplier.contact}</TableCell>
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{supplier.phone}</TableCell>
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{supplier.email}</TableCell>
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{formatCurrency(supplier.totalPurchases)}</TableCell>
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                          <div className={`flex items-center gap-1 ${direction === 'rtl' ? 'justify-end' : 'justify-start'}`}>
                             <span>{supplier.rating}</span>
                             <span>⭐</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm">تعديل</Button>
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                          <Button variant="ghost" size="sm">{t('purchases.edit')}</Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -432,15 +443,15 @@ export function Purchases() {
         {/* Received Items */}
         <TabsContent value="received">
           <Card>
-            <CardHeader className="text-right">
-              <CardTitle>المستلمات</CardTitle>
-              <CardDescription>سجل استلام المشتريات</CardDescription>
+            <CardHeader className={direction === 'rtl' ? 'text-right' : 'text-left'} dir={direction}>
+              <CardTitle>{t('purchases.receivedTitle')}</CardTitle>
+              <CardDescription>{t('purchases.receivedDesc')}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-center text-gray-500 py-8">
                 <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>لا توجد مستلمات جديدة</p>
-                <p className="text-sm mt-2">سيتم عرض المستلمات هنا عند توفرها</p>
+                <p>{t('purchases.noReceivedItems')}</p>
+                <p className="text-sm mt-2">{t('purchases.receivedItemsDesc')}</p>
               </div>
             </CardContent>
           </Card>
@@ -449,21 +460,22 @@ export function Purchases() {
         {/* Purchase Returns */}
         <TabsContent value="returns" className="space-y-4">
           <Card>
-            <CardHeader className="text-right">
-              <CardTitle>مرتجع المشتريات</CardTitle>
-              <CardDescription>إدارة مرتجعات المشتريات وإرجاع البضاعة للموردين</CardDescription>
+            <CardHeader className={direction === 'rtl' ? 'text-right' : 'text-left'} dir={direction}>
+              <CardTitle>{t('purchases.returnsTitle')}</CardTitle>
+              <CardDescription>{t('purchases.returnsDesc')}</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4" dir="rtl">
+              <div className="space-y-4" dir={direction}>
                 {/* Filters */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="space-y-2 md:col-span-2">
-                    <Label>رقم أمر الشراء الأصلي</Label>
+                    <Label>{t('purchases.originalOrderNumber')}</Label>
                     <div className="flex gap-2">
                       <Input
                         placeholder="PO-2025-001"
                         value={returnOrderId}
                         onChange={(e) => setReturnOrderId(e.target.value)}
+                        dir={direction}
                       />
                       <Button
                         variant="outline"
@@ -471,12 +483,12 @@ export function Purchases() {
                         onClick={() => {
                           const order = purchaseOrders.find((o: any) => o.id === returnOrderId.trim());
                           if (!order) {
-                            setReturnError('لم يتم العثور على أمر شراء بهذا الرقم');
+                            setReturnError(t('purchases.orderNotFound'));
                             setReturnItems([]);
                             return;
                           }
                           if (!order.items || !Array.isArray(order.items) || order.items.length === 0) {
-                            setReturnError('أمر الشراء لا يحتوي على تفاصيل عناصر لعمل مرتجع');
+                            setReturnError(t('purchases.orderNoItems'));
                             setReturnItems([]);
                             return;
                           }
@@ -495,20 +507,20 @@ export function Purchases() {
                         }}
                       >
                         <Search className="w-4 h-4" />
-                        بحث
+                        {t('purchases.search')}
                       </Button>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>المورد</Label>
+                    <Label>{t('purchases.supplier')}</Label>
                     <Select
                       value={returnSupplierId}
                       onValueChange={(v) => setReturnSupplierId(v)}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="اختر المورد" />
+                        <SelectValue placeholder={t('purchases.selectSupplier')} />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent dir={direction}>
                         {suppliers.map((supplier) => (
                           <SelectItem key={supplier.id} value={supplier.id}>
                             {supplier.name}
@@ -518,18 +530,19 @@ export function Purchases() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>سبب الإرجاع</Label>
+                    <Label>{t('purchases.returnReason')}</Label>
                     <Input
-                      placeholder="مثال: بضائع تالفة، كمية زائدة..."
+                      placeholder={t('purchases.returnReasonPlaceholder')}
                       value={returnReason}
                       onChange={(e) => setReturnReason(e.target.value)}
+                      dir={direction}
                     />
                   </div>
                 </div>
 
                 {/* Inline validation error */}
                 {returnError && (
-                  <div className="rounded-md border border-red-200 bg-red-50 text-red-700 text-sm p-3 text-right">
+                  <div className={`rounded-md border border-red-200 bg-red-50 text-red-700 text-sm p-3 ${direction === 'rtl' ? 'text-right' : 'text-left'}`}>
                     {returnError}
                   </div>
                 )}
@@ -537,27 +550,27 @@ export function Purchases() {
                 {/* Return Items Table */}
                 {returnItems.length > 0 ? (
                   <div className="border rounded-lg overflow-hidden">
-                    <Table>
+                    <Table dir={direction}>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="text-right">الصنف</TableHead>
-                          <TableHead className="text-right">الكمية المشتراة</TableHead>
-                          <TableHead className="text-right">سعر التكلفة</TableHead>
-                          <TableHead className="text-right">تاريخ الانتهاء</TableHead>
-                          <TableHead className="text-right">الكمية المرتجعة</TableHead>
-                          <TableHead className="text-right">قيمة المرتجع</TableHead>
+                          <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.item')}</TableHead>
+                          <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.purchasedQuantity')}</TableHead>
+                          <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.unitCost')}</TableHead>
+                          <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.expiryDate')}</TableHead>
+                          <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.returnQuantity')}</TableHead>
+                          <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.returnValue')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {returnItems.map((item, index) => (
                           <TableRow key={item.id}>
-                            <TableCell className="text-right">{item.name}</TableCell>
-                            <TableCell className="text-right">{item.quantity}</TableCell>
-                            <TableCell className="text-right">{formatCurrency(item.unitCost)}</TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{item.name}</TableCell>
+                            <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{item.quantity}</TableCell>
+                            <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{formatCurrency(item.unitCost)}</TableCell>
+                            <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                               {(item as any).expiryDate ? new Date((item as any).expiryDate).toLocaleDateString('ar-SA') : '-'}
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                               <Input
                                 type="number"
                                 min={0}
@@ -570,19 +583,20 @@ export function Purchases() {
                                   updated[index] = { ...item, returnQuantity: safeValue };
                                   setReturnItems(updated);
                                 }}
-                                className="w-24 text-right"
+                                className={`w-24 ${direction === 'rtl' ? 'text-right' : 'text-left'}`}
+                                dir="ltr"
                               />
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                               {formatCurrency(item.unitCost * item.returnQuantity)}
                             </TableCell>
                           </TableRow>
                         ))}
                         <TableRow className="bg-gray-50 font-bold">
-                          <TableCell colSpan={4} className="text-right">
-                            إجمالي قيمة المرتجع
+                          <TableCell colSpan={4} className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                            {t('purchases.totalReturnValue')}
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                             {formatCurrency(
                               returnItems.reduce(
                                 (sum, item) => sum + item.unitCost * item.returnQuantity,
@@ -597,8 +611,8 @@ export function Purchases() {
                 ) : (
                   <div className="border rounded-lg p-6 text-center text-gray-500 space-y-2">
                     <Package className="w-10 h-10 mx-auto mb-2 opacity-50" />
-                    <p>أدخل رقم أمر الشراء الأصلي ثم اضغط على زر البحث لعرض العناصر.</p>
-                    <p className="text-xs">بعد ذلك يمكنك تحديد الكميات المراد إرجاعها لكل صنف.</p>
+                    <p>{t('purchases.enterOrderNumber')}</p>
+                    <p className="text-xs">{t('purchases.enterOrderNumberDesc')}</p>
                   </div>
                 )}
 
@@ -607,7 +621,7 @@ export function Purchases() {
                   <div className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                       <div className="space-y-2">
-                        <Label>طريقة التسوية مع المورد</Label>
+                        <Label>{t('purchases.refundMethod')}</Label>
                         <Select
                           value={refundMethod}
                           onValueChange={(v) => setRefundMethod(v as 'cash' | 'credit')}
@@ -615,14 +629,14 @@ export function Purchases() {
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="cash">استرداد نقدي من المورد</SelectItem>
-                            <SelectItem value="credit">تخفيض من رصيد المورد (على الحساب)</SelectItem>
+                          <SelectContent dir={direction}>
+                            <SelectItem value="cash">{t('purchases.cashRefund')}</SelectItem>
+                            <SelectItem value="credit">{t('purchases.creditRefund')}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-1">
-                        <Label>إجمالي قيمة المرتجع</Label>
+                        <Label>{t('purchases.totalReturnValueLabel')}</Label>
                         <div className="text-xl text-blue-600">
                           {formatCurrency(
                             returnItems.reduce(
@@ -638,7 +652,7 @@ export function Purchases() {
                           onClick={() => {
                             const order = purchaseOrders.find((o: any) => o.id === returnOrderId.trim());
                             if (!order) {
-                              setReturnError('لم يتم العثور على أمر الشراء');
+                              setReturnError(t('purchases.orderNotFoundError'));
                               return;
                             }
 
@@ -647,7 +661,7 @@ export function Purchases() {
                               0
                             );
                             if (totalReturn <= 0) {
-                              setReturnError('يرجى إدخال كميات مرتجعة');
+                              setReturnError(t('purchases.enterReturnQuantities'));
                               return;
                             }
 
@@ -658,7 +672,7 @@ export function Purchases() {
                               if (item.returnQuantity > 0) {
                                 const ok = reduceStock(item.id, warehouse, item.returnQuantity);
                                 if (!ok) {
-                                  setReturnError(`لا يمكن خصم الكمية من المخزون للصنف: ${item.name}`);
+                                  setReturnError(t('purchases.cannotDeductStock').replace('{item}', item.name));
                                   return;
                                 }
                               }
@@ -690,19 +704,19 @@ export function Purchases() {
                                 supplier: supplierName,
                                 orderId: order.id,
                                 total: totalReturn,
-                                method: refundMethod === 'cash' ? 'استرداد نقدي' : 'تخفيض من الحساب'
+                                method: refundMethod === 'cash' ? t('purchases.cashRefund') : t('purchases.creditRefund')
                               },
                               ...prev
                             ]);
 
-                            toast.success(`تم إنشاء مرتجع المشتريات بنجاح - ${returnNumber}`);
+                            toast.success(t('purchases.returnCreated').replace('{number}', returnNumber));
                             setReturnItems([]);
                             setReturnOrderId('');
                             setReturnReason('');
                             setReturnError(null);
                           }}
                         >
-                          إتمام عملية مرتجع المشتريات
+                          {t('purchases.completeReturn')}
                         </Button>
                       </div>
                     </div>
@@ -714,39 +728,39 @@ export function Purchases() {
 
           {/* Purchase Returns History */}
           <Card>
-            <CardHeader className="text-right">
-              <CardTitle>سجل مرتجعات المشتريات</CardTitle>
-              <CardDescription>عرض آخر عمليات مرتجع المشتريات</CardDescription>
+            <CardHeader className={direction === 'rtl' ? 'text-right' : 'text-left'} dir={direction}>
+              <CardTitle>{t('purchases.returnsHistory')}</CardTitle>
+              <CardDescription>{t('purchases.returnsHistoryDesc')}</CardDescription>
             </CardHeader>
             <CardContent>
               {purchaseReturns.length === 0 ? (
                 <div className="text-center text-gray-500 py-6">
-                  <p>لا توجد عمليات مرتجع مشتريات مسجلة حتى الآن.</p>
+                  <p>{t('purchases.noReturns')}</p>
                 </div>
               ) : (
-                <div dir="rtl">
-                  <Table>
+                <div dir={direction}>
+                  <Table dir={direction}>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-right">رقم المرتجع</TableHead>
-                        <TableHead className="text-right">تاريخ المرتجع</TableHead>
-                        <TableHead className="text-right">المورد</TableHead>
-                        <TableHead className="text-right">أمر الشراء</TableHead>
-                        <TableHead className="text-right">إجمالي المرتجع</TableHead>
-                        <TableHead className="text-right">طريقة التسوية</TableHead>
+                        <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.returnNumber')}</TableHead>
+                        <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.returnDate')}</TableHead>
+                        <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.supplier')}</TableHead>
+                        <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.returnOrder')}</TableHead>
+                        <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.totalReturn')}</TableHead>
+                        <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('purchases.settlementMethod')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {purchaseReturns.map((ret) => (
                         <TableRow key={ret.id}>
-                          <TableCell className="text-right">{ret.id}</TableCell>
-                          <TableCell className="text-right">{ret.date}</TableCell>
-                          <TableCell className="text-right">{ret.supplier}</TableCell>
-                          <TableCell className="text-right">{ret.orderId}</TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{ret.id}</TableCell>
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{ret.date}</TableCell>
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{ret.supplier}</TableCell>
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{ret.orderId}</TableCell>
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                             {formatCurrency(ret.total)}
                           </TableCell>
-                          <TableCell className="text-right">{ret.method}</TableCell>
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{ret.method}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

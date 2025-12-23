@@ -31,7 +31,7 @@ const formatCurrency = (amount: number) => {
 
 export function OpeningInventory() {
   const { currentUser, isAdmin } = useUser();
-  const { t } = useLanguage();
+  const { t, direction } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedWarehouse, setSelectedWarehouse] = useState('1');
   const [systemType, setSystemType] = useState<'restaurant' | 'retail'>('retail');
@@ -418,7 +418,7 @@ export function OpeningInventory() {
   ), [editingPriceId, editingPriceValue, editingQuantityId, editingQuantityValue, savePriceEdit, cancelPriceEdit, startEditingPrice, updateQuantity, saveQuantityEdit, cancelQuantityEdit, startEditingQuantity, removeFromCart, t]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={direction}>
       {/* Header */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -470,10 +470,11 @@ export function OpeningInventory() {
                 <CardContent className="pt-6">
                   <Label className="mb-2 block">بحث المنتجات</Label>
                   <div className="relative">
-                    <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                    <Search className={`absolute ${direction === 'rtl' ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5`} />
                     <Input
                       placeholder="بحث بالاسم أو الباركود... (اضغط Enter للبحث بالباركود)"
-                      className="pr-10"
+                      className={direction === 'rtl' ? 'pr-10' : 'pl-10'}
+                      dir={direction}
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                       onKeyDown={handleSearchEnter}
@@ -588,10 +589,10 @@ export function OpeningInventory() {
                     </div>
                   </ScrollArea>
                   <div className="mt-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
-                    <p className="text-xs text-gray-500 leading-relaxed text-right md:max-w-xs">
+                    <p className={`text-xs text-gray-500 leading-relaxed md:max-w-xs ${direction === 'rtl' ? 'text-right' : 'text-left'}`}>
                       ملاحظة: يمكن استخدام هذه الواجهة مرة واحدة عند بداية استخدام النظام، ولا تنشئ فواتير مشتريات.
                     </p>
-                    <div className="flex flex-wrap gap-2 justify-end">
+                    <div className={`flex flex-wrap gap-2 ${direction === 'rtl' ? 'justify-end' : 'justify-start'}`}>
                       <Button variant="outline" className="gap-2" onClick={handlePrint}>
                         <Printer className="w-4 h-4" />
                         طباعة
@@ -629,10 +630,10 @@ export function OpeningInventory() {
                             <span className="text-muted-foreground">
                               {t('openingInventory.search.placeholder')}
                             </span>
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            <ChevronsUpDown className={`${direction === 'rtl' ? 'mr-2' : 'ml-2'} h-4 w-4 shrink-0 opacity-50`} />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]" align="start" dir="rtl">
+                        <PopoverContent className="p-0 w-[var(--radix-popover-trigger-width)]" align={direction === 'rtl' ? 'end' : 'start'} dir={direction}>
                           <Command shouldFilter={false}>
                             <CommandInput
                               placeholder={t('openingInventory.search.placeholder')}
@@ -688,7 +689,7 @@ export function OpeningInventory() {
                                           <p className="text-xs text-gray-500 mt-1">باركود: {product.barcode}</p>
                                         )}
                                       </div>
-                                      <Plus className="w-4 h-4 text-blue-600 mr-2" />
+                                      <Plus className={`w-4 h-4 text-blue-600 ${direction === 'rtl' ? 'mr-2' : 'ml-2'}`} />
                                     </div>
                                   </CommandItem>
                                 ))}
@@ -733,10 +734,10 @@ export function OpeningInventory() {
                       </div>
                     </ScrollArea>
                     <div className="mt-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4">
-                      <p className="text-xs text-gray-500 leading-relaxed text-right md:max-w-xs">
+                      <p className={`text-xs text-gray-500 leading-relaxed md:max-w-xs ${direction === 'rtl' ? 'text-right' : 'text-left'}`}>
                         {t('openingInventory.cart.note')}
                       </p>
-                      <div className="flex flex-wrap gap-2 justify-end">
+                      <div className={`flex flex-wrap gap-2 ${direction === 'rtl' ? 'justify-end' : 'justify-start'}`}>
                         <Button variant="outline" className="gap-2" onClick={handlePrint}>
                           <Printer className="w-4 h-4" />
                           {t('openingInventory.cart.print')}

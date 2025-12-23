@@ -9,6 +9,7 @@ import { Download, Printer, Calendar, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { loadAccounts, calculateAccountBalance, type Account } from '../../data/chartOfAccounts';
 import { getAllJournalEntries } from '../../data/journalEntries';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface TrialBalanceRow {
   accountCode: string;
@@ -19,6 +20,7 @@ interface TrialBalanceRow {
 }
 
 export function TrialBalance() {
+  const { t, direction } = useLanguage();
   const [accounts] = useState<Account[]>(loadAccounts());
   const [asOfDate, setAsOfDate] = useState(new Date().toISOString().split('T')[0]);
   const journalEntries = useMemo(() => getAllJournalEntries(), []);
@@ -43,7 +45,7 @@ export function TrialBalance() {
       let debit = 0;
       let credit = 0;
 
-      if (account.nature === 'مدين') {
+      if (account.nature === 'مدين' || account.nature === 'Debit') {
         if (balance >= 0) {
           debit = balance;
         } else {
@@ -95,9 +97,9 @@ export function TrialBalance() {
 
   const handleExport = () => {
     const csvContent = [
-      ['ميزان المراجعة', `حتى تاريخ: ${formatDate(asOfDate)}`],
+      [t('accounting.trialBalance.trialBalanceTitle'), t('accounting.trialBalance.asOfDateDesc').replace('{date}', formatDate(asOfDate))],
       [],
-      ['رمز الحساب', 'اسم الحساب', 'مدين', 'دائن', 'الرصيد'],
+      [t('accounting.trialBalance.accountCode'), t('accounting.trialBalance.accountName'), t('accounting.trialBalance.debit'), t('accounting.trialBalance.credit'), t('accounting.trialBalance.balance')],
       ...trialBalance.rows.map(row => [
         row.accountCode,
         row.accountName,
@@ -106,34 +108,34 @@ export function TrialBalance() {
         row.balance.toFixed(2)
       ]),
       [],
-      ['الإجمالي', '', trialBalance.totalDebit.toFixed(2), trialBalance.totalCredit.toFixed(2), ''],
-      ['الفرق', '', trialBalance.difference.toFixed(2), '', '']
+      [t('accounting.trialBalance.total'), '', trialBalance.totalDebit.toFixed(2), trialBalance.totalCredit.toFixed(2), ''],
+      [t('accounting.trialBalance.difference'), '', trialBalance.difference.toFixed(2), '', '']
     ].map(row => row.join(',')).join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `ميزان_المراجعة_${asOfDate}.csv`;
+    link.download = `${t('accounting.trialBalance.exportFileName').replace('{date}', asOfDate)}.csv`;
     link.click();
-    toast.success('تم تصدير التقرير بنجاح');
+    toast.success(t('accounting.trialBalance.exportSuccess'));
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={direction}>
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1>ميزان المراجعة</h1>
-          <p className="text-gray-600">تقرير ميزان المراجعة لجميع الحسابات</p>
+        <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+          <h1>{t('accounting.trialBalance.title')}</h1>
+          <p className="text-gray-600">{t('accounting.trialBalance.subtitle')}</p>
         </div>
         <div className="flex gap-2">
           <Button onClick={handlePrint} variant="outline" className="gap-2">
             <Printer className="w-4 h-4" />
-            طباعة
+            {t('accounting.trialBalance.print')}
           </Button>
           <Button onClick={handleExport} variant="outline" className="gap-2">
             <Download className="w-4 h-4" />
-            تصدير
+            {t('accounting.trialBalance.export')}
           </Button>
         </div>
       </div>
@@ -143,14 +145,15 @@ export function TrialBalance() {
         <CardContent className="pt-6">
           <div className="flex items-center gap-4">
             <div className="space-y-2 flex-1">
-              <Label>حتى تاريخ</Label>
+              <Label>{t('accounting.trialBalance.asOfDate')}</Label>
               <div className="relative">
-                <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Calendar className={`absolute ${direction === 'rtl' ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400`} />
                 <Input
                   type="date"
                   value={asOfDate}
                   onChange={(e) => setAsOfDate(e.target.value)}
-                  className="pr-10"
+                  className={direction === 'rtl' ? 'pr-10' : 'pl-10'}
+                  dir="ltr"
                 />
               </div>
             </div>
@@ -160,22 +163,22 @@ export function TrialBalance() {
 
       {/* Trial Balance Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>ميزان المراجعة</CardTitle>
+        <CardHeader dir={direction}>
+          <CardTitle>{t('accounting.trialBalance.trialBalanceTitle')}</CardTitle>
           <CardDescription>
-            حتى تاريخ: {formatDate(asOfDate)}
+            {t('accounting.trialBalance.asOfDateDesc').replace('{date}', formatDate(asOfDate))}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="border rounded-lg overflow-hidden">
-            <Table>
+            <Table dir={direction}>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-right w-24">الرمز</TableHead>
-                  <TableHead className="text-right">اسم الحساب</TableHead>
-                  <TableHead className="text-right">مدين</TableHead>
-                  <TableHead className="text-right">دائن</TableHead>
-                  <TableHead className="text-right">الرصيد</TableHead>
+                  <TableHead className={`${direction === 'rtl' ? 'text-right' : 'text-left'} w-24`}>{t('accounting.trialBalance.accountCode')}</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.trialBalance.accountName')}</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.trialBalance.debit')}</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.trialBalance.credit')}</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.trialBalance.balance')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -197,8 +200,8 @@ export function TrialBalance() {
                       </TableRow>
                     ))}
                     <TableRow className="bg-gray-100 font-bold">
-                      <TableCell colSpan={2} className="text-right">
-                        الإجمالي
+                      <TableCell colSpan={2} className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                        {t('accounting.trialBalance.total')}
                       </TableCell>
                       <TableCell className="text-blue-600">
                         {formatCurrency(trialBalance.totalDebit)}
@@ -213,7 +216,7 @@ export function TrialBalance() {
                     {trialBalance.difference > 0.01 && (
                       <TableRow className="bg-red-50">
                         <TableCell colSpan={5} className="text-center text-red-600 font-semibold">
-                          ⚠️ تحذير: الفرق بين المدين والدائن = {formatCurrency(trialBalance.difference)}
+                          ⚠️ {t('accounting.trialBalance.differenceWarning').replace('{difference}', formatCurrency(trialBalance.difference))}
                         </TableCell>
                       </TableRow>
                     )}
@@ -222,7 +225,7 @@ export function TrialBalance() {
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-12 text-gray-500">
                       <FileText className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                      <p>لا توجد حسابات لعرضها</p>
+                      <p>{t('accounting.trialBalance.noAccounts')}</p>
                     </TableCell>
                   </TableRow>
                 )}

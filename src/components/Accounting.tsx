@@ -10,11 +10,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
 import { ScrollArea } from './ui/scroll-area';
-import { Plus, Search, Filter, FileText, DollarSign, TrendingUp, TrendingDown, Download, Eye, ShoppingCart, Package, Warehouse, Receipt, ArrowRightLeft, Zap, BookOpen, Trash2, ArrowRight } from 'lucide-react';
+import { Plus, Search, Filter, FileText, DollarSign, TrendingUp, TrendingDown, Download, Eye, ShoppingCart, Package, Warehouse, Receipt, ArrowRightLeft, Zap, BookOpen, Trash2, ArrowRight, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { getAllJournalEntries, getEntriesByType, addJournalEntry, type JournalEntry } from '../data/journalEntries';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export function Accounting() {
+  const { t, direction } = useLanguage();
   // Load entries from central storage
   const [allEntries, setAllEntries] = useState<JournalEntry[]>([]);
 
@@ -169,7 +171,7 @@ export function Accounting() {
     const validCreditEntries = creditEntries.filter(e => e.account && e.amount > 0);
 
     if (validDebitEntries.length === 0 || validCreditEntries.length === 0) {
-      toast.error('يرجى إضافة حساب مدين واحد على الأقل وحساب دائن واحد على الأقل');
+      toast.error(t('accounting.errors.addDebitCredit'));
       return;
     }
 
@@ -179,12 +181,13 @@ export function Accounting() {
 
     // Validate that debit total equals credit total
     if (Math.abs(totalDebit - totalCredit) > 0.01) {
-      toast.error(`المجموع المدين (${totalDebit.toFixed(2)}) يجب أن يساوي المجموع الدائن (${totalCredit.toFixed(2)})`);
+      const errorMsg = t('accounting.errors.balanceMismatch').replace('{debit}', totalDebit.toFixed(2)).replace('{credit}', totalCredit.toFixed(2));
+      toast.error(errorMsg);
       return;
     }
 
     if (!formData.description) {
-      toast.error('يرجى إدخال وصف للقيد');
+      toast.error(t('accounting.errors.descriptionRequired'));
       return;
     }
 
@@ -222,7 +225,8 @@ export function Accounting() {
     // Add all entries
     entries.forEach(entry => addJournalEntry(entry));
     setAllEntries(getAllJournalEntries());
-    toast.success(`تم إضافة ${entries.length} قيد محاسبي بنجاح`);
+    const successMsg = t('accounting.success.entriesAdded').replace('{count}', entries.length.toString());
+    toast.success(successMsg);
 
     // Reset form
     setFormData({
@@ -289,25 +293,25 @@ export function Accounting() {
   const getOperationLabel = (type?: JournalEntry['operationType']) => {
     switch (type) {
       case 'بيع':
-        return 'بيع';
+        return t('accounting.operationTypes.sale');
       case 'شراء':
-        return 'شراء';
+        return t('accounting.operationTypes.purchase');
       case 'مخزون_توريد':
-        return 'توريد مخزون';
+        return t('accounting.operationTypes.inventorySupply');
       case 'مخزون_صرف':
-        return 'صرف مخزون';
+        return t('accounting.operationTypes.inventoryDisbursement');
       case 'مخزون_تسوية':
-        return 'تسوية مخزون';
+        return t('accounting.operationTypes.inventoryAdjustment');
       case 'مخزون_أول_مدة':
-        return 'مخزون أول المدة';
+        return t('accounting.operationTypes.openingInventory');
       case 'سند_قبض':
-        return 'سند قبض';
+        return t('accounting.operationTypes.receiptVoucher');
       case 'سند_صرف':
-        return 'سند صرف';
+        return t('accounting.operationTypes.paymentVoucher');
       case 'افتتاحي':
-        return 'قيد افتتاحي';
+        return t('accounting.operationTypes.opening');
       default:
-        return 'عام';
+        return t('accounting.general');
     }
   };
 
@@ -319,17 +323,17 @@ export function Accounting() {
   // Show add entry page if showAddEntryPage is true
   if (showAddEntryPage) {
     return (
-      <div className="space-y-6" dir="rtl">
+      <div className="space-y-6" dir={direction}>
         {/* Header with Back Button */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button variant="outline" onClick={() => setShowAddEntryPage(false)} className="gap-2">
-              <ArrowRight className="w-4 h-4" />
-              الرجوع
+              {direction === 'rtl' ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
+              {t('accounting.back')}
             </Button>
-            <div className="text-right">
-              <h1 className="text-3xl font-bold">إضافة قيد محاسبي يدوي</h1>
-              <p className="text-gray-600">قم بإدخال تفاصيل القيد المحاسبي (القيود التلقائية تُنشأ تلقائياً من العمليات)</p>
+            <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+              <h1 className="text-3xl font-bold">{t('accounting.addManualEntry')}</h1>
+              <p className="text-gray-600">{t('accounting.addManualEntryDesc')}</p>
             </div>
           </div>
         </div>
@@ -341,7 +345,7 @@ export function Accounting() {
               {/* Basic Information */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>التاريخ</Label>
+                  <Label>{t('accounting.date')}</Label>
                   <Input
                     type="date"
                     value={formData.date}
@@ -349,18 +353,18 @@ export function Accounting() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>رقم المرجع</Label>
+                  <Label>{t('accounting.reference')}</Label>
                   <Input
-                    placeholder="REF-004"
+                    placeholder={t('accounting.referencePlaceholder')}
                     value={formData.reference}
                     onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>الوصف</Label>
+                <Label>{t('accounting.description')}</Label>
                 <Input
-                  placeholder="وصف القيد المحاسبي"
+                  placeholder={t('accounting.descriptionPlaceholder')}
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 />
@@ -371,7 +375,7 @@ export function Accounting() {
                 {/* Debit Section */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <Label className="text-lg font-semibold text-red-600">الحسابات المدينة (مدين)</Label>
+                    <Label className="text-lg font-semibold text-red-600">{t('accounting.debitAccounts')}</Label>
                     <Button
                       type="button"
                       variant="outline"
@@ -380,14 +384,14 @@ export function Accounting() {
                       className="gap-2"
                     >
                       <Plus className="w-4 h-4" />
-                      إضافة حساب
+                      {t('accounting.addAccountToEntry')}
                     </Button>
                   </div>
                   <div className="space-y-3 border rounded-lg p-4 bg-red-50">
                     {debitEntries.map((entry, index) => (
                       <div key={index} className="grid grid-cols-[1fr_auto_120px] gap-2 items-end">
                         <div className="space-y-1">
-                          <Label className="text-sm">الحساب</Label>
+                          <Label className="text-sm">{t('accounting.account')}</Label>
                           <Select
                             value={entry.account}
                             onValueChange={(value) => {
@@ -397,7 +401,7 @@ export function Accounting() {
                             }}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="اختر الحساب" />
+                              <SelectValue placeholder={t('accounting.account')} />
                             </SelectTrigger>
                             <SelectContent>
                               {accounts.map((account) => (
@@ -409,7 +413,7 @@ export function Accounting() {
                           </Select>
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-sm">المبلغ</Label>
+                          <Label className="text-sm">{t('accounting.amount')}</Label>
                           <Input
                             type="number"
                             placeholder="0.00"
@@ -441,7 +445,7 @@ export function Accounting() {
                     ))}
                     <div className="pt-2 border-t">
                       <div className="flex justify-between items-center">
-                        <span className="font-semibold">المجموع:</span>
+                        <span className="font-semibold">{t('accounting.total')}:</span>
                         <span className="font-bold text-red-600">
                           {formatCurrency(debitEntries.reduce((sum, e) => sum + (e.amount || 0), 0))}
                         </span>
@@ -453,7 +457,7 @@ export function Accounting() {
                 {/* Credit Section */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <Label className="text-lg font-semibold text-green-600">الحسابات الدائنة (دائن)</Label>
+                    <Label className="text-lg font-semibold text-green-600">{t('accounting.creditAccounts')}</Label>
                     <Button
                       type="button"
                       variant="outline"
@@ -462,14 +466,14 @@ export function Accounting() {
                       className="gap-2"
                     >
                       <Plus className="w-4 h-4" />
-                      إضافة حساب
+                      {t('accounting.addAccountToEntry')}
                     </Button>
                   </div>
                   <div className="space-y-3 border rounded-lg p-4 bg-green-50">
                     {creditEntries.map((entry, index) => (
                       <div key={index} className="grid grid-cols-[1fr_auto_120px] gap-2 items-end">
                         <div className="space-y-1">
-                          <Label className="text-sm">الحساب</Label>
+                          <Label className="text-sm">{t('accounting.account')}</Label>
                           <Select
                             value={entry.account}
                             onValueChange={(value) => {
@@ -479,7 +483,7 @@ export function Accounting() {
                             }}
                           >
                             <SelectTrigger>
-                              <SelectValue placeholder="اختر الحساب" />
+                              <SelectValue placeholder={t('accounting.account')} />
                             </SelectTrigger>
                             <SelectContent>
                               {accounts.map((account) => (
@@ -491,7 +495,7 @@ export function Accounting() {
                           </Select>
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-sm">المبلغ</Label>
+                          <Label className="text-sm">{t('accounting.amount')}</Label>
                           <Input
                             type="number"
                             placeholder="0.00"
@@ -512,7 +516,7 @@ export function Accounting() {
                             if (creditEntries.length > 1) {
                               setCreditEntries(creditEntries.filter((_, i) => i !== index));
                             } else {
-                              toast.error('يجب أن يكون هناك حساب دائن واحد على الأقل');
+                              toast.error(t('accounting.errors.minCreditAccount'));
                             }
                           }}
                           className="text-green-600 hover:text-green-700"
@@ -523,7 +527,7 @@ export function Accounting() {
                     ))}
                     <div className="pt-2 border-t">
                       <div className="flex justify-between items-center">
-                        <span className="font-semibold">المجموع:</span>
+                        <span className="font-semibold">{t('accounting.total')}:</span>
                         <span className="font-bold text-green-600">
                           {formatCurrency(creditEntries.reduce((sum, e) => sum + (e.amount || 0), 0))}
                         </span>
@@ -536,7 +540,7 @@ export function Accounting() {
               {/* Balance Check */}
               <div className="p-4 border rounded-lg bg-gray-50">
                 <div className="flex justify-between items-center">
-                  <span className="font-semibold">الفرق:</span>
+                  <span className="font-semibold">{t('accounting.difference')}:</span>
                   <span className={`font-bold text-lg ${Math.abs(
                     debitEntries.reduce((sum, e) => sum + (e.amount || 0), 0) -
                     creditEntries.reduce((sum, e) => sum + (e.amount || 0), 0)
@@ -552,14 +556,14 @@ export function Accounting() {
                   debitEntries.reduce((sum, e) => sum + (e.amount || 0), 0) -
                   creditEntries.reduce((sum, e) => sum + (e.amount || 0), 0)
                 ) >= 0.01 && (
-                    <p className="text-sm text-red-600 mt-2">⚠️ يجب أن يكون المجموع المدين مساوياً للمجموع الدائن</p>
+                    <p className="text-sm text-red-600 mt-2">⚠️ {t('accounting.balanceWarning')}</p>
                   )}
               </div>
 
               {/* Action Buttons */}
               <div className="flex gap-2 pt-4 border-t">
                 <Button onClick={handleAddEntry} className="flex-1" size="lg">
-                  حفظ القيد
+                  {t('accounting.saveEntry')}
                 </Button>
                 <Button
                   variant="outline"
@@ -576,7 +580,7 @@ export function Accounting() {
                     setCreditEntries([{ account: '', amount: 0 }]);
                   }}
                 >
-                  إلغاء
+                  {t('accounting.cancel')}
                 </Button>
               </div>
             </div>
@@ -588,16 +592,16 @@ export function Accounting() {
 
   // Main page
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="space-y-6" dir={direction}>
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="text-right flex-1">
-          <h1 className="text-3xl font-bold">المحاسبة والمالية</h1>
-          <p className="text-gray-600">إدارة القيود المحاسبية التلقائية واليدوية والحسابات المالية</p>
+        <div className={`${direction === 'rtl' ? 'text-right' : 'text-left'} flex-1`}>
+          <h1 className="text-3xl font-bold">{t('accounting.title')}</h1>
+          <p className="text-gray-600">{t('accounting.subtitle')}</p>
         </div>
         <Button className="gap-2 shrink-0" onClick={() => setShowAddEntryPage(true)}>
           <Plus className="w-4 h-4" />
-          قيد محاسبي جديد
+          {t('accounting.addEntry')}
         </Button>
       </div>
 
@@ -606,58 +610,58 @@ export function Accounting() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <Zap className="w-4 h-4 text-yellow-600" />
-            <CardTitle className="text-sm">القيود التلقائية</CardTitle>
+            <CardTitle className="text-sm">{t('accounting.autoEntries')}</CardTitle>
           </CardHeader>
-          <CardContent className="text-right">
+          <CardContent className={direction === 'rtl' ? 'text-right' : 'text-left'}>
             <div className="text-2xl font-bold">{totalAutoEntries}</div>
-            <p className="text-xs text-gray-600 mt-1">إجمالي المبلغ: {formatCurrency(totalAutoAmount)}</p>
+            <p className="text-xs text-gray-600 mt-1">{t('accounting.totalAmount')}: {formatCurrency(totalAutoAmount)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <FileText className="w-4 h-4 text-blue-600" />
-            <CardTitle className="text-sm">القيود اليدوية</CardTitle>
+            <CardTitle className="text-sm">{t('accounting.manualEntries')}</CardTitle>
           </CardHeader>
-          <CardContent className="text-right">
+          <CardContent className={direction === 'rtl' ? 'text-right' : 'text-left'}>
             <div className="text-2xl font-bold">{totalManualEntries}</div>
-            <p className="text-xs text-gray-600 mt-1">إجمالي المبلغ: {formatCurrency(totalManualAmount)}</p>
+            <p className="text-xs text-gray-600 mt-1">{t('accounting.totalAmount')}: {formatCurrency(totalManualAmount)}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <TrendingUp className="w-4 h-4 text-green-600" />
-            <CardTitle className="text-sm">إجمالي الأصول</CardTitle>
+            <CardTitle className="text-sm">{t('accounting.totalAssets')}</CardTitle>
           </CardHeader>
-          <CardContent className="text-right">
+          <CardContent className={direction === 'rtl' ? 'text-right' : 'text-left'}>
             <div className="text-2xl">{formatCurrency(977000)}</div>
-            <p className="text-xs text-gray-600 mt-1">+12% عن الشهر السابق</p>
+            <p className="text-xs text-gray-600 mt-1">+12% {t('accounting.previousMonth')}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <DollarSign className="w-4 h-4 text-blue-600" />
-            <CardTitle className="text-sm">إجمالي القيود</CardTitle>
+            <CardTitle className="text-sm">{t('accounting.totalEntries')}</CardTitle>
           </CardHeader>
-          <CardContent className="text-right">
+          <CardContent className={direction === 'rtl' ? 'text-right' : 'text-left'}>
             <div className="text-2xl font-bold">{allEntries.length}</div>
-            <p className="text-xs text-gray-600 mt-1">إجمالي المبلغ: {formatCurrency(totalAutoAmount + totalManualAmount)}</p>
+            <p className="text-xs text-gray-600 mt-1">{t('accounting.totalAmount')}: {formatCurrency(totalAutoAmount + totalManualAmount)}</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="entries" className="w-full" dir="rtl">
+      <Tabs defaultValue="entries" className="w-full" dir={direction}>
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="entries">القيود المحاسبية</TabsTrigger>
-          <TabsTrigger value="accounts">دليل الحسابات</TabsTrigger>
-          <TabsTrigger value="currencies">العملات</TabsTrigger>
-          <TabsTrigger value="taxes">الضرائب</TabsTrigger>
+          <TabsTrigger value="entries">{t('accounting.journalEntries')}</TabsTrigger>
+          <TabsTrigger value="accounts">{t('accounting.chartOfAccounts')}</TabsTrigger>
+          <TabsTrigger value="currencies">{t('accounting.currencies')}</TabsTrigger>
+          <TabsTrigger value="taxes">{t('accounting.taxes')}</TabsTrigger>
         </TabsList>
 
         {/* Journal Entries */}
-        <TabsContent value="entries" className="space-y-4 mt-4" dir="rtl">
+        <TabsContent value="entries" className="space-y-4 mt-4" dir={direction}>
           <Card>
-            <CardHeader dir="rtl">
+            <CardHeader dir={direction}>
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div className="flex gap-2">
                   <Button
@@ -667,7 +671,7 @@ export function Accounting() {
                     className="gap-2"
                   >
                     <Zap className="w-4 h-4" />
-                    القيود التلقائية ({totalAutoEntries})
+                    {t('accounting.autoEntries')} ({totalAutoEntries})
                   </Button>
                   <Button
                     variant={activeTab === 'manual' ? 'default' : 'outline'}
@@ -676,7 +680,7 @@ export function Accounting() {
                     className="gap-2"
                   >
                     <FileText className="w-4 h-4" />
-                    القيود اليدوية ({totalManualEntries})
+                    {t('accounting.manualEntries')} ({totalManualEntries})
                   </Button>
                 </div>
                 <div className="flex gap-2">
@@ -687,25 +691,25 @@ export function Accounting() {
                     }
                   }}>
                     <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="فلترة حسب النوع" />
+                      <SelectValue placeholder={t('accounting.filterByType')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">جميع الأنواع</SelectItem>
-                      <SelectItem value="بيع">عمليات البيع</SelectItem>
-                      <SelectItem value="شراء">عمليات الشراء</SelectItem>
-                      <SelectItem value="مخزون_توريد">توريد مخزون</SelectItem>
-                      <SelectItem value="مخزون_صرف">صرف مخزون</SelectItem>
-                      <SelectItem value="مخزون_تسوية">تسوية مخزون</SelectItem>
-                      <SelectItem value="مخزون_أول_مدة">مخزون أول المدة</SelectItem>
-                      <SelectItem value="سند_قبض">سندات القبض</SelectItem>
-                      <SelectItem value="سند_صرف">سندات الصرف</SelectItem>
-                      <SelectItem value="افتتاحي">قيود افتتاحية</SelectItem>
-                      <SelectItem value="مرتجع_مبيعات">مرتجعات المبيعات</SelectItem>
+                      <SelectItem value="all">{t('accounting.allTypes')}</SelectItem>
+                      <SelectItem value="بيع">{t('accounting.operationTypes.salesOperations')}</SelectItem>
+                      <SelectItem value="شراء">{t('accounting.operationTypes.purchaseOperations')}</SelectItem>
+                      <SelectItem value="مخزون_توريد">{t('accounting.operationTypes.inventorySupply')}</SelectItem>
+                      <SelectItem value="مخزون_صرف">{t('accounting.operationTypes.inventoryDisbursement')}</SelectItem>
+                      <SelectItem value="مخزون_تسوية">{t('accounting.operationTypes.inventoryAdjustment')}</SelectItem>
+                      <SelectItem value="مخزون_أول_مدة">{t('accounting.operationTypes.openingInventory')}</SelectItem>
+                      <SelectItem value="سند_قبض">{t('accounting.operationTypes.receiptVouchers')}</SelectItem>
+                      <SelectItem value="سند_صرف">{t('accounting.operationTypes.paymentVouchers')}</SelectItem>
+                      <SelectItem value="افتتاحي">{t('accounting.operationTypes.openingEntries')}</SelectItem>
+                      <SelectItem value="مرتجع_مبيعات">{t('accounting.operationTypes.salesReturns')}</SelectItem>
                     </SelectContent>
                   </Select>
                   <Button variant="outline" size="sm" className="gap-2">
                     <Download className="w-4 h-4" />
-                    تصدير
+                    {t('accounting.export')}
                   </Button>
                 </div>
               </div>
@@ -713,37 +717,37 @@ export function Accounting() {
             <CardContent>
               <div className="mb-4">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Search className={`absolute ${direction === 'rtl' ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4`} />
                   <Input
-                    placeholder="بحث في القيود..."
-                    className="pl-10 text-right"
-                    dir="rtl"
+                    placeholder={t('accounting.searchPlaceholder')}
+                    className={direction === 'rtl' ? 'pr-10 text-right' : 'pl-10 text-left'}
+                    dir={direction}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
               </div>
-              <ScrollArea className="h-[600px]">
-                <div dir="rtl">
-                  <Table dir="rtl">
+              <div className="w-full overflow-auto" style={{ maxHeight: '600px' }}>
+                <div dir={direction}>
+                  <Table dir={direction} className="min-w-[1200px]">
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-right">النوع</TableHead>
-                        <TableHead className="text-right">رقم القيد</TableHead>
-                        <TableHead className="text-right">التاريخ</TableHead>
-                        <TableHead className="text-right">الوصف</TableHead>
-                        <TableHead className="text-right">المدين</TableHead>
-                        <TableHead className="text-right">الدائن</TableHead>
-                        <TableHead className="text-right">المبلغ</TableHead>
-                        <TableHead className="text-right">المرجع</TableHead>
-                        <TableHead className="text-right">الحالة</TableHead>
-                        <TableHead className="text-right">إجراءات</TableHead>
+                        <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.type')}</TableHead>
+                        <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.entryNumber')}</TableHead>
+                        <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.date')}</TableHead>
+                        <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.description')}</TableHead>
+                        <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.debit')}</TableHead>
+                        <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.credit')}</TableHead>
+                        <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.amount')}</TableHead>
+                        <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.reference')}</TableHead>
+                        <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.status')}</TableHead>
+                        <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredEntries.map((entry) => (
                         <TableRow key={entry.id}>
-                          <TableCell className="text-right">
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                             {entry.operationType && (
                               <Badge className={getOperationBadgeColor(entry.operationType)}>
                                 <span className="flex items-center gap-1">
@@ -754,24 +758,24 @@ export function Accounting() {
                             )}
                             {!entry.operationType && (
                               <Badge variant="outline">
-                                <FileText className="w-4 h-4 inline mr-1" />
-                                عام
+                                <FileText className={`w-4 h-4 inline ${direction === 'rtl' ? 'mr-1' : 'ml-1'}`} />
+                                {t('accounting.general')}
                               </Badge>
                             )}
                           </TableCell>
-                          <TableCell className="text-right font-medium">{entry.id}</TableCell>
-                          <TableCell className="text-right">{entry.date}</TableCell>
-                          <TableCell className="text-right">{entry.description}</TableCell>
-                          <TableCell className="text-right text-red-600">{entry.debitAccount}</TableCell>
-                          <TableCell className="text-right text-green-600">{entry.creditAccount}</TableCell>
-                          <TableCell className="text-right font-semibold">{formatCurrency(entry.amount)}</TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className={`${direction === 'rtl' ? 'text-right' : 'text-left'} font-medium`}>{entry.id}</TableCell>
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{entry.date}</TableCell>
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{entry.description}</TableCell>
+                          <TableCell className={`${direction === 'rtl' ? 'text-right' : 'text-left'} text-red-600`}>{entry.debitAccount}</TableCell>
+                          <TableCell className={`${direction === 'rtl' ? 'text-right' : 'text-left'} text-green-600`}>{entry.creditAccount}</TableCell>
+                          <TableCell className={`${direction === 'rtl' ? 'text-right' : 'text-left'} font-semibold`}>{formatCurrency(entry.amount)}</TableCell>
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                             {entry.sourceReference ? (
                               <Button
                                 variant="link"
                                 size="sm"
                                 className="p-0 h-auto text-blue-600 hover:underline"
-                                onClick={() => toast.info(`فتح المرجع: ${entry.sourceReference}`)}
+                                onClick={() => toast.info(`${t('accounting.openReference')}: ${entry.sourceReference}`)}
                               >
                                 {entry.reference}
                               </Button>
@@ -779,22 +783,29 @@ export function Accounting() {
                               <span>{entry.reference}</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-right">
-                            <Badge variant={entry.status === 'مُعتمد' ? 'default' : entry.status === 'قيد المراجعة' ? 'secondary' : 'destructive'}>
-                              {entry.status}
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                            <Badge variant={
+                              entry.status === 'مُعتمد' ? 'default' : 
+                              entry.status === 'قيد المراجعة' ? 'secondary' : 
+                              'destructive'
+                            }>
+                              {entry.status === 'مُعتمد' ? t('accounting.statuses.approved') : 
+                               entry.status === 'قيد المراجعة' ? t('accounting.statuses.underReview') : 
+                               entry.status === 'ملغي' ? t('accounting.statuses.rejected') : 
+                               entry.status}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                             <div className="flex gap-1">
-                              <Button variant="ghost" size="sm" onClick={() => toast.info('عرض تفاصيل القيد')}>
+                              <Button variant="ghost" size="sm" onClick={() => toast.info(t('accounting.viewDetails'))}>
                                 <Eye className="w-4 h-4" />
                               </Button>
                               {entry.type === 'auto' && entry.sourceReference && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => toast.info(`فتح العملية الأصلية: ${entry.sourceReference}`)}
-                                  title="فتح العملية الأصلية"
+                                  onClick={() => toast.info(`${t('accounting.openSource')}: ${entry.sourceReference}`)}
+                                  title={t('accounting.openSource')}
                                 >
                                   <ArrowRightLeft className="w-4 h-4" />
                                 </Button>
@@ -806,14 +817,14 @@ export function Accounting() {
                       {filteredEntries.length === 0 && (
                         <TableRow>
                           <TableCell colSpan={10} className="text-center text-gray-500 py-8">
-                            لا توجد قيود مطابقة للبحث أو الفلترة المحددة
+                            {t('accounting.noEntries')}
                           </TableCell>
                         </TableRow>
                       )}
                     </TableBody>
                   </Table>
                 </div>
-              </ScrollArea>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -821,42 +832,42 @@ export function Accounting() {
         {/* Chart of Accounts */}
         <TabsContent value="accounts" className="space-y-4">
           <Card>
-            <CardHeader dir="rtl">
-              <div className="flex items-center justify-between" dir="rtl">
+            <CardHeader dir={direction}>
+              <div className="flex items-center justify-between" dir={direction}>
                 <div className="text-right">
-                  <CardTitle>دليل الحسابات</CardTitle>
-                  <CardDescription>إدارة الحسابات المحاسبية</CardDescription>
+                  <CardTitle>{t('accounting.chartOfAccounts')}</CardTitle>
+                  <CardDescription>{t('accounting.chartOfAccountsDesc')}</CardDescription>
                 </div>
                 <Button size="sm" className="gap-2">
                   <Plus className="w-4 h-4" />
-                  حساب جديد
+                  {t('accounting.newAccount')}
                 </Button>
 
               </div>
             </CardHeader>
             <CardContent>
-              <div dir="rtl">
+              <div dir={direction}>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-right">رمز الحساب</TableHead>
-                      <TableHead className="text-right">اسم الحساب</TableHead>
-                      <TableHead className="text-right">النوع</TableHead>
-                      <TableHead className="text-right">الرصيد</TableHead>
-                      <TableHead className="text-right">العملة</TableHead>
-                      <TableHead className="text-right">إجراءات</TableHead>
+                      <TableHead className="text-left">{t('accounting.accountCode')}</TableHead>
+                      <TableHead className="text-left">{t('accounting.accountName')}</TableHead>
+                      <TableHead className="text-left">{t('accounting.accountType')}</TableHead>
+                      <TableHead className="text-left">{t('accounting.balance')}</TableHead>
+                      <TableHead className="text-left">{t('accounting.currency')}</TableHead>
+                      <TableHead className="text-right">{t('accounting.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {accounts.map((account) => (
                       <TableRow key={account.code}>
-                        <TableCell className="text-right">{account.code}</TableCell>
-                        <TableCell className="text-right">{account.name}</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{account.code}</TableCell>
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{account.name}</TableCell>
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                           <Badge variant="outline">{account.type}</Badge>
                         </TableCell>
-                        <TableCell className="text-right">{formatCurrency(account.balance)}</TableCell>
-                        <TableCell className="text-right">{account.currency}</TableCell>
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{formatCurrency(account.balance)}</TableCell>
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{account.currency}</TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm">تعديل</Button>
                         </TableCell>
@@ -870,42 +881,42 @@ export function Accounting() {
         </TabsContent>
 
         {/* Currencies */}
-        <TabsContent value="currencies" className="space-y-4" dir="rtl">
+        <TabsContent value="currencies" className="space-y-4" dir={direction}>
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="text-right">
-                  <CardTitle>إدارة العملات</CardTitle>
-                  <CardDescription>تحديث أسعار صرف العملات</CardDescription>
+                  <CardTitle>{t('accounting.currencies')}</CardTitle>
+                  <CardDescription>{t('accounting.currenciesDesc')}</CardDescription>
                 </div>
                 <Button size="sm" className="gap-2">
                   <Plus className="w-4 h-4" />
-                  عملة جديدة
+                  {t('accounting.addNewCurrency')}
                 </Button>
 
               </div>
             </CardHeader>
             <CardContent>
-              <div dir="rtl">
+              <div dir={direction}>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-right">الرمز</TableHead>
-                      <TableHead className="text-right">اسم العملة</TableHead>
-                      <TableHead className="text-right">الرمز</TableHead>
-                      <TableHead className="text-right">سعر الصرف (مقابل الريال)</TableHead>
-                      <TableHead className="text-right">إجراءات</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.currencyCode')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.currencyName')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.currencySymbol')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.exchangeRate')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {currencies.map((currency) => (
                       <TableRow key={currency.code}>
-                        <TableCell className="text-right">{currency.code}</TableCell>
-                        <TableCell className="text-right">{currency.name}</TableCell>
-                        <TableCell className="text-right">{currency.symbol}</TableCell>
-                        <TableCell className="text-right">{currency.rate.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm">تحديث السعر</Button>
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{currency.code}</TableCell>
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{currency.name}</TableCell>
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{currency.symbol}</TableCell>
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{currency.rate.toFixed(2)}</TableCell>
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                          <Button variant="ghost" size="sm">{t('accounting.updateRate')}</Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -917,48 +928,48 @@ export function Accounting() {
         </TabsContent>
 
         {/* Tax Management */}
-        <TabsContent value="taxes" className="space-y-4" dir="rtl">
+        <TabsContent value="taxes" className="space-y-4" dir={direction}>
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <div className="text-right">
-                  <CardTitle>إدارة الضرائب</CardTitle>
-                  <CardDescription>إعداد وإدارة الضرائب المختلفة</CardDescription>
+                <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                  <CardTitle>{t('accounting.taxManagement')}</CardTitle>
+                  <CardDescription>{t('accounting.taxManagementDesc')}</CardDescription>
                 </div>
                 <Button size="sm" className="gap-2">
                   <Plus className="w-4 h-4" />
-                  ضريبة جديدة
+                  {t('accounting.newTax')}
                 </Button>
 
               </div>
             </CardHeader>
             <CardContent>
-              <div dir="rtl">
+              <div dir={direction}>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-right">اسم الضريبة</TableHead>
-                      <TableHead className="text-right">النسبة (%)</TableHead>
-                      <TableHead className="text-right">النوع</TableHead>
-                      <TableHead className="text-right">الحالة</TableHead>
-                      <TableHead className="text-right">إجراءات</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.taxName')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.taxRate')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.taxType')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.taxStatus')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {taxRates.map((tax, index) => (
                       <TableRow key={index}>
-                        <TableCell className="text-right">{tax.name}</TableCell>
-                        <TableCell className="text-right">{tax.rate}%</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{tax.name}</TableCell>
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{tax.rate}%</TableCell>
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                           <Badge variant="outline">{tax.type}</Badge>
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                           <Badge variant={tax.active ? 'default' : 'secondary'}>
-                            {tax.active ? 'نشط' : 'غير نشط'}
+                            {tax.active ? t('accounting.active') : t('accounting.inactive')}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm">تعديل</Button>
+                        <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                          <Button variant="ghost" size="sm">{t('accounting.edit')}</Button>
                         </TableCell>
                       </TableRow>
                     ))}

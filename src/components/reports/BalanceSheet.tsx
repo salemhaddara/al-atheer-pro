@@ -50,18 +50,18 @@ export function BalanceSheet() {
   };
 
   const assetDistribution = [
-    { name: 'النقد والأرصدة', value: balanceSheet.assets.current.cash, color: '#3b82f6' },
-    { name: 'المدينون', value: balanceSheet.assets.current.accountsReceivable, color: '#8b5cf6' },
-    { name: 'المخزون', value: balanceSheet.assets.current.inventory, color: '#10b981' },
-    { name: 'الأصول الثابتة', value: balanceSheet.assets.fixed.total, color: '#f59e0b' }
+    { name: t('accounting.balanceSheet.cashAndBalances'), value: balanceSheet.assets.current.cash, color: '#3b82f6' },
+    { name: t('accounting.balanceSheet.receivables'), value: balanceSheet.assets.current.accountsReceivable, color: '#8b5cf6' },
+    { name: t('accounting.balanceSheet.inventoryLabel'), value: balanceSheet.assets.current.inventory, color: '#10b981' },
+    { name: t('accounting.balanceSheet.fixedAssetsLabel'), value: balanceSheet.assets.fixed.total, color: '#f59e0b' }
   ];
 
   const comparisonData = [
-    { category: 'الأصول المتداولة', amount: balanceSheet.assets.current.total },
-    { category: 'الأصول الثابتة', amount: balanceSheet.assets.fixed.total },
-    { category: 'الخصوم المتداولة', amount: balanceSheet.liabilities.current.total },
-    { category: 'الخصوم طويلة الأجل', amount: balanceSheet.liabilities.longTerm.total },
-    { category: 'حقوق الملكية', amount: balanceSheet.equity.total }
+    { category: t('accounting.balanceSheet.currentAssets'), amount: balanceSheet.assets.current.total },
+    { category: t('accounting.balanceSheet.fixedAssets'), amount: balanceSheet.assets.fixed.total },
+    { category: t('accounting.balanceSheet.currentLiabilities'), amount: balanceSheet.liabilities.current.total },
+    { category: t('accounting.balanceSheet.longTermLiabilities'), amount: balanceSheet.liabilities.longTerm.total },
+    { category: t('accounting.balanceSheet.equity'), amount: balanceSheet.equity.total }
   ];
 
   const formatCurrency = (value: number) => {
@@ -74,28 +74,28 @@ export function BalanceSheet() {
 
   const stats = [
     {
-      title: 'إجمالي الأصول',
+      title: t('accounting.balanceSheet.totalAssets'),
       value: formatCurrency(balanceSheet.assets.total),
       icon: Building2,
       bgColor: 'bg-blue-50',
       color: 'text-blue-600'
     },
     {
-      title: 'إجمالي الخصوم',
+      title: t('accounting.balanceSheet.totalLiabilities'),
       value: formatCurrency(balanceSheet.liabilities.total),
       icon: Wallet,
       bgColor: 'bg-red-50',
       color: 'text-red-600'
     },
     {
-      title: 'حقوق الملكية',
+      title: t('accounting.balanceSheet.equity'),
       value: formatCurrency(balanceSheet.equity.total),
       icon: TrendingUp,
       bgColor: 'bg-green-50',
       color: 'text-green-600'
     },
     {
-      title: 'رأس المال العامل',
+      title: t('accounting.balanceSheet.workingCapital'),
       value: formatCurrency(balanceSheet.assets.current.total - balanceSheet.liabilities.current.total),
       icon: Package,
       bgColor: 'bg-purple-50',
@@ -107,16 +107,16 @@ export function BalanceSheet() {
     <div dir={direction}>
       {/* Header */}
       <div className="mb-8 flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-bold mb-2">الميزانية العمومية</h1>
-          <p className="text-gray-600">المركز المالي للشركة في تاريخ 30 يونيو 2025</p>
+        <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+          <h1 className="text-3xl font-bold mb-2">{t('accounting.balanceSheet.title')}</h1>
+          <p className="text-gray-600">{t('accounting.balanceSheet.subtitle').replace('{date}', '30 يونيو 2025')}</p>
         </div>
         <div className="flex gap-3">
           <Select defaultValue="2025-06">
             <SelectTrigger className="w-[180px]">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent dir={direction}>
               <SelectItem value="2025-06">يونيو 2025</SelectItem>
               <SelectItem value="2025-03">مارس 2025</SelectItem>
               <SelectItem value="2024-12">ديسمبر 2024</SelectItem>
@@ -124,7 +124,7 @@ export function BalanceSheet() {
           </Select>
           <Button className="gap-2">
             <Download className="w-4 h-4" />
-            تصدير التقرير
+            {t('accounting.balanceSheet.exportReport')}
           </Button>
         </div>
       </div>
@@ -140,7 +140,7 @@ export function BalanceSheet() {
                   <div className={`${stat.bgColor} ${stat.color} p-3 rounded-lg`}>
                     <Icon className="w-6 h-6" />
                   </div>
-                  <div className="text-right">
+                  <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                     <p className="text-sm text-gray-600 mb-1">{stat.title}</p>
                     <p className="text-2xl font-bold">{stat.value}</p>
                   </div>
@@ -154,12 +154,12 @@ export function BalanceSheet() {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <Card>
-          <CardHeader>
-            <CardTitle>توزيع الأصول</CardTitle>
-            <CardDescription>نسب الأصول حسب التصنيف</CardDescription>
+          <CardHeader dir={direction}>
+            <CardTitle>{t('accounting.balanceSheet.assetDistribution')}</CardTitle>
+            <CardDescription>{t('accounting.balanceSheet.assetDistributionDesc')}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div dir="rtl">
+            <div dir={direction}>
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
@@ -184,12 +184,12 @@ export function BalanceSheet() {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>مقارنة المكونات</CardTitle>
-            <CardDescription>الأصول، الخصوم، وحقوق الملكية</CardDescription>
+          <CardHeader dir={direction}>
+            <CardTitle>{t('accounting.balanceSheet.componentsComparison')}</CardTitle>
+            <CardDescription>{t('accounting.balanceSheet.componentsComparisonDesc')}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div dir="rtl">
+            <div dir={direction}>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={comparisonData} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" />
@@ -208,33 +208,33 @@ export function BalanceSheet() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Assets */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-blue-600">الأصول</CardTitle>
+          <CardHeader dir={direction}>
+            <CardTitle className="text-blue-600">{t('accounting.balanceSheet.assets')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {/* Current Assets */}
               <div>
-                <h3 className="font-semibold text-lg mb-3 text-blue-700">الأصول المتداولة</h3>
-                <div className="space-y-2 pr-4">
+                <h3 className={`font-semibold text-lg mb-3 text-blue-700 ${direction === 'rtl' ? 'text-right' : 'text-left'}`}>{t('accounting.balanceSheet.currentAssets')}</h3>
+                <div className={`space-y-2 ${direction === 'rtl' ? 'pr-4' : 'pl-4'}`}>
                   <div className="flex justify-between py-1">
-                    <span className="text-gray-700">النقد والأرصدة البنكية</span>
+                    <span className="text-gray-700">{t('accounting.balanceSheet.cashAndBankBalances')}</span>
                     <span className="font-medium">{formatCurrency(balanceSheet.assets.current.cash)}</span>
                   </div>
                   <div className="flex justify-between py-1">
-                    <span className="text-gray-700">المدينون والذمم المدينة</span>
+                    <span className="text-gray-700">{t('accounting.balanceSheet.accountsReceivable')}</span>
                     <span className="font-medium">{formatCurrency(balanceSheet.assets.current.accountsReceivable)}</span>
                   </div>
                   <div className="flex justify-between py-1">
-                    <span className="text-gray-700">المخزون</span>
+                    <span className="text-gray-700">{t('accounting.balanceSheet.inventory')}</span>
                     <span className="font-medium">{formatCurrency(balanceSheet.assets.current.inventory)}</span>
                   </div>
                   <div className="flex justify-between py-1">
-                    <span className="text-gray-700">مصروفات مدفوعة مقدماً</span>
+                    <span className="text-gray-700">{t('accounting.balanceSheet.prepaidExpenses')}</span>
                     <span className="font-medium">{formatCurrency(balanceSheet.assets.current.prepaidExpenses)}</span>
                   </div>
                   <div className="flex justify-between py-2 border-t-2 border-blue-200 mt-2">
-                    <span className="font-bold">إجمالي الأصول المتداولة</span>
+                    <span className="font-bold">{t('accounting.balanceSheet.totalCurrentAssets')}</span>
                     <span className="font-bold text-blue-600">{formatCurrency(balanceSheet.assets.current.total)}</span>
                   </div>
                 </div>
@@ -242,30 +242,30 @@ export function BalanceSheet() {
 
               {/* Fixed Assets */}
               <div>
-                <h3 className="font-semibold text-lg mb-3 text-blue-700">الأصول الثابتة</h3>
-                <div className="space-y-2 pr-4">
+                <h3 className={`font-semibold text-lg mb-3 text-blue-700 ${direction === 'rtl' ? 'text-right' : 'text-left'}`}>{t('accounting.balanceSheet.fixedAssets')}</h3>
+                <div className={`space-y-2 ${direction === 'rtl' ? 'pr-4' : 'pl-4'}`}>
                   <div className="flex justify-between py-1">
-                    <span className="text-gray-700">الأراضي</span>
+                    <span className="text-gray-700">{t('accounting.balanceSheet.land')}</span>
                     <span className="font-medium">{formatCurrency(balanceSheet.assets.fixed.land)}</span>
                   </div>
                   <div className="flex justify-between py-1">
-                    <span className="text-gray-700">المباني والمنشآت</span>
+                    <span className="text-gray-700">{t('accounting.balanceSheet.buildings')}</span>
                     <span className="font-medium">{formatCurrency(balanceSheet.assets.fixed.buildings)}</span>
                   </div>
                   <div className="flex justify-between py-1">
-                    <span className="text-gray-700">الآلات والمعدات</span>
+                    <span className="text-gray-700">{t('accounting.balanceSheet.equipment')}</span>
                     <span className="font-medium">{formatCurrency(balanceSheet.assets.fixed.equipment)}</span>
                   </div>
                   <div className="flex justify-between py-1">
-                    <span className="text-gray-700">السيارات والمركبات</span>
+                    <span className="text-gray-700">{t('accounting.balanceSheet.vehicles')}</span>
                     <span className="font-medium">{formatCurrency(balanceSheet.assets.fixed.vehicles)}</span>
                   </div>
                   <div className="flex justify-between py-1">
-                    <span className="text-gray-700 text-red-600">مجمع الإهلاك</span>
+                    <span className="text-gray-700 text-red-600">{t('accounting.balanceSheet.accumulatedDepreciation')}</span>
                     <span className="font-medium text-red-600">{formatCurrency(balanceSheet.assets.fixed.accumulatedDepreciation)}</span>
                   </div>
                   <div className="flex justify-between py-2 border-t-2 border-blue-200 mt-2">
-                    <span className="font-bold">إجمالي الأصول الثابتة</span>
+                    <span className="font-bold">{t('accounting.balanceSheet.totalFixedAssets')}</span>
                     <span className="font-bold text-blue-600">{formatCurrency(balanceSheet.assets.fixed.total)}</span>
                   </div>
                 </div>
@@ -274,7 +274,7 @@ export function BalanceSheet() {
               {/* Total Assets */}
               <div className="bg-blue-50 p-4 rounded-lg">
                 <div className="flex justify-between">
-                  <span className="font-bold text-xl">إجمالي الأصول</span>
+                  <span className="font-bold text-xl">{t('accounting.balanceSheet.totalAssetsLabel')}</span>
                   <span className="font-bold text-xl text-blue-600">{formatCurrency(balanceSheet.assets.total)}</span>
                 </div>
               </div>
@@ -284,29 +284,29 @@ export function BalanceSheet() {
 
         {/* Liabilities & Equity */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-red-600">الخصوم وحقوق الملكية</CardTitle>
+          <CardHeader dir={direction}>
+            <CardTitle className="text-red-600">{t('accounting.balanceSheet.liabilitiesAndEquity')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {/* Current Liabilities */}
               <div>
-                <h3 className="font-semibold text-lg mb-3 text-red-700">الخصوم المتداولة</h3>
-                <div className="space-y-2 pr-4">
+                <h3 className={`font-semibold text-lg mb-3 text-red-700 ${direction === 'rtl' ? 'text-right' : 'text-left'}`}>{t('accounting.balanceSheet.currentLiabilities')}</h3>
+                <div className={`space-y-2 ${direction === 'rtl' ? 'pr-4' : 'pl-4'}`}>
                   <div className="flex justify-between py-1">
-                    <span className="text-gray-700">الدائنون والذمم الدائنة</span>
+                    <span className="text-gray-700">{t('accounting.balanceSheet.accountsPayable')}</span>
                     <span className="font-medium">{formatCurrency(balanceSheet.liabilities.current.accountsPayable)}</span>
                   </div>
                   <div className="flex justify-between py-1">
-                    <span className="text-gray-700">قروض قصيرة الأجل</span>
+                    <span className="text-gray-700">{t('accounting.balanceSheet.shortTermLoans')}</span>
                     <span className="font-medium">{formatCurrency(balanceSheet.liabilities.current.shortTermLoans)}</span>
                   </div>
                   <div className="flex justify-between py-1">
-                    <span className="text-gray-700">مصروفات مستحقة</span>
+                    <span className="text-gray-700">{t('accounting.balanceSheet.accruedExpenses')}</span>
                     <span className="font-medium">{formatCurrency(balanceSheet.liabilities.current.accrued)}</span>
                   </div>
                   <div className="flex justify-between py-2 border-t-2 border-red-200 mt-2">
-                    <span className="font-bold">إجمالي الخصوم المتداولة</span>
+                    <span className="font-bold">{t('accounting.balanceSheet.totalCurrentLiabilities')}</span>
                     <span className="font-bold text-red-600">{formatCurrency(balanceSheet.liabilities.current.total)}</span>
                   </div>
                 </div>
@@ -314,18 +314,18 @@ export function BalanceSheet() {
 
               {/* Long-term Liabilities */}
               <div>
-                <h3 className="font-semibold text-lg mb-3 text-red-700">الخصوم طويلة الأجل</h3>
-                <div className="space-y-2 pr-4">
+                <h3 className={`font-semibold text-lg mb-3 text-red-700 ${direction === 'rtl' ? 'text-right' : 'text-left'}`}>{t('accounting.balanceSheet.longTermLiabilities')}</h3>
+                <div className={`space-y-2 ${direction === 'rtl' ? 'pr-4' : 'pl-4'}`}>
                   <div className="flex justify-between py-1">
-                    <span className="text-gray-700">قروض طويلة الأجل</span>
+                    <span className="text-gray-700">{t('accounting.balanceSheet.longTermLoans')}</span>
                     <span className="font-medium">{formatCurrency(balanceSheet.liabilities.longTerm.longTermLoans)}</span>
                   </div>
                   <div className="flex justify-between py-1">
-                    <span className="text-gray-700">سندات دين</span>
+                    <span className="text-gray-700">{t('accounting.balanceSheet.bonds')}</span>
                     <span className="font-medium">{formatCurrency(balanceSheet.liabilities.longTerm.bonds)}</span>
                   </div>
                   <div className="flex justify-between py-2 border-t-2 border-red-200 mt-2">
-                    <span className="font-bold">إجمالي الخصوم طويلة الأجل</span>
+                    <span className="font-bold">{t('accounting.balanceSheet.totalLongTermLiabilities')}</span>
                     <span className="font-bold text-red-600">{formatCurrency(balanceSheet.liabilities.longTerm.total)}</span>
                   </div>
                 </div>
@@ -334,29 +334,29 @@ export function BalanceSheet() {
               {/* Total Liabilities */}
               <div className="bg-red-50 p-3 rounded-lg">
                 <div className="flex justify-between">
-                  <span className="font-bold text-lg">إجمالي الخصوم</span>
+                  <span className="font-bold text-lg">{t('accounting.balanceSheet.totalLiabilitiesLabel')}</span>
                   <span className="font-bold text-lg text-red-600">{formatCurrency(balanceSheet.liabilities.total)}</span>
                 </div>
               </div>
 
               {/* Equity */}
               <div>
-                <h3 className="font-semibold text-lg mb-3 text-green-700">حقوق الملكية</h3>
-                <div className="space-y-2 pr-4">
+                <h3 className={`font-semibold text-lg mb-3 text-green-700 ${direction === 'rtl' ? 'text-right' : 'text-left'}`}>{t('accounting.balanceSheet.equitySection')}</h3>
+                <div className={`space-y-2 ${direction === 'rtl' ? 'pr-4' : 'pl-4'}`}>
                   <div className="flex justify-between py-1">
-                    <span className="text-gray-700">رأس المال</span>
+                    <span className="text-gray-700">{t('accounting.balanceSheet.capital')}</span>
                     <span className="font-medium">{formatCurrency(balanceSheet.equity.capital)}</span>
                   </div>
                   <div className="flex justify-between py-1">
-                    <span className="text-gray-700">أرباح محتجزة</span>
+                    <span className="text-gray-700">{t('accounting.balanceSheet.retainedEarnings')}</span>
                     <span className="font-medium">{formatCurrency(balanceSheet.equity.retainedEarnings)}</span>
                   </div>
                   <div className="flex justify-between py-1">
-                    <span className="text-gray-700">أرباح العام الحالي</span>
+                    <span className="text-gray-700">{t('accounting.balanceSheet.currentYearProfit')}</span>
                     <span className="font-medium">{formatCurrency(balanceSheet.equity.currentYearProfit)}</span>
                   </div>
                   <div className="flex justify-between py-2 border-t-2 border-green-200 mt-2">
-                    <span className="font-bold">إجمالي حقوق الملكية</span>
+                    <span className="font-bold">{t('accounting.balanceSheet.totalEquity')}</span>
                     <span className="font-bold text-green-600">{formatCurrency(balanceSheet.equity.total)}</span>
                   </div>
                 </div>
@@ -365,7 +365,7 @@ export function BalanceSheet() {
               {/* Total Liabilities & Equity */}
               <div className="bg-gray-100 p-4 rounded-lg border-2 border-gray-400">
                 <div className="flex justify-between">
-                  <span className="font-bold text-xl">إجمالي الخصوم وحقوق الملكية</span>
+                  <span className="font-bold text-xl">{t('accounting.balanceSheet.totalLiabilitiesAndEquity')}</span>
                   <span className="font-bold text-xl">{formatCurrency(balanceSheet.liabilities.total + balanceSheet.equity.total)}</span>
                 </div>
               </div>
@@ -373,14 +373,14 @@ export function BalanceSheet() {
               {/* Financial Ratios */}
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <div className="bg-blue-50 p-3 rounded-lg">
-                  <p className="text-xs text-gray-600 mb-1">نسبة التداول</p>
-                  <p className="text-lg font-bold text-blue-600">
+                  <p className={`text-xs text-gray-600 mb-1 ${direction === 'rtl' ? 'text-right' : 'text-left'}`}>{t('accounting.balanceSheet.currentRatio')}</p>
+                  <p className={`text-lg font-bold text-blue-600 ${direction === 'rtl' ? 'text-right' : 'text-left'}`}>
                     {(balanceSheet.assets.current.total / balanceSheet.liabilities.current.total).toFixed(2)}
                   </p>
                 </div>
                 <div className="bg-purple-50 p-3 rounded-lg">
-                  <p className="text-xs text-gray-600 mb-1">نسبة المديونية</p>
-                  <p className="text-lg font-bold text-purple-600">
+                  <p className={`text-xs text-gray-600 mb-1 ${direction === 'rtl' ? 'text-right' : 'text-left'}`}>{t('accounting.balanceSheet.debtRatio')}</p>
+                  <p className={`text-lg font-bold text-purple-600 ${direction === 'rtl' ? 'text-right' : 'text-left'}`}>
                     {((balanceSheet.liabilities.total / balanceSheet.assets.total) * 100).toFixed(1)}%
                   </p>
                 </div>

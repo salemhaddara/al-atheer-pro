@@ -27,8 +27,10 @@ import {
   type AccountWithChildren
 } from '../data/chartOfAccounts';
 import { getAllJournalEntries } from '../data/journalEntries';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export function ChartOfAccounts() {
+  const { t, direction } = useLanguage();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
@@ -150,27 +152,27 @@ export function ChartOfAccounts() {
   };
 
   const handleDelete = (account: Account) => {
-    if (!confirm(`هل أنت متأكد من حذف الحساب "${account.name}"؟`)) return;
+    if (!confirm(t('accounting.deleteConfirm').replace('{name}', account.name))) return;
 
     // Check if account is used in journal entries
     const journalEntries = getAllJournalEntries();
     if (isAccountUsed(account.code, journalEntries)) {
-      toast.error('لا يمكن حذف الحساب لأنه مستخدم في قيود محاسبية');
+      toast.error(t('accounting.cannotDeleteUsed'));
       return;
     }
 
     try {
       deleteAccount(account.id);
       setAccounts(loadAccounts());
-      toast.success('تم حذف الحساب بنجاح');
+      toast.success(t('accounting.accountDeleted'));
     } catch (error: any) {
-      toast.error(error.message || 'فشل حذف الحساب');
+      toast.error(error.message || t('accounting.deleteFailed'));
     }
   };
 
   const handleSave = () => {
     if (!formData.code.trim() || !formData.name.trim()) {
-      toast.error('يرجى ملء جميع الحقول المطلوبة');
+      toast.error(t('accounting.fillRequiredFields'));
       return;
     }
 
@@ -204,17 +206,17 @@ export function ChartOfAccounts() {
     try {
       if (editingAccount) {
         updateAccount(editingAccount.id, accountData);
-        toast.success('تم تحديث الحساب بنجاح');
+        toast.success(t('accounting.accountUpdated'));
       } else {
         addAccount(accountData);
-        toast.success('تم إضافة الحساب بنجاح');
+        toast.success(t('accounting.accountAdded'));
       }
 
       setAccounts(loadAccounts());
       setIsDialogOpen(false);
       setEditingAccount(null);
     } catch (error: any) {
-      toast.error(error.message || 'فشل حفظ الحساب');
+      toast.error(error.message || t('accounting.saveFailed'));
     }
   };
 
@@ -247,7 +249,7 @@ export function ChartOfAccounts() {
       <React.Fragment key={account.id}>
         <TableRow
           className={level > 0 ? 'bg-gray-50' : ''}
-          style={{ paddingRight: `${level * 2}rem` }}
+          style={{ [direction === 'rtl' ? 'paddingRight' : 'paddingLeft']: `${level * 2}rem` }}
         >
           <TableCell>
             {hasChildren ? (
@@ -268,7 +270,7 @@ export function ChartOfAccounts() {
             )}
           </TableCell>
           <TableCell className="font-mono text-sm">{account.code}</TableCell>
-          <TableCell style={{ paddingRight: `${level * 1.5 + 0.5}rem` }}>
+          <TableCell style={{ [direction === 'rtl' ? 'paddingRight' : 'paddingLeft']: `${level * 1.5 + 0.5}rem` }}>
             <div className="flex items-center gap-2">
               {hasChildren ? (
                 isExpanded ? (
@@ -290,7 +292,7 @@ export function ChartOfAccounts() {
               {account.nature}
             </Badge>
           </TableCell>
-          <TableCell className="text-right">
+          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
             {balance >= 0 ? (
               <span className="text-green-600 font-semibold">
                 {balance.toLocaleString('ar-SA')} ر.س
@@ -303,7 +305,7 @@ export function ChartOfAccounts() {
           </TableCell>
           <TableCell>
             <Badge variant={account.isActive ? 'default' : 'secondary'}>
-              {account.isActive ? 'نشط' : 'معطل'}
+              {account.isActive ? t('accounting.accountActive') : t('accounting.accountInactive')}
             </Badge>
           </TableCell>
           <TableCell>
@@ -312,7 +314,7 @@ export function ChartOfAccounts() {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleEdit(account)}
-                title="تعديل"
+                title={t('accounting.accountEdit')}
               >
                 <Edit className="w-4 h-4" />
               </Button>
@@ -321,7 +323,7 @@ export function ChartOfAccounts() {
                   variant="ghost"
                   size="sm"
                   onClick={() => handleDelete(account)}
-                  title="حذف"
+                  title={t('accounting.accountDelete')}
                   className="text-red-600 hover:text-red-700"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -341,16 +343,16 @@ export function ChartOfAccounts() {
   }, [accounts]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" dir={direction}>
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1>شجرة الحسابات</h1>
-          <p className="text-gray-600">إدارة وتنظيم الحسابات المحاسبية</p>
+        <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+          <h1>{t('accounting.chartOfAccountsTitle')}</h1>
+          <p className="text-gray-600">{t('accounting.chartOfAccountsSubtitle')}</p>
         </div>
         <Button onClick={handleAddNew} className="gap-2">
           <Plus className="w-4 h-4" />
-          إضافة حساب جديد
+          {t('accounting.addNewAccount')}
         </Button>
       </div>
 
@@ -359,26 +361,26 @@ export function ChartOfAccounts() {
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="relative">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className={`absolute ${direction === 'rtl' ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400`} />
               <Input
-                placeholder="ابحث بالاسم أو الرمز..."
+                placeholder={t('accounting.searchByNameOrCode')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pr-10"
-                dir="rtl"
+                className={direction === 'rtl' ? 'pr-10' : 'pl-10'}
+                dir={direction}
               />
             </div>
             <Select value={filterType} onValueChange={(value: AccountType | 'all') => setFilterType(value)}>
               <SelectTrigger>
-                <SelectValue placeholder="تصفية حسب النوع" />
+                <SelectValue placeholder={t('accounting.filterByType')} />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">جميع الأنواع</SelectItem>
-                <SelectItem value="أصول">أصول</SelectItem>
-                <SelectItem value="خصوم">خصوم</SelectItem>
-                <SelectItem value="حقوق_ملكية">حقوق ملكية</SelectItem>
-                <SelectItem value="إيرادات">إيرادات</SelectItem>
-                <SelectItem value="مصروفات">مصروفات</SelectItem>
+              <SelectContent dir={direction}>
+                <SelectItem value="all">{t('accounting.allAccountTypes')}</SelectItem>
+                <SelectItem value="أصول">{t('accounting.accountTypes.assets')}</SelectItem>
+                <SelectItem value="خصوم">{t('accounting.accountTypes.liabilities')}</SelectItem>
+                <SelectItem value="حقوق_ملكية">{t('accounting.accountTypes.equity')}</SelectItem>
+                <SelectItem value="إيرادات">{t('accounting.accountTypes.revenue')}</SelectItem>
+                <SelectItem value="مصروفات">{t('accounting.accountTypes.expenses')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -387,23 +389,23 @@ export function ChartOfAccounts() {
 
       {/* Accounts Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>قائمة الحسابات</CardTitle>
-          <CardDescription>جميع الحسابات مع أرصدتها الحالية</CardDescription>
+        <CardHeader dir={direction}>
+          <CardTitle>{t('accounting.accountsList')}</CardTitle>
+          <CardDescription>{t('accounting.accountsListDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="border rounded-lg overflow-hidden">
-            <Table>
+            <Table dir={direction}>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12"></TableHead>
-                  <TableHead className="text-right">الرمز</TableHead>
-                  <TableHead className="text-right">اسم الحساب</TableHead>
-                  <TableHead className="text-right">النوع</TableHead>
-                  <TableHead className="text-right">الطبيعة</TableHead>
-                  <TableHead className="text-right">الرصيد</TableHead>
-                  <TableHead className="text-right">الحالة</TableHead>
-                  <TableHead className="text-right w-24">إجراءات</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.accountCodeShort')}</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.accountName')}</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.accountType')}</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.accountNature')}</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.balance')}</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('accounting.accountStatus')}</TableHead>
+                  <TableHead className={`${direction === 'rtl' ? 'text-right' : 'text-left'} w-24`}>{t('accounting.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -412,7 +414,7 @@ export function ChartOfAccounts() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-8 text-gray-500">
-                      لا توجد حسابات
+                      {t('accounting.noAccounts')}
                     </TableCell>
                   </TableRow>
                 )}
@@ -424,46 +426,47 @@ export function ChartOfAccounts() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl" dir="rtl">
-          <DialogHeader>
-            <DialogTitle>{editingAccount ? 'تعديل الحساب' : 'إضافة حساب جديد'}</DialogTitle>
+        <DialogContent className="max-w-2xl" dir={direction}>
+          <DialogHeader dir={direction}>
+            <DialogTitle>{editingAccount ? t('accounting.editAccount') : t('accounting.addAccount')}</DialogTitle>
             <DialogDescription>
-              {editingAccount ? 'تعديل بيانات الحساب' : 'إضافة حساب جديد إلى شجرة الحسابات'}
+              {editingAccount ? t('accounting.editAccountDesc') : t('accounting.addAccountDesc')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>رمز الحساب *</Label>
+                <Label>{t('accounting.accountCodeLabel')}</Label>
                 <Input
                   value={formData.code}
                   onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                  placeholder="مثال: 1010"
+                  placeholder={t('accounting.accountCodePlaceholder')}
                   className="font-mono"
                   dir="ltr"
                 />
               </div>
               <div className="space-y-2">
-                <Label>اسم الحساب *</Label>
+                <Label>{t('accounting.accountNameLabel')}</Label>
                 <Input
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="مثال: الصندوق"
-                  className="text-right"
+                  placeholder={t('accounting.accountNamePlaceholder')}
+                  className={direction === 'rtl' ? 'text-right' : 'text-left'}
+                  dir={direction}
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>الحساب الأب</Label>
+                <Label>{t('accounting.parentAccount')}</Label>
                 <Select value={formData.parentId || 'none'} onValueChange={handleParentChange}>
                   <SelectTrigger>
-                    <SelectValue placeholder="اختر الحساب الأب (اختياري)" />
+                    <SelectValue placeholder={t('accounting.parentAccountPlaceholder')} />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">حساب رئيسي</SelectItem>
+                  <SelectContent dir={direction}>
+                    <SelectItem value="none">{t('accounting.mainAccount')}</SelectItem>
                     {parentOptions.map(acc => (
                       <SelectItem key={acc.id} value={acc.id}>
                         {acc.code} - {acc.name}
@@ -473,7 +476,7 @@ export function ChartOfAccounts() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>نوع الحساب *</Label>
+                <Label>{t('accounting.accountTypeLabel')}</Label>
                 <Select
                   value={formData.type}
                   onValueChange={(value: AccountType) => {
@@ -487,12 +490,12 @@ export function ChartOfAccounts() {
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="أصول">أصول</SelectItem>
-                    <SelectItem value="خصوم">خصوم</SelectItem>
-                    <SelectItem value="حقوق_ملكية">حقوق ملكية</SelectItem>
-                    <SelectItem value="إيرادات">إيرادات</SelectItem>
-                    <SelectItem value="مصروفات">مصروفات</SelectItem>
+                  <SelectContent dir={direction}>
+                    <SelectItem value="أصول">{t('accounting.accountTypes.assets')}</SelectItem>
+                    <SelectItem value="خصوم">{t('accounting.accountTypes.liabilities')}</SelectItem>
+                    <SelectItem value="حقوق_ملكية">{t('accounting.accountTypes.equity')}</SelectItem>
+                    <SelectItem value="إيرادات">{t('accounting.accountTypes.revenue')}</SelectItem>
+                    <SelectItem value="مصروفات">{t('accounting.accountTypes.expenses')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -500,7 +503,7 @@ export function ChartOfAccounts() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>طبيعة الحساب *</Label>
+                <Label>{t('accounting.accountNatureLabel')}</Label>
                 <Select
                   value={formData.nature}
                   onValueChange={(value: 'مدين' | 'دائن') => setFormData({ ...formData, nature: value })}
@@ -508,31 +511,33 @@ export function ChartOfAccounts() {
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="مدين">مدين</SelectItem>
-                    <SelectItem value="دائن">دائن</SelectItem>
+                  <SelectContent dir={direction}>
+                    <SelectItem value="مدين">{t('accounting.accountNatures.debit')}</SelectItem>
+                    <SelectItem value="دائن">{t('accounting.accountNatures.credit')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>الرصيد الافتتاحي</Label>
+                <Label>{t('accounting.openingBalance')}</Label>
                 <Input
                   type="number"
                   value={formData.openingBalance}
                   onChange={(e) => setFormData({ ...formData, openingBalance: Number(e.target.value) })}
                   placeholder="0"
                   step="0.01"
+                  dir="ltr"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>الوصف</Label>
+              <Label>{t('accounting.accountDescription')}</Label>
               <Input
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="وصف الحساب (اختياري)"
-                className="text-right"
+                placeholder={t('accounting.accountDescriptionPlaceholder')}
+                className={direction === 'rtl' ? 'text-right' : 'text-left'}
+                dir={direction}
               />
             </div>
 
@@ -543,16 +548,16 @@ export function ChartOfAccounts() {
                 onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
                 className="w-4 h-4"
               />
-              <Label>الحساب نشط</Label>
+              <Label>{t('accounting.accountIsActive')}</Label>
             </div>
           </div>
 
           <div className="flex gap-3 pt-4 border-t">
             <Button onClick={() => setIsDialogOpen(false)} variant="outline" className="flex-1">
-              إلغاء
+              {t('accounting.accountCancel')}
             </Button>
             <Button onClick={handleSave} className="flex-1">
-              {editingAccount ? 'حفظ التعديلات' : 'إضافة الحساب'}
+              {editingAccount ? t('accounting.accountSaveChanges') : t('accounting.addAccountButton')}
             </Button>
           </div>
         </DialogContent>

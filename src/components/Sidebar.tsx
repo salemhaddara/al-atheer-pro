@@ -30,12 +30,15 @@ import {
   Landmark,
   CalendarClock,
   BookOpen,
-  MapPin as MapPinIcon
+  MapPin as MapPinIcon,
+  Search,
+  X
 } from 'lucide-react';
 import { useState, useMemo, useCallback, memo, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Input } from './ui/input';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useUser } from '../contexts/UserContext';
 
@@ -104,12 +107,24 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
     return false;
   });
   const [expandedSections, setExpandedSections] = useState<string[]>(['accounting', 'sales']);
+  const [searchQuery, setSearchQuery] = useState('');
   const [currentBranch, setCurrentBranch] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('current_branch') || 'الفرع الرئيسي';
+      return localStorage.getItem('current_branch') || '';
     }
-    return 'الفرع الرئيسي';
+    return '';
   });
+
+  // Update currentBranch with translation when language changes (only if no saved branch)
+  useEffect(() => {
+    const savedBranch = typeof window !== 'undefined' ? localStorage.getItem('current_branch') : null;
+    if (!savedBranch) {
+      setCurrentBranch(t('sidebar.mainBranch'));
+    } else if (currentBranch === 'الفرع الرئيسي' || currentBranch === 'Main Branch') {
+      // Update if it's the old default value
+      setCurrentBranch(t('sidebar.mainBranch'));
+    }
+  }, [t]); // Only depend on t to avoid infinite loop
 
   // Use controlled state if provided, otherwise use internal state
   const isCollapsed = controlledCollapsed !== undefined ? controlledCollapsed : internalCollapsed;
@@ -165,11 +180,11 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
         adminOnly: true,
         items: [
           { id: 'accounting', label: t('sidebar.menu.accounting'), icon: Receipt, adminOnly: true },
-          { id: 'chart-of-accounts', label: 'شجرة الحسابات', icon: BookOpen, adminOnly: true },
-          { id: 'account-statements', label: 'كشوفات الحسابات', icon: FileText, adminOnly: true },
-          { id: 'receipt-vouchers', label: 'سندات القبض', icon: TrendingUp, adminOnly: true },
-          { id: 'payment-vouchers', label: 'سندات الصرف', icon: TrendingDown, adminOnly: true },
-          { id: 'trial-balance', label: 'ميزان المراجعة', icon: Calculator, adminOnly: true },
+          { id: 'chart-of-accounts', label: t('sidebar.menu.chartOfAccounts'), icon: BookOpen, adminOnly: true },
+          { id: 'account-statements', label: t('sidebar.menu.accountStatements'), icon: FileText, adminOnly: true },
+          { id: 'receipt-vouchers', label: t('sidebar.menu.receiptVouchers'), icon: TrendingUp, adminOnly: true },
+          { id: 'payment-vouchers', label: t('sidebar.menu.paymentVouchers'), icon: TrendingDown, adminOnly: true },
+          { id: 'trial-balance', label: t('sidebar.menu.trialBalance'), icon: Calculator, adminOnly: true },
           { id: 'balance-sheet', label: t('sidebar.menu.balanceSheet'), icon: Receipt, adminOnly: true },
         ]
       },
@@ -181,9 +196,9 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
         items: [
           { id: 'purchases', label: t('sidebar.menu.purchases'), icon: ShoppingBag, adminOnly: true },
           { id: 'pos', label: t('sidebar.menu.pos'), icon: Store, adminOnly: false },
-          { id: 'pos-management', label: 'إدارة نقاط البيع والدرج', icon: Wallet, adminOnly: false },
-          { id: 'quotations', label: 'عروض الأسعار', icon: FileText, adminOnly: false },
-          { id: 'price-inquiry', label: 'شاشة الأسعار (للعملاء)', icon: Package, adminOnly: false },
+          { id: 'pos-management', label: t('sidebar.menu.posManagement'), icon: Wallet, adminOnly: false },
+          { id: 'quotations', label: t('sidebar.menu.quotations'), icon: FileText, adminOnly: false },
+          { id: 'price-inquiry', label: t('sidebar.menu.priceInquiry'), icon: Package, adminOnly: false },
         ]
       },
       {
@@ -206,7 +221,7 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
         adminOnly: true,
         items: [
           { id: 'warehouses', label: t('sidebar.menu.warehouses'), icon: Warehouse, adminOnly: true },
-          { id: 'opening-inventory', label: 'مخزون أول المدة', icon: Package, adminOnly: true },
+          { id: 'opening-inventory', label: t('sidebar.menu.openingInventory'), icon: Package, adminOnly: true },
           { id: 'products', label: t('sidebar.menu.products'), icon: Package, adminOnly: true },
           { id: 'services', label: t('sidebar.menu.services'), icon: Briefcase, adminOnly: true },
         ]
@@ -219,7 +234,7 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
         adminOnly: true,
         items: [
           { id: 'safes', label: t('sidebar.menu.safes'), icon: DollarSign, adminOnly: true },
-          { id: 'banks-pos', label: 'إدارة البنوك والصرافات', icon: Landmark, adminOnly: true },
+          { id: 'banks-pos', label: t('sidebar.menu.banksPos'), icon: Landmark, adminOnly: true },
         ]
       },
       {
@@ -241,9 +256,9 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
         adminOnly: false,
         items: [
           { id: 'customers', label: t('sidebar.menu.customers'), icon: Users, adminOnly: false },
-          { id: 'customer-statements', label: 'كشوف العملاء', icon: FileText, adminOnly: true },
+          { id: 'customer-statements', label: t('sidebar.menu.customerStatements'), icon: FileText, adminOnly: true },
           { id: 'suppliers', label: t('sidebar.menu.suppliers'), icon: Users2, adminOnly: true },
-          { id: 'vendor-statements', label: 'كشوف الموردين', icon: FileText, adminOnly: true },
+          { id: 'vendor-statements', label: t('sidebar.menu.vendorStatements'), icon: FileText, adminOnly: true },
         ]
       },
       {
@@ -279,19 +294,39 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
     ];
 
     // Filter sections based on user role
-    if (isAdmin()) {
-      return allSections;
+    let filteredSections = isAdmin() 
+      ? allSections 
+      : allSections
+          .filter(section => !section.adminOnly)
+          .map(section => ({
+            ...section,
+            items: section.items?.filter(item => !item.adminOnly) || []
+          }))
+          .filter(section => section.items && section.items.length > 0);
+
+    // Filter by search query if provided
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filteredSections = filteredSections
+        .map(section => {
+          const matchingItems = section.items?.filter(item => 
+            item.label.toLowerCase().includes(query) ||
+            section.label.toLowerCase().includes(query)
+          ) || [];
+          
+          return {
+            ...section,
+            items: matchingItems
+          };
+        })
+        .filter(section => 
+          section.items && section.items.length > 0 ||
+          section.label.toLowerCase().includes(query)
+        );
     }
 
-    // For employees, filter out admin-only sections and items
-    return allSections
-      .filter(section => !section.adminOnly)
-      .map(section => ({
-        ...section,
-        items: section.items?.filter(item => !item.adminOnly) || []
-      }))
-      .filter(section => section.items && section.items.length > 0);
-  }, [t, isAdmin]);
+    return filteredSections;
+  }, [t, isAdmin, searchQuery]);
 
   return (
     <div
@@ -410,6 +445,32 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
         </div>
       )}
 
+      {/* Search Bar */}
+      {!isCollapsed && (
+        <div className="p-4 border-b border-gray-200">
+          <div className="relative">
+            <Search className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 ${direction === 'rtl' ? 'right-3' : 'left-3'}`} />
+            <Input
+              type="text"
+              placeholder={t('sidebar.search') || 'ابحث في القائمة...'}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={`${direction === 'rtl' ? (searchQuery ? 'pr-10 pl-10' : 'pr-10') : (searchQuery ? 'pl-10 pr-10' : 'pl-10')}`}
+              dir={direction}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 hover:text-gray-600 ${direction === 'rtl' ? 'left-3' : 'right-3'}`}
+                aria-label="Clear search"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <nav className={`${isCollapsed ? 'px-2 py-3 overflow-visible' : 'p-4'}`}>
         {menuSections.map((section, sectionIndex) => {
           const SectionIcon = section.icon;
@@ -454,6 +515,9 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
           }
 
           // When expanded, show sections with expandable functionality
+          // Auto-expand sections when searching
+          const shouldExpand = searchQuery.trim() ? true : isExpanded;
+          
           return (
             <div key={section.id} className="mb-2">
               {section.expandable && SectionIcon ? (
@@ -465,11 +529,11 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
                     <SectionIcon className="w-4 h-4" />
                     <span className="text-sm">{section.label}</span>
                   </div>
-                  <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`w-4 h-4 transition-transform ${shouldExpand ? 'rotate-180' : ''}`} />
                 </button>
               ) : null}
 
-              {(!section.expandable || isExpanded) && (
+              {(!section.expandable || shouldExpand) && (
                 <div className={section.expandable ? (direction === 'rtl' ? 'mr-4 mt-1' : 'ml-4 mt-1') : ''}>
                   {section.items.map((item) => {
                     const Icon = item.icon;
