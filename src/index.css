@@ -59,7 +59,7 @@
 
 @layer theme {
   :root, :host {
-    --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    --font-sans: var(--font-tajawal);
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     --color-red-50: oklch(.971 .013 17.38);
     --color-red-100: oklch(.936 .032 17.717);
@@ -155,7 +155,7 @@
     -webkit-text-size-adjust: 100%;
     tab-size: 4;
     line-height: 1.5;
-    font-family: var(--default-font-family, ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji");
+    font-family: var(--font-sans);
     font-feature-settings: var(--default-font-feature-settings, normal);
     font-variation-settings: var(--default-font-variation-settings, normal);
     -webkit-tap-highlight-color: transparent;
@@ -163,6 +163,7 @@
 
   body {
     line-height: inherit;
+    font-family: inherit;
   }
 
   hr {
@@ -1517,6 +1518,10 @@
     vertical-align: middle;
   }
 
+  .font-sans {
+    font-family: var(--font-sans);
+  }
+
   .font-mono {
     font-family: var(--font-mono);
   }
@@ -2550,6 +2555,7 @@
 
 :root {
   --font-size: 16px;
+  --font-sans: var(--font-tajawal);
   --background: #fff;
   --foreground: oklch(.145 0 0);
   --card: #fff;
@@ -2590,6 +2596,7 @@
 }
 
 .dark {
+  --font-sans: var(--font-tajawal);
   --background: oklch(.145 0 0);
   --foreground: oklch(.985 0 0);
   --card: oklch(.145 0 0);

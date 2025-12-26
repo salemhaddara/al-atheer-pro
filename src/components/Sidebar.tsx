@@ -32,7 +32,8 @@ import {
   BookOpen,
   MapPin as MapPinIcon,
   Search,
-  X
+  X,
+  LogOut
 } from 'lucide-react';
 import { useState, useMemo, useCallback, memo, useEffect } from 'react';
 import Link from 'next/link';
@@ -96,7 +97,7 @@ const routeMap: Record<string, string> = {
 
 export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, isCollapsed: controlledCollapsed, onToggle }: SidebarProps) {
   const { t, direction } = useLanguage();
-  const { isAdmin, currentUser } = useUser();
+  const { currentUser, logout } = useUser();
   const pathname = usePathname();
   const router = useRouter();
   const [internalCollapsed, setInternalCollapsed] = useState(() => {
@@ -169,7 +170,7 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
         id: 'main',
         label: t('sidebar.sections.main'),
         items: [
-          { id: 'dashboard', label: t('sidebar.menu.dashboard'), icon: LayoutDashboard, adminOnly: false },
+          { id: 'dashboard', label: t('sidebar.menu.dashboard'), icon: LayoutDashboard },
         ]
       },
       {
@@ -177,15 +178,14 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
         label: t('sidebar.sections.accounting'),
         icon: Calculator,
         expandable: true,
-        adminOnly: true,
         items: [
-          { id: 'accounting', label: t('sidebar.menu.accounting'), icon: Receipt, adminOnly: true },
-          { id: 'chart-of-accounts', label: t('sidebar.menu.chartOfAccounts'), icon: BookOpen, adminOnly: true },
-          { id: 'account-statements', label: t('sidebar.menu.accountStatements'), icon: FileText, adminOnly: true },
-          { id: 'receipt-vouchers', label: t('sidebar.menu.receiptVouchers'), icon: TrendingUp, adminOnly: true },
-          { id: 'payment-vouchers', label: t('sidebar.menu.paymentVouchers'), icon: TrendingDown, adminOnly: true },
-          { id: 'trial-balance', label: t('sidebar.menu.trialBalance'), icon: Calculator, adminOnly: true },
-          { id: 'balance-sheet', label: t('sidebar.menu.balanceSheet'), icon: Receipt, adminOnly: true },
+          { id: 'accounting', label: t('sidebar.menu.accounting'), icon: Receipt },
+          { id: 'chart-of-accounts', label: t('sidebar.menu.chartOfAccounts'), icon: BookOpen },
+          { id: 'account-statements', label: t('sidebar.menu.accountStatements'), icon: FileText },
+          { id: 'receipt-vouchers', label: t('sidebar.menu.receiptVouchers'), icon: TrendingUp },
+          { id: 'payment-vouchers', label: t('sidebar.menu.paymentVouchers'), icon: TrendingDown },
+          { id: 'trial-balance', label: t('sidebar.menu.trialBalance'), icon: Calculator },
+          { id: 'balance-sheet', label: t('sidebar.menu.balanceSheet'), icon: Receipt },
         ]
       },
       {
@@ -194,11 +194,11 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
         icon: ShoppingCart,
         expandable: true,
         items: [
-          { id: 'purchases', label: t('sidebar.menu.purchases'), icon: ShoppingBag, adminOnly: true },
-          { id: 'pos', label: t('sidebar.menu.pos'), icon: Store, adminOnly: false },
-          { id: 'pos-management', label: t('sidebar.menu.posManagement'), icon: Wallet, adminOnly: false },
-          { id: 'quotations', label: t('sidebar.menu.quotations'), icon: FileText, adminOnly: false },
-          { id: 'price-inquiry', label: t('sidebar.menu.priceInquiry'), icon: Package, adminOnly: false },
+          { id: 'purchases', label: t('sidebar.menu.purchases'), icon: ShoppingBag },
+          { id: 'pos', label: t('sidebar.menu.pos'), icon: Store },
+          { id: 'pos-management', label: t('sidebar.menu.posManagement'), icon: Wallet },
+          { id: 'quotations', label: t('sidebar.menu.quotations'), icon: FileText },
+          { id: 'price-inquiry', label: t('sidebar.menu.priceInquiry'), icon: Package },
         ]
       },
       {
@@ -206,11 +206,10 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
         label: t('sidebar.sections.hr'),
         icon: Users2,
         expandable: true,
-        adminOnly: true,
         items: [
-          { id: 'hr', label: t('sidebar.menu.hr'), icon: Briefcase, adminOnly: true },
-          { id: 'employees', label: t('sidebar.menu.employees'), icon: UserCircle, adminOnly: true },
-          { id: 'shifts', label: t('sidebar.menu.shifts'), icon: CalendarClock, adminOnly: true },
+          { id: 'hr', label: t('sidebar.menu.hr'), icon: Briefcase },
+          { id: 'employees', label: t('sidebar.menu.employees'), icon: UserCircle },
+          { id: 'shifts', label: t('sidebar.menu.shifts'), icon: CalendarClock },
         ]
       },
       {
@@ -218,12 +217,11 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
         label: t('sidebar.sections.warehouses'),
         icon: Warehouse,
         expandable: true,
-        adminOnly: true,
         items: [
-          { id: 'warehouses', label: t('sidebar.menu.warehouses'), icon: Warehouse, adminOnly: true },
-          { id: 'opening-inventory', label: t('sidebar.menu.openingInventory'), icon: Package, adminOnly: true },
-          { id: 'products', label: t('sidebar.menu.products'), icon: Package, adminOnly: true },
-          { id: 'services', label: t('sidebar.menu.services'), icon: Briefcase, adminOnly: true },
+          { id: 'warehouses', label: t('sidebar.menu.warehouses'), icon: Warehouse },
+          { id: 'opening-inventory', label: t('sidebar.menu.openingInventory'), icon: Package },
+          { id: 'products', label: t('sidebar.menu.products'), icon: Package },
+          { id: 'services', label: t('sidebar.menu.services'), icon: Briefcase },
         ]
       },
       {
@@ -231,10 +229,9 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
         label: t('sidebar.sections.financialAccounts'),
         icon: DollarSign,
         expandable: true,
-        adminOnly: true,
         items: [
-          { id: 'safes', label: t('sidebar.menu.safes'), icon: DollarSign, adminOnly: true },
-          { id: 'banks-pos', label: t('sidebar.menu.banksPos'), icon: Landmark, adminOnly: true },
+          { id: 'safes', label: t('sidebar.menu.safes'), icon: DollarSign },
+          { id: 'banks-pos', label: t('sidebar.menu.banksPos'), icon: Landmark },
         ]
       },
       {
@@ -242,10 +239,9 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
         label: t('sidebar.sections.companies'),
         icon: Building2,
         expandable: true,
-        adminOnly: true,
         items: [
-          { id: 'companies', label: t('sidebar.menu.companies'), icon: Building2, adminOnly: true },
-          { id: 'branches', label: t('sidebar.menu.branches'), icon: MapPin, adminOnly: true },
+          { id: 'companies', label: t('sidebar.menu.companies'), icon: Building2 },
+          { id: 'branches', label: t('sidebar.menu.branches'), icon: MapPin },
         ]
       },
       {
@@ -253,12 +249,11 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
         label: t('sidebar.sections.customers'),
         icon: Users,
         expandable: true,
-        adminOnly: false,
         items: [
-          { id: 'customers', label: t('sidebar.menu.customers'), icon: Users, adminOnly: false },
-          { id: 'customer-statements', label: t('sidebar.menu.customerStatements'), icon: FileText, adminOnly: true },
-          { id: 'suppliers', label: t('sidebar.menu.suppliers'), icon: Users2, adminOnly: true },
-          { id: 'vendor-statements', label: t('sidebar.menu.vendorStatements'), icon: FileText, adminOnly: true },
+          { id: 'customers', label: t('sidebar.menu.customers'), icon: Users },
+          { id: 'customer-statements', label: t('sidebar.menu.customerStatements'), icon: FileText },
+          { id: 'suppliers', label: t('sidebar.menu.suppliers'), icon: Users2 },
+          { id: 'vendor-statements', label: t('sidebar.menu.vendorStatements'), icon: FileText },
         ]
       },
       {
@@ -266,17 +261,16 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
         label: t('sidebar.sections.reports'),
         icon: BarChart3,
         expandable: true,
-        adminOnly: true,
         items: [
-          { id: 'invoices', label: t('sidebar.menu.invoices'), icon: FileText, adminOnly: true },
-          { id: 'financial-reports', label: t('sidebar.menu.financialReports'), icon: Calculator, adminOnly: true },
-          { id: 'profit-loss', label: t('sidebar.menu.profitLoss'), icon: TrendingUp, adminOnly: true },
-          { id: 'cash-flow', label: t('sidebar.menu.cashFlow'), icon: Wallet, adminOnly: true },
-          { id: 'purchase-reports', label: t('sidebar.menu.purchaseReports'), icon: ShoppingBag, adminOnly: true },
-          { id: 'inventory-reports', label: t('sidebar.menu.inventoryReports'), icon: PackageCheck, adminOnly: true },
-          { id: 'customer-reports', label: t('sidebar.menu.customerReports'), icon: Users, adminOnly: true },
-          { id: 'supplier-reports', label: t('sidebar.menu.supplierReports'), icon: Users2, adminOnly: true },
-          { id: 'tax-reports', label: t('sidebar.menu.taxReports'), icon: CreditCard, adminOnly: true },
+          { id: 'invoices', label: t('sidebar.menu.invoices'), icon: FileText },
+          { id: 'financial-reports', label: t('sidebar.menu.financialReports'), icon: Calculator },
+          { id: 'profit-loss', label: t('sidebar.menu.profitLoss'), icon: TrendingUp },
+          { id: 'cash-flow', label: t('sidebar.menu.cashFlow'), icon: Wallet },
+          { id: 'purchase-reports', label: t('sidebar.menu.purchaseReports'), icon: ShoppingBag },
+          { id: 'inventory-reports', label: t('sidebar.menu.inventoryReports'), icon: PackageCheck },
+          { id: 'customer-reports', label: t('sidebar.menu.customerReports'), icon: Users },
+          { id: 'supplier-reports', label: t('sidebar.menu.supplierReports'), icon: Users2 },
+          { id: 'tax-reports', label: t('sidebar.menu.taxReports'), icon: CreditCard },
         ]
       },
       {
@@ -284,49 +278,38 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
         label: t('sidebar.sections.settings'),
         icon: SettingsIcon,
         expandable: true,
-        adminOnly: true,
         items: [
-          { id: 'settings', label: t('sidebar.menu.settingsGeneral'), icon: SettingsIcon, adminOnly: true },
-          { id: 'system-setup', label: t('sidebar.menu.systemSetup'), icon: SettingsIcon, adminOnly: true },
-          { id: 'permissions', label: t('sidebar.menu.permissions'), icon: UserCircle, adminOnly: true },
+          { id: 'settings', label: t('sidebar.menu.settingsGeneral'), icon: SettingsIcon },
+          { id: 'system-setup', label: t('sidebar.menu.systemSetup'), icon: SettingsIcon },
+          { id: 'permissions', label: t('sidebar.menu.permissions'), icon: UserCircle },
         ]
       }
     ];
 
-    // Filter sections based on user role
-    let filteredSections = isAdmin() 
-      ? allSections 
-      : allSections
-          .filter(section => !section.adminOnly)
-          .map(section => ({
-            ...section,
-            items: section.items?.filter(item => !item.adminOnly) || []
-          }))
-          .filter(section => section.items && section.items.length > 0);
-
     // Filter by search query if provided
+    let filteredSections = allSections;
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
-      filteredSections = filteredSections
+      filteredSections = allSections
         .map(section => {
-          const matchingItems = section.items?.filter(item => 
+          const matchingItems = section.items?.filter(item =>
             item.label.toLowerCase().includes(query) ||
             section.label.toLowerCase().includes(query)
           ) || [];
-          
+
           return {
             ...section,
             items: matchingItems
           };
         })
-        .filter(section => 
+        .filter(section =>
           section.items && section.items.length > 0 ||
           section.label.toLowerCase().includes(query)
         );
     }
 
     return filteredSections;
-  }, [t, isAdmin, searchQuery]);
+  }, [t, searchQuery]);
 
   return (
     <div
@@ -376,55 +359,6 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
         )}
       </div>
 
-      {/* User Info Section */}
-      {currentUser && (
-        <div className={`border-b border-gray-200 ${isCollapsed ? 'py-3' : 'py-4'}`}>
-          {isCollapsed ? (
-            <div className="flex justify-center">
-              <div className="relative">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm ring-2 ring-blue-100">
-                  <span className="text-white font-semibold text-sm">
-                    {currentUser.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                  </span>
-                </div>
-                {currentUser.role === 'admin' && (
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white"></div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="px-4 space-y-3">
-              {/* User Avatar and Basic Info */}
-              <div className="flex items-start gap-3">
-                <div className="relative flex-shrink-0">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm ring-2 ring-blue-100">
-                    <span className="text-white font-semibold text-base">
-                      {currentUser.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0 space-y-0.5">
-                  <p className="text-sm font-semibold text-gray-900 truncate leading-tight">{currentUser.name} {currentUser.position && (
-                    <span className="text-xs text-gray-600 truncate leading-tight">({currentUser.position})</span>
-                  )}</p>
-
-                  {currentUser.department && (
-                    <p className="text-xs text-gray-500 truncate leading-tight">{currentUser.department}</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Branch Info */}
-              <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
-                <MapPinIcon className={`w-4 h-4 text-gray-500 flex-shrink-0 ${direction === 'rtl' ? 'ml-1' : 'mr-1'}`} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-gray-700 truncate">{currentBranch}</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Company Selector */}
       {!isCollapsed && (
@@ -471,7 +405,7 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
         </div>
       )}
 
-      <nav className={`${isCollapsed ? 'px-2 py-3 overflow-visible' : 'p-4'}`}>
+      <nav className={`${isCollapsed ? 'px-2 py-3 overflow-visible' : 'p-4'} ${currentUser ? (isCollapsed ? 'pb-16' : 'pb-20') : ''}`}>
         {menuSections.map((section, sectionIndex) => {
           const SectionIcon = section.icon;
           const isExpanded = expandedSections.includes(section.id);
@@ -517,7 +451,7 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
           // When expanded, show sections with expandable functionality
           // Auto-expand sections when searching
           const shouldExpand = searchQuery.trim() ? true : isExpanded;
-          
+
           return (
             <div key={section.id} className="mb-2">
               {section.expandable && SectionIcon ? (
@@ -561,6 +495,23 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
           );
         })}
       </nav>
+
+      {/* Logout Button */}
+      {currentUser && (
+        <div className={`absolute bottom-0 left-0 right-0 border-t border-gray-200 bg-white ${isCollapsed ? 'p-2' : 'p-4'}`}>
+          <button
+            onClick={() => {
+              logout();
+              router.push('/login');
+            }}
+            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors ${isCollapsed ? 'justify-center' : ''}`}
+            aria-label={t('sidebar.logout')}
+          >
+            <LogOut className="w-5 h-5" />
+            {!isCollapsed && <span className="text-sm font-medium">{t('sidebar.logout')}</span>}
+          </button>
+        </div>
+      )}
     </div>
   );
 });

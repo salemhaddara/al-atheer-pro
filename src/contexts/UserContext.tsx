@@ -1,10 +1,12 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { getAuthToken } from '@/lib/api';
+import { getStoredUser, mapApiUserToUser, clearAuthData } from '@/lib/auth';
 
 export type UserRole = 'admin' | 'employee';
 
-export type Permission = 
+export type Permission =
     | 'manage_drawers'           // Manage cash drawers (open, close, add money)
     | 'view_drawers'              // View drawer status
     | 'manage_pos'               // Manage POS terminals
@@ -44,26 +46,31 @@ export function UserProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         if (typeof window !== 'undefined') {
             try {
+                // Check if user has a valid auth token
+                const token = getAuthToken();
+                if (!token) {
+                    // No token, clear any stale user data
+                    setCurrentUserState(null);
+                    return;
+                }
+
+                // Try to get user from auth storage first (from API login)
+                const authUser = getStoredUser();
+                if (authUser) {
+                    const appUser = mapApiUserToUser(authUser);
+                    setCurrentUserState(appUser);
+                    return;
+                }
+
+                // Fallback to legacy storage
                 const stored = localStorage.getItem(STORAGE_KEY);
                 if (stored) {
                     const user = JSON.parse(stored);
                     setCurrentUserState(user);
-                } else {
-                    // Default admin user for development
-                    const defaultUser: User = {
-                        id: '1',
-                        name: 'خالد أحمد',
-                        email: 'khaled@example.com',
-                        role: 'admin',
-                        position: 'مدير عام',
-                        department: 'الإدارة',
-                        permissions: ['all'] // Admin has all permissions
-                    };
-                    setCurrentUserState(defaultUser);
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultUser));
                 }
             } catch (error) {
                 console.error('Error loading user from storage:', error);
+                setCurrentUserState(null);
             }
         }
     }, []);
@@ -82,6 +89,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
     };
 
     const logout = () => {
+        // Clear auth data (token and user)
+        clearAuthData();
         setCurrentUser(null);
     };
 

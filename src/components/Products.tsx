@@ -895,7 +895,7 @@ export function Products() {
             margin: 10mm;
           }
           body {
-            font-family: Arial, sans-serif;
+            font-family: 'Tajawal', ui-sans-serif, system-ui, sans-serif;
             margin: 0;
             padding: 20px;
             background: #f5f5f5;

@@ -416,7 +416,8 @@
     },
     "expand": "توسيع",
     "collapse": "طي",
-    "mainBranch": "الفرع الرئيسي"
+    "mainBranch": "الفرع الرئيسي",
+    "logout": "تسجيل الخروج"
   },
   "pos": {
     "title": "نقطة البيع (POS)",
@@ -887,6 +888,7 @@
     "searchByNameOrCode": "ابحث بالاسم أو الرمز...",
     "filterByType": "تصفية حسب النوع",
     "allAccountTypes": "جميع الأنواع",
+    "allTypes": "جميع الأنواع",
     "accountsList": "قائمة الحسابات",
     "accountsListDesc": "جميع الحسابات مع أرصدتها الحالية",
     "accountCodeShort": "الرمز",
@@ -895,6 +897,9 @@
     "accountActive": "نشط",
     "accountInactive": "معطل",
     "accountEdit": "تعديل",
+    "active": "نشط",
+    "inactive": "معطل",
+    "edit": "تعديل",
     "accountDelete": "حذف",
     "noAccounts": "لا توجد حسابات",
     "editAccount": "تعديل الحساب",
@@ -947,8 +952,8 @@
     "taxRate": "النسبة (%)",
     "taxType": "النوع",
     "taxStatus": "الحالة",
-    "currenciesDesc":"تحديث أسعار صرف العملات",
-    "addNewCurrency":"إضافة عملة جديدة",
+    "currenciesDesc": "تحديث أسعار صرف العملات",
+    "addNewCurrency": "إضافة عملة جديدة",
     "accountStatements": {
       "title": "كشوفات الحسابات",
       "subtitle": "عرض حركات وأرصدة الحسابات",
@@ -1626,5 +1631,27 @@
     "deleteConfirm": "هل أنت متأكد من حذف هذا عرض السعر؟",
     "quotationLoaded": "تم تحميل عرض السعر للتعديل",
     "cancel": "إلغاء"
+  },
+  "login": {
+    "title": "مرحباً بعودتك",
+    "subtitle": "قم بتسجيل الدخول إلى حسابك للمتابعة",
+    "identifier": "البريد الإلكتروني، اسم المستخدم، أو رقم الهاتف",
+    "identifierPlaceholder": "أدخل بريدك الإلكتروني، اسم المستخدم، أو رقم الهاتف",
+    "password": "كلمة المرور",
+    "passwordPlaceholder": "أدخل كلمة المرور",
+    "rememberMe": "تذكرني",
+    "forgotPassword": "نسيت كلمة المرور؟",
+    "signIn": "تسجيل الدخول",
+    "signingIn": "جاري تسجيل الدخول...",
+    "loginSuccess": "تم تسجيل الدخول بنجاح",
+    "loginFailed": "فشل تسجيل الدخول",
+    "invalidCredentials": "بيانات الاعتماد المقدمة غير صحيحة.",
+    "accountBanned": "تم حظر حسابك",
+    "identifierRequired": "البريد الإلكتروني، اسم المستخدم، أو رقم الهاتف مطلوب",
+    "passwordRequired": "كلمة المرور مطلوبة",
+    "networkError": "خطأ في الشبكة. يرجى التحقق من اتصالك.",
+    "serverError": "خطأ في الخادم. يرجى المحاولة مرة أخرى لاحقاً.",
+    "showPassword": "إظهار كلمة المرور",
+    "hidePassword": "إخفاء كلمة المرور"
   }
 }

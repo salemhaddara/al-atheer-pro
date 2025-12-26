@@ -328,7 +328,7 @@ export function PriceQuotation() {
         <style>
           * { margin: 0; padding: 0; box-sizing: border-box; }
           body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Tajawal', ui-sans-serif, system-ui, sans-serif;
             padding: 20px;
             direction: rtl;
           }

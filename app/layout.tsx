@@ -1,7 +1,15 @@
 import { cookies } from 'next/headers';
 import { ClientProviders } from '@/components/providers/ClientProviders';
 import { getLanguageFromCookies, getDirection } from '@/lib/translations';
+import { Tajawal } from 'next/font/google';
 import '@/index.css';
+
+const tajawal = Tajawal({
+  subsets: ['arabic', 'latin'],
+  weight: ['300', '400', '500', '700', '800', '900'],
+  variable: '--font-tajawal',
+  display: 'swap',
+});
 
 export const metadata = {
   title: 'Arabic Reputation System',
@@ -18,8 +26,8 @@ export default async function RootLayout({
   const direction = getDirection(language);
 
   return (
-    <html lang={language} dir={direction} suppressHydrationWarning>
-      <body className="antialiased">
+    <html lang={language} dir={direction} suppressHydrationWarning className={tajawal.variable}>
+      <body className="antialiased font-sans">
         <ClientProviders initialLanguage={language}>
           {children}
         </ClientProviders>
