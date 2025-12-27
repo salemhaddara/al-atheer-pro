@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { toast } from 'sonner';
@@ -13,7 +13,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useUser } from '@/contexts/UserContext';
 import { login } from '@/lib/api';
 import { storeAuthData, mapApiUserToUser } from '@/lib/auth';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface LoginFormData {
     identifier: string;
@@ -29,8 +29,18 @@ export function LoginForm({ isRTL }: LoginFormProps) {
     const { t, language } = useLanguage();
     const { login: setUser } = useUser();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+
+    // Get redirect path from URL, default to home
+    const getRedirectPath = (): string => {
+        const redirect = searchParams?.get('redirect');
+        if (redirect && redirect.startsWith('/') && !redirect.startsWith('/login')) {
+            return redirect;
+        }
+        return '/';
+    };
 
     const {
         register,
@@ -60,7 +70,10 @@ export function LoginForm({ isRTL }: LoginFormProps) {
                 const appUser = mapApiUserToUser(result.data.user);
                 setUser(appUser);
                 toast.success(t('login.loginSuccess'));
-                router.push('/');
+                
+                // Redirect to the intended page or home
+                const redirectPath = getRedirectPath();
+                router.push(redirectPath);
                 router.refresh();
             } else {
                 if (result.errors) {

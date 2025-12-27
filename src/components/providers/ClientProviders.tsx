@@ -6,6 +6,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { FullscreenToggle } from '@/components/FullscreenToggle';
 import { ReactNode } from 'react';
 import { AppLayout } from '../AppLayout';
+import { AuthGuard } from '../login/AuthGuard';
 import { usePathname } from 'next/navigation';
 
 interface ClientProvidersProps {
@@ -23,9 +24,11 @@ export function ClientProviders({ children, initialLanguage = 'ar' }: ClientProv
         {isLoginPage ? (
           children
         ) : (
-          <AppLayout>
-            {children}
-          </AppLayout>
+          <AuthGuard>
+            <AppLayout>
+              {children}
+            </AppLayout>
+          </AuthGuard>
         )}
         <Toaster position="top-center" richColors />
         {!isLoginPage && <FullscreenToggle />}

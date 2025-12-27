@@ -42,7 +42,7 @@ export function LoginImageSection({ isRTL }: LoginImageSectionProps) {
     }, []);
 
     return (
-        <div className={`w-full w-1/2 relative bg-gradient-to-br from-primary/95 to-primary/80 overflow-hidden h-full ${isRTL ? 'order-last' : ''}`}>
+        <div className={`w-full relative bg-gradient-to-br from-primary/95 to-primary/80 overflow-hidden h-full`}>
             {/* Shimmer Loading Effect */}
             {!imageLoaded && !imageError && (
                 <div className="absolute inset-0 z-20 bg-gradient-to-br from-primary/95 to-primary/80">
