@@ -63,27 +63,34 @@ export function useRequireAuth(redirectTo: string = '/login') {
                 }
 
                 // Token exists but user context not loaded yet
-                // Wait for UserContext to initialize (max 300ms)
-                // This handles race conditions during initial load
+                // Wait for UserContext to initialize (max 3 seconds)
+                // This handles race conditions during initial load, especially on page refresh
                 const timeoutId = setTimeout(() => {
                     if (hasRedirected.current) return;
 
                     // Final check: verify authentication status
                     if (checkAuth()) {
                         // Still have token, user should be authenticated
-                        // Wait a bit more for user context to load
+                        // Wait a bit more for user context to load (up to 2 more seconds)
                         const secondTimeoutId = setTimeout(() => {
+                            if (hasRedirected.current) return;
+                            
                             if (currentUser !== null) {
                                 setIsAuthenticated(true);
+                                setIsChecking(false);
+                            } else if (checkAuth()) {
+                                // Token still exists, assume user is authenticated
+                                // Don't redirect - let the page load
+                                setIsAuthenticated(true);
+                                setIsChecking(false);
                             } else {
-                                // Token exists but no user - might be invalid token
-                                // Redirect to login to re-authenticate
+                                // Token was cleared, redirect to login
                                 hasRedirected.current = true;
                                 router.replace(`${redirectTo}?redirect=${encodeURIComponent(pathname || '/')}`);
                                 setIsAuthenticated(false);
+                                setIsChecking(false);
                             }
-                            setIsChecking(false);
-                        }, 200);
+                        }, 2000);
 
                         return () => clearTimeout(secondTimeoutId);
                     } else {
@@ -93,15 +100,21 @@ export function useRequireAuth(redirectTo: string = '/login') {
                         setIsAuthenticated(false);
                         setIsChecking(false);
                     }
-                }, 300);
+                }, 3000);
 
                 return () => clearTimeout(timeoutId);
             } catch (error) {
                 console.error('Error checking authentication:', error);
-                // On error, redirect to login (fail secure)
-                hasRedirected.current = true;
-                router.replace(redirectTo);
-                setIsAuthenticated(false);
+                // On error, only redirect if no token exists
+                const token = getAuthToken();
+                if (!token) {
+                    hasRedirected.current = true;
+                    router.replace(redirectTo);
+                    setIsAuthenticated(false);
+                } else {
+                    // Token exists, assume authenticated despite error
+                    setIsAuthenticated(true);
+                }
                 setIsChecking(false);
             }
         };
