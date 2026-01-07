@@ -3,7 +3,7 @@
  * Handles authentication, error handling, and multilingual support
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://192.168.10.105:8000';
 
 export interface ApiError {
     success: false;
@@ -92,7 +92,9 @@ export async function apiRequest<T>(
     const language = getLanguage();
     const token = getAuthToken();
 
-    const url = `${API_BASE_URL}${endpoint}${endpoint.includes('?') ? '&' : '?'}lang=${language}`;
+    // Properly construct URL with query parameters
+    const separator = endpoint.includes('?') ? '&' : '?';
+    const url = `${API_BASE_URL}${endpoint}${separator}lang=${language}`;
 
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
