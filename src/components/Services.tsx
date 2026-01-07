@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Plus, Search, Edit, Trash2, Briefcase, DollarSign, ChevronDown, ChevronUp, Folder, FolderOpen, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { Textarea } from './ui/textarea';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // Service Category Interface
 interface ServiceCategory {
@@ -47,6 +48,8 @@ interface Service {
 }
 
 export function Services() {
+    const { direction } = useLanguage();
+
     // Tax Rates State
     const [taxRates] = useState<TaxRate[]>([
         { id: 'tax-1', name: 'القيمة المضافة 15%', rate: 15 },
@@ -436,12 +439,12 @@ export function Services() {
     const totalRevenue = services.reduce((sum, s) => sum + s.price, 0);
 
     return (
-        <div className="p-6 space-y-6" dir="rtl">
+        <div className="space-y-6" dir={direction}>
             {/* Header */}
             <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold">إدارة الخدمات</h1>
-                    <p className="text-gray-500 mt-1">تعريف وإدارة الخدمات المقدمة (بدون مخزون أو سعر شراء)</p>
+                <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                    <h1 className="text-2xl font-bold">إدارة الخدمات</h1>
+                    <p className="text-gray-600">تعريف وإدارة الخدمات المقدمة (بدون مخزون أو سعر شراء)</p>
                 </div>
                 <Button onClick={() => { resetForm(); setIsAddDialogOpen(true); }} className="gap-2">
                     <Plus className="h-4 w-4" />

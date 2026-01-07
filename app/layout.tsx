@@ -9,10 +9,11 @@ const tajawal = Tajawal({
   weight: ['300', '400', '500', '700', '800', '900'],
   variable: '--font-tajawal',
   display: 'swap',
+  preload: true,
 });
 
 export const metadata = {
-  title: 'Arabic Reputation System',
+  title: 'Al-Atheer Pro',
   description: 'Comprehensive business management system',
 };
 
@@ -27,7 +28,7 @@ export default async function RootLayout({
 
   return (
     <html lang={language} dir={direction} suppressHydrationWarning className={tajawal.variable}>
-      <body className="antialiased font-sans">
+      <body className={`antialiased font-sans ${tajawal.className}`}>
         <ClientProviders initialLanguage={language}>
           {children}
         </ClientProviders>

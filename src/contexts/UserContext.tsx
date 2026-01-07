@@ -7,10 +7,10 @@ import { getStoredUser, mapApiUserToUser, clearAuthData } from '@/lib/auth';
 export type UserRole = 'admin' | 'employee';
 
 export type Permission =
-    | 'manage_drawers'           // Manage cash drawers (open, close, add money)
-    | 'view_drawers'              // View drawer status
-    | 'manage_pos'               // Manage POS terminals
-    | 'all';                     // All permissions (admin)
+    | 'manage_drawers'
+    | 'view_drawers'
+    | 'manage_pos'
+    | 'all';
 
 export interface User {
     id: string;
