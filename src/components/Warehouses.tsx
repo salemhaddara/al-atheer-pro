@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -8,34 +8,196 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Warehouse, Package, TrendingDown, AlertTriangle, Plus, Search, ArrowRightLeft, Settings, Grid3x3, Edit, Trash2, Boxes, Calculator, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
+import { Warehouse, Package, TrendingDown, AlertTriangle, Plus, Search, ArrowRightLeft, Settings, Grid3x3, Edit, Trash2, Boxes, Calculator, ArrowDownCircle, ArrowUpCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getStock, adjustStock, getCostPrice, getWarehouseProducts, increaseStock, reduceStock } from '../data/inventory';
 import { createInventoryAdjustmentEntry, createInventoryReceiptFromAccountEntry, createInventoryIssueToAccountEntry, addJournalEntry } from '../data/journalEntries';
+import { 
+  getWarehouses, 
+  getBranches, 
+  createWarehouse,
+  updateWarehouse,
+  type Warehouse as WarehouseType, 
+  type Branch, 
+  type CreateWarehouseRequest,
+  getWarehouseStorages,
+  createWarehouseStorage,
+  updateWarehouseStorage,
+  deleteWarehouseStorage,
+  getWarehouseStorageShelves,
+  createWarehouseStorageShelf,
+  updateWarehouseStorageShelf,
+  deleteWarehouseStorageShelf,
+  type WarehouseStorage,
+  type CreateWarehouseStorageRequest,
+  type WarehouseStorageShelf as WarehouseStorageShelfType,
+  type CreateWarehouseStorageShelfRequest
+} from '@/lib/api';
+import { getStoredUser } from '@/lib/auth';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export function Warehouses() {
+  const { t, direction } = useLanguage();
 
-  const [warehouses, setWarehouses] = useState([
-    { id: '1', name: 'المستودع الرئيسي', location: 'الرياض - حي الصناعية', capacity: 5000, used: 3200, manager: 'أحمد محمد', status: 'نشط' },
-    { id: '2', name: 'مستودع الفرع الشمالي', location: 'الرياض - حي النرجس', capacity: 3000, used: 1800, manager: 'فاطمة علي', status: 'نشط' },
-    { id: '3', name: 'مستودع الفرع الجنوبي', location: 'الرياض - حي العليا', capacity: 2000, used: 1500, manager: 'سعيد خالد', status: 'نشط' }
-  ]);
+  const [warehouses, setWarehouses] = useState<WarehouseType[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [storages, setStorages] = useState<WarehouseStorage[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingWarehouse, setEditingWarehouse] = useState<WarehouseType | null>(null);
+  const [warehouseFormData, setWarehouseFormData] = useState({
+    name_ar: '',
+    name_en: '',
+    branch_id: '',
+    location_ar: '',
+    location_en: '',
+    capacity: '',
+    is_active: true,
+    is_default: false,
+    notes: ''
+  });
 
-  const [shelves, setShelves] = useState([
-    { id: '1', code: 'A-01', warehouse: 'المستودع الرئيسي', warehouseId: '1', section: 'قسم A', level: 1, capacity: 200, used: 145, status: 'نشط', products: 12 },
-    { id: '2', code: 'A-02', warehouse: 'المستودع الرئيسي', warehouseId: '1', section: 'قسم A', level: 2, capacity: 200, used: 180, status: 'نشط', products: 15 },
-    { id: '3', code: 'A-03', warehouse: 'المستودع الرئيسي', warehouseId: '1', section: 'قسم A', level: 3, capacity: 200, used: 95, status: 'نشط', products: 8 },
-    { id: '4', code: 'B-01', warehouse: 'المستودع الرئيسي', warehouseId: '1', section: 'قسم B', level: 1, capacity: 150, used: 120, status: 'نشط', products: 10 },
-    { id: '5', code: 'B-02', warehouse: 'المستودع الرئيسي', warehouseId: '1', section: 'قسم B', level: 2, capacity: 150, used: 75, status: 'نشط', products: 6 },
-    { id: '6', code: 'C-01', warehouse: 'مستودع الفرع الشمالي', warehouseId: '2', section: 'قسم C', level: 1, capacity: 180, used: 160, status: 'نشط', products: 14 },
-    { id: '7', code: 'C-02', warehouse: 'مستودع الفرع الشمالي', warehouseId: '2', section: 'قسم C', level: 2, capacity: 180, used: 90, status: 'نشط', products: 7 },
-    { id: '8', code: 'D-01', warehouse: 'مستودع الفرع الجنوبي', warehouseId: '3', section: 'قسم D', level: 1, capacity: 120, used: 100, status: 'نشط', products: 9 }
-  ]);
+  useEffect(() => {
+    fetchWarehouses();
+    fetchBranches();
+  }, []);
+
+  useEffect(() => {
+    if (t) {
+      setReceiptCreditAccount(t('warehouses.receipt.cash'));
+      setIssueDebitAccount(t('warehouses.issue.expenses'));
+    }
+  }, [t]);
+
+  useEffect(() => {
+    if (warehouses.length > 0) {
+      fetchAllStorages();
+    }
+  }, [warehouses]);
+
+  useEffect(() => {
+    if (storages.length > 0) {
+      fetchAllShelves();
+    }
+  }, [storages]);
+
+  const fetchWarehouses = async () => {
+    setIsLoading(true);
+    try {
+      const result = await getWarehouses({ per_page: 100 });
+      if (result.success) {
+        const warehousesData = result.data.warehouses;
+        const warehousesList = warehousesData?.data || (Array.isArray(warehousesData) ? warehousesData : []);
+        setWarehouses(warehousesList);
+      } else {
+        toast.error(result.message || 'Failed to load warehouses');
+      }
+    } catch (error) {
+      console.error('Error fetching warehouses:', error);
+      toast.error('An error occurred while loading warehouses');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchBranches = async () => {
+    try {
+      const result = await getBranches({ per_page: 100 });
+      if (result.success) {
+        const branchesData = result.data.branches;
+        const branchesList = branchesData?.data || (Array.isArray(branchesData) ? branchesData : []);
+        setBranches(branchesList);
+      }
+    } catch (error) {
+      console.error('Error fetching branches:', error);
+    }
+  };
+
+  const fetchAllStorages = async () => {
+    try {
+      const allStorages: WarehouseStorage[] = [];
+      for (const warehouse of warehouses) {
+        const result = await getWarehouseStorages(warehouse.id);
+        if (result.success) {
+          allStorages.push(...result.data.storages);
+        }
+      }
+      setStorages(allStorages);
+    } catch (error) {
+      console.error('Error fetching storages:', error);
+    }
+  };
+
+  const fetchAllShelves = async () => {
+    try {
+      const allShelves: Array<WarehouseStorageShelfType & { 
+        warehouseId?: number; 
+        warehouse?: string; 
+        storage?: string;
+        used?: number;
+        products?: number;
+        status?: string;
+      }> = [];
+      
+      for (const storage of storages) {
+        const warehouse = warehouses.find(w => w.id === storage.warehouse_id);
+        if (!warehouse) continue;
+
+        const result = await getWarehouseStorageShelves(storage.warehouse_id, storage.id);
+        if (result.success) {
+          const shelvesWithMetadata = result.data.shelves.map(shelf => ({
+            ...shelf,
+            warehouseId: storage.warehouse_id,
+            warehouse: direction === 'rtl' ? warehouse.name_ar : warehouse.name_en,
+            storage: direction === 'rtl' ? storage.name_ar : storage.name_en,
+            used: 0, // TODO: Calculate from actual product inventory
+            products: 0, // TODO: Calculate from actual product inventory
+            status: shelf.is_active ? t('warehouses.shelf.active') : t('warehouses.shelf.inactive')
+          }));
+          allShelves.push(...shelvesWithMetadata);
+        }
+      }
+      setShelves(allShelves);
+    } catch (error) {
+      console.error('Error fetching shelves:', error);
+      toast.error(t('warehouses.messages.shelfLoadError'));
+    }
+  };
+
+  const [shelves, setShelves] = useState<Array<WarehouseStorageShelfType & { 
+    warehouseId?: number; 
+    warehouse?: string; 
+    storage?: string;
+    used?: number;
+    products?: number;
+    status?: string;
+  }>>([]);
 
   const [isShelfDialogOpen, setIsShelfDialogOpen] = useState(false);
-  const [editingShelf, setEditingShelf] = useState<any>(null);
+  const [editingShelf, setEditingShelf] = useState<(WarehouseStorageShelfType & { warehouseId?: number; storageId?: number }) | null>(null);
   const [selectedWarehouse, setSelectedWarehouse] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoadingShelves, setIsLoadingShelves] = useState(false);
+  const [shelfFormData, setShelfFormData] = useState({
+    code: '',
+    capacity: '',
+    level: '',
+    is_active: true,
+    warehouseId: '',
+    storageId: ''
+  });
+
+  // Storage management state
+  const [isStorageDialogOpen, setIsStorageDialogOpen] = useState(false);
+  const [editingStorage, setEditingStorage] = useState<WarehouseStorage | null>(null);
+  const [storageFormData, setStorageFormData] = useState({
+    name_ar: '',
+    name_en: '',
+    capacity: '',
+    warehouseId: ''
+  });
+  const [isSubmittingStorage, setIsSubmittingStorage] = useState(false);
   
   // Inventory Adjustment State
   const [adjustmentWarehouse, setAdjustmentWarehouse] = useState<string>('1');
@@ -61,7 +223,7 @@ export function Warehouses() {
     taxAmount: number;
     totalAmount: number;
   }>>([]);
-  const [receiptCreditAccount, setReceiptCreditAccount] = useState<string>('الصندوق');
+  const [receiptCreditAccount, setReceiptCreditAccount] = useState<string>('');
   const [receiptCustomAccount, setReceiptCustomAccount] = useState<string>('');
   const [receiptIncludeTax, setReceiptIncludeTax] = useState<boolean>(false);
   const [receiptDescription, setReceiptDescription] = useState<string>('');
@@ -75,7 +237,7 @@ export function Warehouses() {
     costPrice: number;
     totalAmount: number;
   }>>([]);
-  const [issueDebitAccount, setIssueDebitAccount] = useState<string>('مصروفات والخسائر');
+  const [issueDebitAccount, setIssueDebitAccount] = useState<string>('');
   const [issueCustomAccount, setIssueCustomAccount] = useState<string>('');
   const [issueReason, setIssueReason] = useState<string>('');
   const [issueDescription, setIssueDescription] = useState<string>('');
@@ -103,30 +265,336 @@ export function Warehouses() {
     { id: '6', name: 'كاميرا ويب HD' }
   ];
 
+  // Storage management handlers
+  const handleAddStorage = () => {
+    setEditingStorage(null);
+    setStorageFormData({
+      name_ar: '',
+      name_en: '',
+      capacity: '',
+      warehouseId: ''
+    });
+    setIsStorageDialogOpen(true);
+  };
+
+  const handleEditStorage = (storage: WarehouseStorage) => {
+    setEditingStorage(storage);
+    setStorageFormData({
+      name_ar: storage.name_ar || '',
+      name_en: storage.name_en || '',
+      capacity: storage.capacity?.toString() || '',
+      warehouseId: storage.warehouse_id?.toString() || ''
+    });
+    setIsStorageDialogOpen(true);
+  };
+
+  const handleDeleteStorage = async (storage: WarehouseStorage) => {
+    if (!storage.warehouse_id) {
+      toast.error(t('warehouses.messages.invalidData'));
+      return;
+    }
+
+    try {
+      const result = await deleteWarehouseStorage(storage.warehouse_id, storage.id);
+      
+      if (result.success) {
+        toast.success(t('warehouses.messages.storageDeleted'));
+        await fetchAllStorages();
+        await fetchAllShelves();
+      } else {
+        toast.error(result.message || t('warehouses.messages.error'));
+      }
+    } catch (error) {
+      console.error('Error deleting storage:', error);
+      toast.error(t('warehouses.messages.storageDeleteError'));
+    }
+  };
+
+  const handleSaveStorage = async () => {
+    if (!storageFormData.name_ar || !storageFormData.name_en || !storageFormData.capacity || !storageFormData.warehouseId) {
+      toast.error(t('warehouses.messages.fillRequired'));
+      return;
+    }
+
+    const warehouseId = parseInt(storageFormData.warehouseId);
+    const storageData: CreateWarehouseStorageRequest = {
+      name_ar: storageFormData.name_ar.trim(),
+      name_en: storageFormData.name_en.trim(),
+      capacity: parseInt(storageFormData.capacity)
+    };
+
+    setIsSubmittingStorage(true);
+    try {
+      if (editingStorage) {
+        // Update existing storage
+        const result = await updateWarehouseStorage(warehouseId, editingStorage.id, storageData);
+        
+        if (result.success) {
+          toast.success(t('warehouses.messages.storageUpdated'));
+          setIsStorageDialogOpen(false);
+          setEditingStorage(null);
+          await fetchAllStorages();
+          await fetchAllShelves();
+        } else {
+          toast.error(result.message || t('warehouses.messages.error'));
+        }
+      } else {
+        // Create new storage
+        const result = await createWarehouseStorage(warehouseId, storageData);
+        
+        if (result.success) {
+          toast.success(t('warehouses.messages.storageCreated'));
+          setIsStorageDialogOpen(false);
+          setStorageFormData({
+            name_ar: '',
+            name_en: '',
+            capacity: '',
+            warehouseId: ''
+          });
+          await fetchAllStorages();
+        } else {
+          toast.error(result.message || t('warehouses.messages.error'));
+        }
+      }
+    } catch (error) {
+      console.error('Error saving storage:', error);
+      toast.error(t('warehouses.messages.storageSaveError'));
+    } finally {
+      setIsSubmittingStorage(false);
+    }
+  };
+
   const handleAddShelf = () => {
     setEditingShelf(null);
+    setShelfFormData({
+      code: '',
+      capacity: '',
+      level: '',
+      is_active: true,
+      warehouseId: '',
+      storageId: ''
+    });
     setIsShelfDialogOpen(true);
   };
 
   const handleEditShelf = (shelf: any) => {
     setEditingShelf(shelf);
+    const storage = storages.find(s => s.id === shelf.warehouse_storage_id);
+    setShelfFormData({
+      code: shelf.code || '',
+      capacity: shelf.capacity?.toString() || '',
+      level: shelf.level !== null && shelf.level !== undefined ? shelf.level.toString() : '',
+      is_active: shelf.is_active ?? true,
+      warehouseId: shelf.warehouseId?.toString() || (storage?.warehouse_id?.toString() || ''),
+      storageId: shelf.warehouse_storage_id?.toString() || ''
+    });
     setIsShelfDialogOpen(true);
   };
 
-  const handleDeleteShelf = (shelfId: string) => {
-    const shelf = shelves.find(s => s.id === shelfId);
-    if (shelf && shelf.used > 0) {
-      toast.error('لا يمكن حذف رف يحتوي على منتجات. قم بنقل المنتجات أولاً.');
+  const handleDeleteShelf = async (shelf: any) => {
+    if (shelf.used && shelf.used > 0) {
+      toast.error(t('warehouses.messages.cannotDeleteShelfWithProducts'));
       return;
     }
-    setShelves(shelves.filter(s => s.id !== shelfId));
-    toast.success('تم حذف الرف بنجاح');
+
+    if (!shelf.warehouseId || !shelf.warehouse_storage_id) {
+      toast.error(t('warehouses.messages.invalidShelf'));
+      return;
+    }
+
+    try {
+      const result = await deleteWarehouseStorageShelf(
+        shelf.warehouseId,
+        shelf.warehouse_storage_id,
+        shelf.id
+      );
+      
+      if (result.success) {
+        toast.success(t('warehouses.messages.shelfDeleted'));
+        // Refresh storages and shelves
+        await fetchAllStorages();
+        await fetchAllShelves();
+      } else {
+        toast.error(result.message || t('warehouses.messages.error'));
+      }
+    } catch (error) {
+      console.error('Error deleting shelf:', error);
+      toast.error(t('warehouses.messages.shelfDeleteError'));
+    }
   };
 
-  const handleSaveShelf = () => {
-    toast.success(editingShelf ? 'تم تحديث الرف بنجاح' : 'تم إضافة الرف بنجاح');
-    setIsShelfDialogOpen(false);
-    setEditingShelf(null);
+  const handleSaveShelf = async () => {
+    if (!shelfFormData.code || !shelfFormData.capacity || !shelfFormData.storageId) {
+      toast.error(t('warehouses.messages.fillRequired'));
+      return;
+    }
+
+    const storageId = parseInt(shelfFormData.storageId);
+    const storage = storages.find(s => s.id === storageId);
+    if (!storage) {
+      toast.error(t('warehouses.messages.invalidStorage'));
+      return;
+    }
+
+    const shelfData: CreateWarehouseStorageShelfRequest = {
+      code: shelfFormData.code,
+      capacity: parseInt(shelfFormData.capacity),
+      level: shelfFormData.level ? parseInt(shelfFormData.level) : null,
+      is_active: shelfFormData.is_active
+    };
+
+    try {
+      if (editingShelf) {
+        // Update existing shelf
+        const result = await updateWarehouseStorageShelf(
+          storage.warehouse_id,
+          storageId,
+          editingShelf.id,
+          shelfData
+        );
+        
+        if (result.success) {
+          toast.success(t('warehouses.messages.shelfUpdated'));
+          setIsShelfDialogOpen(false);
+          setEditingShelf(null);
+          await fetchAllStorages();
+          await fetchAllShelves();
+        } else {
+          toast.error(result.message || t('warehouses.messages.shelfSaveError'));
+        }
+      } else {
+        // Create new shelf
+        const result = await createWarehouseStorageShelf(
+          storage.warehouse_id,
+          storageId,
+          shelfData
+        );
+        
+        if (result.success) {
+          toast.success(t('warehouses.messages.shelfCreated'));
+          setIsShelfDialogOpen(false);
+          setShelfFormData({
+            code: '',
+            capacity: '',
+            level: '',
+            is_active: true,
+            warehouseId: '',
+            storageId: ''
+          });
+          await fetchAllStorages();
+          await fetchAllShelves();
+        } else {
+          toast.error(result.message || t('warehouses.messages.error'));
+        }
+      }
+    } catch (error) {
+      console.error('Error saving shelf:', error);
+      toast.error(t('warehouses.messages.shelfSaveError'));
+    }
+  };
+
+  const handleAddWarehouse = () => {
+    setEditingWarehouse(null);
+    setWarehouseFormData({
+      name_ar: '',
+      name_en: '',
+      branch_id: '',
+      location_ar: '',
+      location_en: '',
+      capacity: '',
+      is_active: true,
+      is_default: false,
+      notes: ''
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleEditWarehouse = (warehouse: WarehouseType) => {
+    setEditingWarehouse(warehouse);
+    setWarehouseFormData({
+      name_ar: warehouse.name_ar || '',
+      name_en: warehouse.name_en || '',
+      branch_id: warehouse.branch_id?.toString() || '',
+      location_ar: warehouse.location_ar || '',
+      location_en: warehouse.location_en || '',
+      capacity: warehouse.capacity?.toString() || '',
+      is_active: warehouse.is_active ?? true,
+      is_default: warehouse.is_default || false,
+      notes: warehouse.notes || '',
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleSaveWarehouse = async () => {
+    if (!warehouseFormData.name_ar || !warehouseFormData.name_en || !warehouseFormData.branch_id || 
+        !warehouseFormData.location_ar || !warehouseFormData.location_en || !warehouseFormData.capacity) {
+        toast.error(t('warehouses.messages.fillAllRequired'));
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const payload: CreateWarehouseRequest = {
+        name_ar: warehouseFormData.name_ar.trim(),
+        name_en: warehouseFormData.name_en.trim(),
+        branch_id: parseInt(warehouseFormData.branch_id),
+        location_ar: warehouseFormData.location_ar.trim(),
+        location_en: warehouseFormData.location_en.trim(),
+        capacity: parseInt(warehouseFormData.capacity),
+        is_active: warehouseFormData.is_active ?? true,
+        is_default: warehouseFormData.is_default || false
+      };
+
+      if (warehouseFormData.notes?.trim()) {
+        payload.notes = warehouseFormData.notes.trim();
+      }
+
+      let result;
+      if (editingWarehouse) {
+        // Update existing warehouse
+        result = await updateWarehouse(editingWarehouse.id, payload);
+        if (result.success) {
+          toast.success(t('warehouses.messages.warehouseUpdated'));
+        }
+      } else {
+        // Create new warehouse
+        result = await createWarehouse(payload);
+        if (result.success) {
+          toast.success(t('warehouses.messages.warehouseCreated'));
+        }
+      }
+
+      if (result.success) {
+        setIsDialogOpen(false);
+        setEditingWarehouse(null);
+        setWarehouseFormData({
+          name_ar: '',
+          name_en: '',
+          branch_id: '',
+          location_ar: '',
+          location_en: '',
+          capacity: '',
+          is_active: true,
+          is_default: false,
+          notes: ''
+        });
+        await fetchWarehouses();
+        await fetchAllStorages();
+        await fetchAllShelves();
+      } else {
+        if (result.errors) {
+          const errorMessages = Object.values(result.errors).flat();
+          toast.error(errorMessages[0] || result.message);
+        } else {
+          toast.error(result.message || t('warehouses.messages.warehouseSaveError'));
+        }
+      }
+    } catch (error) {
+      console.error('Error saving warehouse:', error);
+      toast.error(t('warehouses.messages.warehouseSaveError'));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -135,9 +603,9 @@ export function Warehouses() {
 
   const getStockStatus = (status: string) => {
     switch (status) {
-      case 'متوفر': return 'default';
-      case 'منخفض': return 'secondary';
-      case 'نفد': return 'destructive';
+      case t('warehouses.inventory.status'): return 'default';
+      case t('warehouses.stats.lowStock'): return 'secondary';
+      case t('warehouses.stats.outOfStock'): return 'destructive';
       default: return 'outline';
     }
   };
@@ -149,12 +617,12 @@ export function Warehouses() {
   };
 
   const filteredShelves = shelves
-    .filter(s => selectedWarehouse === 'all' || s.warehouseId === selectedWarehouse)
+    .filter(s => selectedWarehouse === 'all' || s.warehouseId?.toString() === selectedWarehouse)
     .filter(s =>
       searchQuery === '' ||
       s.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.warehouse.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.section.toLowerCase().includes(searchQuery.toLowerCase())
+      (s.warehouse && s.warehouse.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (s.storage && s.storage.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
   return (
@@ -162,97 +630,168 @@ export function Warehouses() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="text-right flex-1">
-          <h1>إدارة المستودعات</h1>
-          <p className="text-gray-600">متابعة المخزون والمستودعات</p>
+          <h1>{t('warehouses.title')}</h1>
+          <p className="text-gray-600">{t('warehouses.subtitle')}</p>
         </div>
-        <Dialog>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="gap-2 shrink-0">
+            <Button onClick={handleAddWarehouse} className="gap-2 shrink-0">
               <Plus className="w-4 h-4" />
-              مستودع جديد
+              {t('warehouses.warehouse.new')}
             </Button>
           </DialogTrigger>
-          <DialogContent dir="rtl">
+          <DialogContent className="max-h-[90vh] overflow-y-auto" dir="rtl">
             <DialogHeader className="text-right">
-              <DialogTitle>إضافة مستودع جديد</DialogTitle>
-              <DialogDescription>قم بإدخال بيانات المستودع</DialogDescription>
+              <DialogTitle>{editingWarehouse ? t('warehouses.warehouse.edit') : t('warehouses.warehouse.add')}</DialogTitle>
+              <DialogDescription>{t('warehouses.warehouse.editDescription')}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>اسم المستودع / Warehouse Name</Label>
-                <Input placeholder="مستودع الفرع الغربي" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>{t('warehouses.warehouse.nameAr')} *</Label>
+                  <Input 
+                    value={warehouseFormData.name_ar}
+                    onChange={(e) => setWarehouseFormData({ ...warehouseFormData, name_ar: e.target.value })}
+                    placeholder={t('warehouses.warehouse.nameAr')}
+                    dir={direction}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('warehouses.warehouse.nameEn')} *</Label>
+                  <Input 
+                    value={warehouseFormData.name_en}
+                    onChange={(e) => setWarehouseFormData({ ...warehouseFormData, name_en: e.target.value })}
+                    placeholder="West Branch Warehouse"
+                    dir="ltr"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label>الفرع المخصص / Assigned Branch</Label>
-                <Select>
+                <Label>{t('warehouses.warehouse.branch')} *</Label>
+                <Select
+                  value={warehouseFormData.branch_id}
+                  onValueChange={(value) => setWarehouseFormData({ ...warehouseFormData, branch_id: value })}
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="اختر الفرع" />
+                    <SelectValue placeholder={t('warehouses.warehouse.selectBranch')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">الفرع الرئيسي</SelectItem>
-                    <SelectItem value="2">فرع الشمال</SelectItem>
-                    <SelectItem value="3">فرع جدة</SelectItem>
+                    {branches.map((branch) => {
+                      const authUser = getStoredUser();
+                      const isSuperAdmin = authUser?.is_system_owner_admin === true;
+                      const branchName = direction === 'rtl' ? branch.name_ar : branch.name_en;
+                      const institutionName = branch.institution 
+                        ? (direction === 'rtl' ? branch.institution.name_ar : branch.institution.name_en)
+                        : '';
+                      
+                      return (
+                        <SelectItem key={branch.id} value={branch.id.toString()}>
+                          {isSuperAdmin && institutionName 
+                            ? `${branchName} - ${institutionName}`
+                            : branchName}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label>الموقع / Location</Label>
-                <Input placeholder="الرياض - حي السليمانية" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>{t('warehouses.warehouse.locationAr')} *</Label>
+                  <Input 
+                    value={warehouseFormData.location_ar}
+                    onChange={(e) => setWarehouseFormData({ ...warehouseFormData, location_ar: e.target.value })}
+                    placeholder={t('warehouses.warehouse.locationAr')}
+                    dir={direction}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{t('warehouses.warehouse.locationEn')} *</Label>
+                  <Input 
+                    value={warehouseFormData.location_en}
+                    onChange={(e) => setWarehouseFormData({ ...warehouseFormData, location_en: e.target.value })}
+                    placeholder="Riyadh - Al Sulaimaniyah"
+                    dir="ltr"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label>السعة الكلية / Total Capacity</Label>
-                <Input type="number" placeholder="5000" />
+                <Label>{t('warehouses.warehouse.capacity')} *</Label>
+                <Input 
+                  type="number" 
+                  value={warehouseFormData.capacity}
+                  onChange={(e) => setWarehouseFormData({ ...warehouseFormData, capacity: e.target.value })}
+                  placeholder="5000"
+                  dir="ltr"
+                />
               </div>
 
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="text-right">
-                  <Label>حالة المستودع / Warehouse Status</Label>
-                  <p className="text-sm text-gray-600">تفعيل أو تعطيل المستودع</p>
+                  <Label>{t('warehouses.warehouse.status')}</Label>
+                  <p className="text-sm text-gray-600">{t('warehouses.warehouse.statusDescription')}</p>
                 </div>
-                <select className="border rounded px-3 py-1">
-                  <option value="active">نشط / Active</option>
-                  <option value="inactive">غير نشط / Inactive</option>
+                <select 
+                  className="border rounded px-3 py-1"
+                  value={warehouseFormData.is_active ? 'active' : 'inactive'}
+                  onChange={(e) => setWarehouseFormData({ ...warehouseFormData, is_active: e.target.value === 'active' })}
+                >
+                  <option value="active">{t('warehouses.warehouse.active')}</option>
+                  <option value="inactive">{t('warehouses.warehouse.inactive')}</option>
                 </select>
               </div>
 
               <div className="flex items-center justify-between p-3 border rounded-lg bg-blue-50">
                 <div className="text-right">
-                  <Label>مستودع افتراضي / Default Warehouse</Label>
-                  <p className="text-sm text-gray-600">تعيين كمستودع رئيسي افتراضي</p>
+                  <Label>{t('warehouses.warehouse.isDefault')}</Label>
+                  <p className="text-sm text-gray-600">{t('warehouses.warehouse.isDefaultDescription')}</p>
                 </div>
-                <input type="checkbox" className="w-5 h-5" />
-              </div>
-
-              <div className="space-y-2">
-                <Label>الموظف المسؤول / Responsible Employee (Stock_Emps Relation)</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر الموظف المسؤول" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">أحمد محمد - مدير</SelectItem>
-                    <SelectItem value="2">فاطمة علي - مشرف</SelectItem>
-                    <SelectItem value="3">سعيد خالد - أمين مستودع</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-gray-500">سيتم إنشاء علاقة في جدول Stock_Emps</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>ملاحظات / Notes</Label>
-                <textarea
-                  className="w-full border rounded-lg p-2 text-right"
-                  rows={3}
-                  placeholder="أدخل أي ملاحظات..."
+                <input 
+                  type="checkbox" 
+                  className="w-5 h-5"
+                  checked={warehouseFormData.is_default}
+                  onChange={(e) => setWarehouseFormData({ ...warehouseFormData, is_default: e.target.checked })}
                 />
               </div>
 
-              <Button className="w-full" onClick={() => toast.success('تم إضافة المستودع بنجاح')}>
-                حفظ المستودع
-              </Button>
+              <div className="space-y-2">
+                <Label>{t('warehouses.warehouse.notes')}</Label>
+                <textarea
+                  className="w-full border rounded-lg p-2 text-right"
+                  rows={3}
+                  placeholder={t('warehouses.warehouse.notesPlaceholder')}
+                  value={warehouseFormData.notes}
+                  onChange={(e) => setWarehouseFormData({ ...warehouseFormData, notes: e.target.value })}
+                  dir={direction}
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4 border-t">
+                <Button 
+                  className="flex-1" 
+                  onClick={handleSaveWarehouse}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      {t('warehouses.warehouse.saving')}
+                    </>
+                  ) : (
+                    editingWarehouse ? t('warehouses.warehouse.saveChanges') : t('warehouses.warehouse.save')
+                  )}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsDialogOpen(false)}
+                  disabled={isSubmitting}
+                >
+                  {t('warehouses.warehouse.cancel')}
+                </Button>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
@@ -263,41 +802,41 @@ export function Warehouses() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <Warehouse className="w-4 h-4 text-blue-600" />
-            <CardTitle className="text-sm">عدد المستودعات</CardTitle>
+            <CardTitle className="text-sm">{t('warehouses.stats.warehouseCount')}</CardTitle>
           </CardHeader>
           <CardContent className="text-right">
             <div className="text-2xl">8</div>
-            <p className="text-xs text-gray-600 mt-1">مستودع نشط</p>
+            <p className="text-xs text-gray-600 mt-1">{t('warehouses.stats.activeWarehouses')}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <Package className="w-4 h-4 text-green-600" />
-            <CardTitle className="text-sm">إجمالي المنتجات</CardTitle>
+            <CardTitle className="text-sm">{t('warehouses.stats.totalProducts')}</CardTitle>
           </CardHeader>
           <CardContent className="text-right">
             <div className="text-2xl">{formatCurrency(6500)}</div>
-            <p className="text-xs text-gray-600 mt-1">وحدة مخزنة</p>
+            <p className="text-xs text-gray-600 mt-1">{t('warehouses.stats.storedUnits')}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <TrendingDown className="w-4 h-4 text-orange-600" />
-            <CardTitle className="text-sm">مخزون منخفض</CardTitle>
+            <CardTitle className="text-sm">{t('warehouses.stats.lowStock')}</CardTitle>
           </CardHeader>
           <CardContent className="text-right">
             <div className="text-2xl">12</div>
-            <p className="text-xs text-gray-600 mt-1">منتج يحتاج إعادة طلب</p>
+            <p className="text-xs text-gray-600 mt-1">{t('warehouses.stats.needsReorder')}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <AlertTriangle className="w-4 h-4 text-red-600" />
-            <CardTitle className="text-sm">نفد المخزون</CardTitle>
+            <CardTitle className="text-sm">{t('warehouses.stats.outOfStock')}</CardTitle>
           </CardHeader>
           <CardContent className="text-right">
             <div className="text-2xl">3</div>
-            <p className="text-xs text-gray-600 mt-1">منتج نفد من المخزون</p>
+            <p className="text-xs text-gray-600 mt-1">{t('warehouses.stats.outOfStockProducts')}</p>
           </CardContent>
         </Card>
       </div>
@@ -305,69 +844,104 @@ export function Warehouses() {
       {/* Main Content */}
       <Tabs defaultValue="warehouses" className="w-full">
         <TabsList>
-          <TabsTrigger value="warehouses">المستودعات</TabsTrigger>
-          <TabsTrigger value="inventory">المخزون</TabsTrigger>
-          <TabsTrigger value="transfers">نقل المنتجات</TabsTrigger>
-          <TabsTrigger value="receipt">توريد مخزني</TabsTrigger>
-          <TabsTrigger value="issue">صرف مخزني</TabsTrigger>
-          <TabsTrigger value="adjustment">تسوية المخزون</TabsTrigger>
-          <TabsTrigger value="shelves">الرفوف</TabsTrigger>
+          <TabsTrigger value="warehouses">{t('warehouses.tabs.warehouses')}</TabsTrigger>
+          <TabsTrigger value="inventory">{t('warehouses.tabs.inventory')}</TabsTrigger>
+          <TabsTrigger value="transfers">{t('warehouses.tabs.transfers')}</TabsTrigger>
+          <TabsTrigger value="receipt">{t('warehouses.tabs.receipt')}</TabsTrigger>
+          <TabsTrigger value="issue">{t('warehouses.tabs.issue')}</TabsTrigger>
+          <TabsTrigger value="adjustment">{t('warehouses.tabs.adjustment')}</TabsTrigger>
+          <TabsTrigger value="storages">{t('warehouses.tabs.storages')}</TabsTrigger>
+          <TabsTrigger value="shelves">{t('warehouses.tabs.shelves')}</TabsTrigger>
         </TabsList>
 
         {/* Warehouses */}
         <TabsContent value="warehouses" className="space-y-4">
           <Card>
             <CardHeader className="text-right">
-              <CardTitle>قائمة المستودعات</CardTitle>
-              <CardDescription>عرض وإدارة جميع المستودعات</CardDescription>
+              <CardTitle>{t('warehouses.list.title')}</CardTitle>
+              <CardDescription>{t('warehouses.list.subtitle')}</CardDescription>
             </CardHeader>
             <CardContent>
               <div dir="rtl">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-right">اسم المستودع</TableHead>
-                      <TableHead className="text-right">الموقع</TableHead>
-                      <TableHead className="text-right">السعة</TableHead>
-                      <TableHead className="text-right">المستخدم</TableHead>
-                      <TableHead className="text-right">نسبة الامتلاء</TableHead>
-                      <TableHead className="text-right">المدير</TableHead>
-                      <TableHead className="text-right">الحالة</TableHead>
-                      <TableHead className="text-right">إجراءات</TableHead>
+                      <TableHead className="text-right">{t('warehouses.list.warehouseName')}</TableHead>
+                      <TableHead className="text-right">{t('warehouses.list.location')}</TableHead>
+                      <TableHead className="text-right">{t('warehouses.list.capacity')}</TableHead>
+                      <TableHead className="text-right">{t('warehouses.list.user')}</TableHead>
+                      <TableHead className="text-right">{t('warehouses.list.fillPercentage')}</TableHead>
+                      <TableHead className="text-right">{t('warehouses.list.manager')}</TableHead>
+                      <TableHead className="text-right">{t('warehouses.list.status')}</TableHead>
+                      <TableHead className="text-right">{t('warehouses.list.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {warehouses.map((warehouse) => {
-                      const fillPercentage = (warehouse.used / warehouse.capacity) * 100;
-                      return (
-                        <TableRow key={warehouse.id}>
-                          <TableCell className="text-right">{warehouse.name}</TableCell>
-                          <TableCell className="text-right">{warehouse.location}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(warehouse.capacity)}</TableCell>
-                          <TableCell className="text-right">{formatCurrency(warehouse.used)}</TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center gap-2 justify-end">
-                              <span className="text-sm">{fillPercentage.toFixed(0)}%</span>
-                              <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                                <div
-                                  className="h-full bg-blue-600"
-                                  style={{ width: `${fillPercentage}%` }}
-                                />
+                    {isLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8">
+                          <Loader2 className="w-6 h-6 animate-spin mx-auto text-gray-400" />
+                        </TableCell>
+                      </TableRow>
+                    ) : warehouses.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                          No warehouses found
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      warehouses.map((warehouse) => {
+                        const used = 0; // TODO: Calculate from inventory when available
+                        const fillPercentage = warehouse.capacity > 0 ? (used / warehouse.capacity) * 100 : 0;
+                        return (
+                          <TableRow key={warehouse.id}>
+                            <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                              {direction === 'rtl' ? warehouse.name_ar : warehouse.name_en}
+                            </TableCell>
+                            <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                              {direction === 'rtl' ? warehouse.location_ar : warehouse.location_en}
+                            </TableCell>
+                            <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                              {warehouse.capacity.toLocaleString()}
+                            </TableCell>
+                            <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                              {used.toLocaleString()}
+                            </TableCell>
+                            <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                              <div className={`flex items-center gap-2 ${direction === 'rtl' ? '' : 'justify-start'}`}>
+                                <span className="text-sm">{fillPercentage.toFixed(0)}%</span>
+                                <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-blue-600"
+                                    style={{ width: `${Math.min(fillPercentage, 100)}%` }}
+                                  />
+                                </div>
                               </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">{warehouse.manager}</TableCell>
-                          <TableCell className="text-right">
-                            <Badge variant="default">{warehouse.status}</Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button variant="ghost" size="sm">
-                              <Settings className="w-4 h-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                            </TableCell>
+                            <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                              {warehouse.branch 
+                                ? (direction === 'rtl' ? warehouse.branch.name_ar : warehouse.branch.name_en)
+                                : '-'}
+                            </TableCell>
+                            <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                              <Badge variant={warehouse.is_active ? 'default' : 'secondary'}>
+                                {warehouse.is_active ? 'Active' : 'Inactive'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleEditWarehouse(warehouse)}
+                                title={t('warehouses.list.edit')}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -382,30 +956,30 @@ export function Warehouses() {
               <div className="flex items-center justify-between">
                 <Button variant="outline" size="sm" className="gap-2">
                   <Search className="w-4 h-4" />
-                  بحث متقدم
+                  {t('warehouses.inventory.advancedSearch')}
                 </Button>
                 <div className="text-right">
-                  <CardTitle>حالة المخزون</CardTitle>
-                  <CardDescription>متابعة المنتجات في المستودعات</CardDescription>
+                  <CardTitle>{t('warehouses.inventory.title')}</CardTitle>
+                  <CardDescription>{t('warehouses.inventory.subtitle')}</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <div className="mb-4">
-                <Input placeholder="بحث عن منتج أو باركود..." className="text-right" dir="rtl" />
+                <Input placeholder={t('warehouses.inventory.searchPlaceholder')} className="text-right" dir="rtl" />
               </div>
               <div dir="rtl">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-right">المنتج</TableHead>
-                      <TableHead className="text-right">الباركود</TableHead>
-                      <TableHead className="text-right">المستودع</TableHead>
-                      <TableHead className="text-right">الرف</TableHead>
-                      <TableHead className="text-right">الكمية</TableHead>
-                      <TableHead className="text-right">الحد الأدنى</TableHead>
-                      <TableHead className="text-right">الحالة</TableHead>
-                      <TableHead className="text-right">إجراءات</TableHead>
+                      <TableHead className="text-right">{t('warehouses.inventory.product')}</TableHead>
+                      <TableHead className="text-right">{t('warehouses.inventory.barcode')}</TableHead>
+                      <TableHead className="text-right">{t('warehouses.inventory.warehouse')}</TableHead>
+                      <TableHead className="text-right">{t('warehouses.inventory.shelf')}</TableHead>
+                      <TableHead className="text-right">{t('warehouses.inventory.quantity')}</TableHead>
+                      <TableHead className="text-right">{t('warehouses.inventory.minStock')}</TableHead>
+                      <TableHead className="text-right">{t('warehouses.inventory.status')}</TableHead>
+                      <TableHead className="text-right">{t('warehouses.inventory.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -425,7 +999,7 @@ export function Warehouses() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm">تعديل</Button>
+                          <Button variant="ghost" size="sm">{t('warehouses.list.edit')}</Button>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -445,45 +1019,49 @@ export function Warehouses() {
                   <DialogTrigger asChild>
                     <Button size="sm" className="gap-2">
                       <ArrowRightLeft className="w-4 h-4" />
-                      نقل جديد
+                      {t('warehouses.transfers.new')}
                     </Button>
                   </DialogTrigger>
                   <DialogContent dir="rtl">
                     <DialogHeader className="text-right">
-                      <DialogTitle>نقل منتجات بين المستودعات</DialogTitle>
+                      <DialogTitle>{t('warehouses.transfers.newTransfer')}</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label>من المستودع</Label>
+                        <Label>{t('warehouses.transfers.from')}</Label>
                         <Select>
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             {warehouses.map((w) => (
-                              <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                              <SelectItem key={w.id} value={w.id.toString()}>
+                                {direction === 'rtl' ? w.name_ar : w.name_en}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label>إلى المستودع</Label>
+                        <Label>{t('warehouses.transfers.to')}</Label>
                         <Select>
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             {warehouses.map((w) => (
-                              <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                              <SelectItem key={w.id} value={w.id.toString()}>
+                                {direction === 'rtl' ? w.name_ar : w.name_en}
+                              </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label>المنتج</Label>
+                        <Label>{t('warehouses.transfers.product')}</Label>
                         <Select>
                           <SelectTrigger>
-                            <SelectValue placeholder="اختر المنتج" />
+                            <SelectValue placeholder={t('warehouses.transfers.selectProduct')} />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="1">كمبيوتر محمول HP</SelectItem>
@@ -492,18 +1070,18 @@ export function Warehouses() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label>الكمية</Label>
+                        <Label>{t('warehouses.transfers.quantity')}</Label>
                         <Input type="number" placeholder="0" />
                       </div>
-                      <Button className="w-full" onClick={() => toast.success('تم إنشاء طلب النقل')}>
-                        تنفيذ النقل
+                      <Button className="w-full" onClick={() => toast.success(t('warehouses.transfers.transferCreated'))}>
+                        {t('warehouses.transfers.execute')}
                       </Button>
                     </div>
                   </DialogContent>
                 </Dialog>
                 <div className="text-right">
-                  <CardTitle>نقل المنتجات بين المستودعات</CardTitle>
-                  <CardDescription>متابعة عمليات النقل</CardDescription>
+                  <CardTitle>{t('warehouses.transfers.title')}</CardTitle>
+                  <CardDescription>{t('warehouses.transfers.subtitle')}</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -512,13 +1090,13 @@ export function Warehouses() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-right">رقم النقل</TableHead>
-                      <TableHead className="text-right">التاريخ</TableHead>
-                      <TableHead className="text-right">من</TableHead>
-                      <TableHead className="text-right">إلى</TableHead>
-                      <TableHead className="text-right">المنتج</TableHead>
-                      <TableHead className="text-right">الكمية</TableHead>
-                      <TableHead className="text-right">الحالة</TableHead>
+                      <TableHead className="text-right">{t('warehouses.transfers.transferNumber')}</TableHead>
+                      <TableHead className="text-right">{t('warehouses.transfers.date')}</TableHead>
+                      <TableHead className="text-right">{t('warehouses.transfers.fromWarehouse')}</TableHead>
+                      <TableHead className="text-right">{t('warehouses.transfers.toWarehouse')}</TableHead>
+                      <TableHead className="text-right">{t('warehouses.transfers.product')}</TableHead>
+                      <TableHead className="text-right">{t('warehouses.transfers.quantity')}</TableHead>
+                      <TableHead className="text-right">{t('warehouses.transfers.status')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -531,7 +1109,7 @@ export function Warehouses() {
                         <TableCell className="text-right">{transfer.product}</TableCell>
                         <TableCell className="text-right">{transfer.quantity}</TableCell>
                         <TableCell className="text-right">
-                          <Badge variant={transfer.status === 'مكتمل' ? 'default' : 'secondary'}>
+                          <Badge variant={transfer.status === t('warehouses.transfers.completed') ? 'default' : 'secondary'}>
                             {transfer.status}
                           </Badge>
                         </TableCell>
@@ -550,22 +1128,22 @@ export function Warehouses() {
             <CardHeader className="text-right">
               <CardTitle className="flex items-center gap-2">
                 <ArrowDownCircle className="w-5 h-5 text-green-600" />
-                توريد مخزني
+                {t('warehouses.receipt.title')}
               </CardTitle>
-              <CardDescription>توريد بضاعة للمخزن من مورد أو حساب آخر</CardDescription>
+              <CardDescription>{t('warehouses.receipt.subtitle')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Warehouse Selection */}
               <div className="space-y-2">
-                <Label>المستودع الهدف</Label>
+                <Label>{t('warehouses.receipt.targetWarehouse')}</Label>
                 <Select value={receiptWarehouse} onValueChange={setReceiptWarehouse}>
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {warehouses.map((warehouse) => (
-                      <SelectItem key={warehouse.id} value={warehouse.id}>
-                        {warehouse.name}
+                      <SelectItem key={warehouse.id} value={warehouse.id.toString()}>
+                        {direction === 'rtl' ? warehouse.name_ar : warehouse.name_en}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -575,7 +1153,7 @@ export function Warehouses() {
               {/* Add Products */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-lg">المنتجات</Label>
+                  <Label className="text-lg">{t('warehouses.receipt.products')}</Label>
                   <Button
                     variant="outline"
                     size="sm"
@@ -592,7 +1170,7 @@ export function Warehouses() {
                     }}
                   >
                     <Plus className="w-4 h-4 ml-2" />
-                    إضافة منتج
+                    {t('warehouses.receipt.addProduct')}
                   </Button>
                 </div>
 
@@ -602,12 +1180,12 @@ export function Warehouses() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="text-right">المنتج</TableHead>
-                            <TableHead className="text-right">الكمية</TableHead>
-                            <TableHead className="text-right">سعر الشراء</TableHead>
-                            <TableHead className="text-right">الضريبة</TableHead>
-                            <TableHead className="text-right">المجموع</TableHead>
-                            <TableHead className="text-right">إجراءات</TableHead>
+                            <TableHead className="text-right">{t('warehouses.receipt.products')}</TableHead>
+                            <TableHead className="text-right">{t('warehouses.receipt.quantity')}</TableHead>
+                            <TableHead className="text-right">{t('warehouses.receipt.purchasePrice')}</TableHead>
+                            <TableHead className="text-right">{t('warehouses.receipt.tax')}</TableHead>
+                            <TableHead className="text-right">{t('warehouses.receipt.total')}</TableHead>
+                            <TableHead className="text-right">{t('warehouses.storage.actions')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -632,7 +1210,7 @@ export function Warehouses() {
                                   }}
                                 >
                                   <SelectTrigger className="w-48">
-                                    <SelectValue placeholder="اختر المنتج" />
+                                    <SelectValue placeholder={t('warehouses.transfers.selectProduct')} />
                                   </SelectTrigger>
                                   <SelectContent>
                                     {products.map((product) => (
@@ -705,7 +1283,7 @@ export function Warehouses() {
                                     </SelectContent>
                                   </Select>
                                 ) : (
-                                  <span className="text-gray-400">بدون ضريبة</span>
+                                  <span className="text-gray-400">{t('warehouses.receipt.noTax')}</span>
                                 )}
                               </TableCell>
                               <TableCell className="text-right font-semibold">
@@ -746,16 +1324,16 @@ export function Warehouses() {
                       })));
                     }}
                   />
-                  <Label htmlFor="includeTax">إدخال مع الضريبة</Label>
+                  <Label htmlFor="includeTax">{t('warehouses.receipt.includeTax')}</Label>
                 </div>
               </div>
 
               {/* Credit Account Selection */}
               <div className="space-y-2">
-                <Label>الحساب الدائن (مصدر التوريد)</Label>
+                <Label>{t('warehouses.receipt.creditAccount')}</Label>
                 <Select value={receiptCreditAccount} onValueChange={(value) => {
                   setReceiptCreditAccount(value);
-                  if (value !== 'حساب مخصص') {
+                  if (value !== t('warehouses.receipt.customAccount')) {
                     setReceiptCustomAccount('');
                   }
                 }}>
@@ -763,16 +1341,16 @@ export function Warehouses() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="الصندوق">الصندوق</SelectItem>
-                    <SelectItem value="البنك">البنك</SelectItem>
-                    <SelectItem value="الموردين">الموردين</SelectItem>
-                    <SelectItem value="حساب الشركة">حساب الشركة</SelectItem>
-                    <SelectItem value="حساب مخصص">حساب مخصص</SelectItem>
+                    <SelectItem value={t('warehouses.receipt.cash')}>{t('warehouses.receipt.cash')}</SelectItem>
+                    <SelectItem value={t('warehouses.receipt.bank')}>{t('warehouses.receipt.bank')}</SelectItem>
+                    <SelectItem value={t('warehouses.receipt.suppliers')}>{t('warehouses.receipt.suppliers')}</SelectItem>
+                    <SelectItem value={t('warehouses.receipt.companyAccount')}>{t('warehouses.receipt.companyAccount')}</SelectItem>
+                    <SelectItem value={t('warehouses.receipt.customAccount')}>{t('warehouses.receipt.customAccount')}</SelectItem>
                   </SelectContent>
                 </Select>
-                {receiptCreditAccount === 'حساب مخصص' && (
+                {receiptCreditAccount === t('warehouses.receipt.customAccount') && (
                   <Input
-                    placeholder="أدخل اسم الحساب"
+                    placeholder={t('warehouses.receipt.enterAccountName')}
                     value={receiptCustomAccount}
                     onChange={(e) => setReceiptCustomAccount(e.target.value)}
                   />
@@ -781,9 +1359,9 @@ export function Warehouses() {
 
               {/* Description */}
               <div className="space-y-2">
-                <Label>الوصف (اختياري)</Label>
+                <Label>{t('warehouses.receipt.description')}</Label>
                 <Input
-                  placeholder="مثال: توريد بضاعة بدون ضريبة من مورد"
+                  placeholder={t('warehouses.receipt.descriptionPlaceholder')}
                   value={receiptDescription}
                   onChange={(e) => setReceiptDescription(e.target.value)}
                 />
@@ -793,21 +1371,21 @@ export function Warehouses() {
               {receiptItems.length > 0 && (
                 <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                   <div className="flex justify-between">
-                    <span className="font-semibold">المجموع الفرعي:</span>
+                    <span className="font-semibold">{t('warehouses.receipt.subtotal')}:</span>
                     <span>{new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' }).format(
                       receiptItems.reduce((sum, item) => sum + (item.costPrice * item.quantity), 0)
                     )}</span>
                   </div>
                   {receiptIncludeTax && (
                     <div className="flex justify-between">
-                      <span className="font-semibold">الضريبة:</span>
+                      <span className="font-semibold">{t('warehouses.receipt.taxAmount')}:</span>
                       <span>{new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' }).format(
                         receiptItems.reduce((sum, item) => sum + item.taxAmount, 0)
                       )}</span>
                     </div>
                   )}
                   <div className="flex justify-between border-t pt-2">
-                    <span className="font-semibold">الإجمالي:</span>
+                    <span className="font-semibold">{t('warehouses.receipt.grandTotal')}:</span>
                     <span className="text-lg font-bold text-green-600">{new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' }).format(
                       receiptItems.reduce((sum, item) => sum + item.totalAmount, 0)
                     )}</span>
@@ -821,34 +1399,35 @@ export function Warehouses() {
                   variant="outline"
                   onClick={() => {
                     setReceiptItems([]);
-                    setReceiptCreditAccount('الصندوق');
+                    setReceiptCreditAccount(t('warehouses.receipt.cash'));
                     setReceiptCustomAccount('');
                     setReceiptIncludeTax(false);
                     setReceiptDescription('');
                   }}
                 >
-                  إلغاء
+                  {t('warehouses.receipt.cancel')}
                 </Button>
                 <Button
                   onClick={() => {
                     if (receiptItems.length === 0) {
-                      toast.error('يرجى إضافة منتجات للتوريد');
+                      toast.error(t('warehouses.receipt.addProducts'));
                       return;
                     }
 
                     const emptyProducts = receiptItems.filter(item => !item.productId || item.quantity <= 0 || item.costPrice <= 0);
                     if (emptyProducts.length > 0) {
-                      toast.error('يرجى إكمال بيانات جميع المنتجات');
+                      toast.error(t('warehouses.receipt.completeAllProducts'));
                       return;
                     }
 
-                    if (receiptCreditAccount === 'حساب مخصص' && !receiptCustomAccount.trim()) {
-                      toast.error('يرجى إدخال اسم الحساب المخصص');
+                    if (receiptCreditAccount === t('warehouses.receipt.customAccount') && !receiptCustomAccount.trim()) {
+                      toast.error(t('warehouses.receipt.enterAccountName'));
                       return;
                     }
 
                     const receiptNumber = `REC-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
-                    const warehouseName = warehouses.find(w => w.id === receiptWarehouse)?.name || '';
+                    const warehouse = warehouses.find(w => w.id.toString() === receiptWarehouse);
+                    const warehouseName = warehouse ? (direction === 'rtl' ? warehouse.name_ar : warehouse.name_en) : '';
                     const totalAmount = receiptItems.reduce((sum, item) => sum + item.totalAmount, 0);
                     const totalTax = receiptItems.reduce((sum, item) => sum + item.taxAmount, 0);
 
@@ -858,7 +1437,7 @@ export function Warehouses() {
                     });
 
                     // Create journal entry
-                    const creditAccount = receiptCreditAccount === 'حساب مخصص' ? receiptCustomAccount : receiptCreditAccount;
+                    const creditAccount = receiptCreditAccount === t('warehouses.receipt.customAccount') ? receiptCustomAccount : receiptCreditAccount;
                     const journalEntry = createInventoryReceiptFromAccountEntry(
                       receiptNumber,
                       totalAmount - totalTax, // Amount without tax
@@ -871,16 +1450,16 @@ export function Warehouses() {
 
                     addJournalEntry(journalEntry);
 
-                    toast.success(`تم توريد المخزون بنجاح - ${receiptNumber}`);
+                    toast.success(`${t('warehouses.messages.receiptCreated')} - ${receiptNumber}`);
                     setReceiptItems([]);
-                    setReceiptCreditAccount('الصندوق');
+                    setReceiptCreditAccount(t('warehouses.receipt.cash'));
                     setReceiptCustomAccount('');
                     setReceiptIncludeTax(false);
                     setReceiptDescription('');
                   }}
                 >
                   <ArrowDownCircle className="w-4 h-4 ml-2" />
-                  حفظ التوريد
+                  {t('warehouses.receipt.save')}
                 </Button>
               </div>
             </CardContent>
@@ -893,22 +1472,22 @@ export function Warehouses() {
             <CardHeader className="text-right">
               <CardTitle className="flex items-center gap-2">
                 <ArrowUpCircle className="w-5 h-5 text-red-600" />
-                صرف مخزني
+                {t('warehouses.issue.title')}
               </CardTitle>
-              <CardDescription>صرف بضاعة من المخزن إلى حساب آخر (مصروفات، خسائر، شركة)</CardDescription>
+              <CardDescription>{t('warehouses.issue.subtitle')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Warehouse Selection */}
               <div className="space-y-2">
-                <Label>المستودع المصدر</Label>
+                <Label>{t('warehouses.issue.targetWarehouse')}</Label>
                 <Select value={issueWarehouse} onValueChange={setIssueWarehouse}>
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {warehouses.map((warehouse) => (
-                      <SelectItem key={warehouse.id} value={warehouse.id}>
-                        {warehouse.name}
+                      <SelectItem key={warehouse.id} value={warehouse.id.toString()}>
+                        {direction === 'rtl' ? warehouse.name_ar : warehouse.name_en}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -918,7 +1497,7 @@ export function Warehouses() {
               {/* Add Products */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-lg">المنتجات</Label>
+                  <Label className="text-lg">{t('warehouses.issue.products')}</Label>
                   <Button
                     variant="outline"
                     size="sm"
@@ -933,7 +1512,7 @@ export function Warehouses() {
                     }}
                   >
                     <Plus className="w-4 h-4 ml-2" />
-                    إضافة منتج
+                    {t('warehouses.issue.addProduct')}
                   </Button>
                 </div>
 
@@ -943,12 +1522,12 @@ export function Warehouses() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="text-right">المنتج</TableHead>
-                            <TableHead className="text-right">الكمية المتاحة</TableHead>
-                            <TableHead className="text-right">الكمية المراد صرفها</TableHead>
-                            <TableHead className="text-right">سعر التكلفة</TableHead>
-                            <TableHead className="text-right">المجموع</TableHead>
-                            <TableHead className="text-right">إجراءات</TableHead>
+                            <TableHead className="text-right">{t('warehouses.issue.product')}</TableHead>
+                            <TableHead className="text-right">{t('warehouses.issue.availableQty')}</TableHead>
+                            <TableHead className="text-right">{t('warehouses.issue.quantity')}</TableHead>
+                            <TableHead className="text-right">{t('warehouses.issue.costPrice')}</TableHead>
+                            <TableHead className="text-right">{t('warehouses.issue.total')}</TableHead>
+                            <TableHead className="text-right">{t('warehouses.storage.actions')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -973,7 +1552,7 @@ export function Warehouses() {
                                   }}
                                 >
                                   <SelectTrigger className="w-48">
-                                    <SelectValue placeholder="اختر المنتج" />
+                                    <SelectValue placeholder={t('warehouses.transfers.selectProduct')} />
                                   </SelectTrigger>
                                   <SelectContent>
                                     {products.map((product) => (
@@ -1034,10 +1613,10 @@ export function Warehouses() {
 
               {/* Debit Account Selection */}
               <div className="space-y-2">
-                <Label>الحساب المدين (وجهة الصرف)</Label>
+                <Label>{t('warehouses.issue.debitAccount')}</Label>
                 <Select value={issueDebitAccount} onValueChange={(value) => {
                   setIssueDebitAccount(value);
-                  if (value !== 'حساب مخصص') {
+                  if (value !== t('warehouses.issue.customAccount')) {
                     setIssueCustomAccount('');
                   }
                 }}>
@@ -1045,15 +1624,15 @@ export function Warehouses() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="مصروفات والخسائر">مصروفات والخسائر</SelectItem>
-                    <SelectItem value="مصروفات الاستهلاك">مصروفات الاستهلاك</SelectItem>
-                    <SelectItem value="حساب الشركة">حساب الشركة</SelectItem>
-                    <SelectItem value="حساب مخصص">حساب مخصص</SelectItem>
+                    <SelectItem value={t('warehouses.issue.expenses')}>{t('warehouses.issue.expenses')}</SelectItem>
+                    <SelectItem value={t('warehouses.issue.depreciation')}>{t('warehouses.issue.depreciation')}</SelectItem>
+                    <SelectItem value={t('warehouses.issue.companyAccount')}>{t('warehouses.issue.companyAccount')}</SelectItem>
+                    <SelectItem value={t('warehouses.issue.customAccount')}>{t('warehouses.issue.customAccount')}</SelectItem>
                   </SelectContent>
                 </Select>
-                {issueDebitAccount === 'حساب مخصص' && (
+                {issueDebitAccount === t('warehouses.issue.customAccount') && (
                   <Input
-                    placeholder="أدخل اسم الحساب"
+                    placeholder={t('warehouses.issue.enterAccountName')}
                     value={issueCustomAccount}
                     onChange={(e) => setIssueCustomAccount(e.target.value)}
                   />
@@ -1062,9 +1641,9 @@ export function Warehouses() {
 
               {/* Reason */}
               <div className="space-y-2">
-                <Label>سبب الصرف</Label>
+                <Label>{t('warehouses.issue.reason')}</Label>
                 <Input
-                  placeholder="مثال: بضاعة منتهية الصلاحية"
+                  placeholder={t('warehouses.issue.reasonPlaceholder')}
                   value={issueReason}
                   onChange={(e) => setIssueReason(e.target.value)}
                 />
@@ -1072,9 +1651,9 @@ export function Warehouses() {
 
               {/* Description */}
               <div className="space-y-2">
-                <Label>الوصف (اختياري)</Label>
+                <Label>{t('warehouses.issue.description')}</Label>
                 <Input
-                  placeholder="مثال: صرف بضاعة منتهية للشركة المصنعة"
+                  placeholder={t('warehouses.issue.descriptionPlaceholder')}
                   value={issueDescription}
                   onChange={(e) => setIssueDescription(e.target.value)}
                 />
@@ -1084,7 +1663,7 @@ export function Warehouses() {
               {issueItems.length > 0 && (
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="flex justify-between">
-                    <span className="font-semibold">الإجمالي:</span>
+                    <span className="font-semibold">{t('warehouses.issue.total')}:</span>
                     <span className="text-lg font-bold text-red-600">{new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' }).format(
                       issueItems.reduce((sum, item) => sum + item.totalAmount, 0)
                     )}</span>
@@ -1098,24 +1677,24 @@ export function Warehouses() {
                   variant="outline"
                   onClick={() => {
                     setIssueItems([]);
-                    setIssueDebitAccount('مصروفات والخسائر');
+                    setIssueDebitAccount(t('warehouses.issue.expenses'));
                     setIssueCustomAccount('');
                     setIssueReason('');
                     setIssueDescription('');
                   }}
                 >
-                  إلغاء
+                  {t('warehouses.issue.cancel')}
                 </Button>
                 <Button
                   onClick={() => {
                     if (issueItems.length === 0) {
-                      toast.error('يرجى إضافة منتجات للصرف');
+                      toast.error(t('warehouses.issue.addProducts'));
                       return;
                     }
 
                     const emptyProducts = issueItems.filter(item => !item.productId || item.quantity <= 0);
                     if (emptyProducts.length > 0) {
-                      toast.error('يرجى إكمال بيانات جميع المنتجات');
+                      toast.error(t('warehouses.issue.completeAllProducts'));
                       return;
                     }
 
@@ -1123,36 +1702,37 @@ export function Warehouses() {
                     for (const item of issueItems) {
                       const availableStock = getStock(item.productId, issueWarehouse);
                       if (availableStock < item.quantity) {
-                        toast.error(`الكمية المتاحة من ${item.productName}: ${availableStock} فقط`);
+                        toast.error(`${t('warehouses.issue.availableStock')} ${item.productName}: ${availableStock} ${t('warehouses.issue.only')}`);
                         return;
                       }
                     }
 
-                    if (issueDebitAccount === 'حساب مخصص' && !issueCustomAccount.trim()) {
-                      toast.error('يرجى إدخال اسم الحساب المخصص');
+                    if (issueDebitAccount === t('warehouses.issue.customAccount') && !issueCustomAccount.trim()) {
+                      toast.error(t('warehouses.issue.enterCustomAccount'));
                       return;
                     }
 
                     if (!issueReason.trim()) {
-                      toast.error('يرجى إدخال سبب الصرف');
+                      toast.error(t('warehouses.issue.enterReason'));
                       return;
                     }
 
                     const issueNumber = `ISS-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
-                    const warehouseName = warehouses.find(w => w.id === issueWarehouse)?.name || '';
+                    const warehouse = warehouses.find(w => w.id.toString() === issueWarehouse);
+                    const warehouseName = warehouse ? (direction === 'rtl' ? warehouse.name_ar : warehouse.name_en) : '';
                     const totalAmount = issueItems.reduce((sum, item) => sum + item.totalAmount, 0);
 
                     // Reduce stock for each product
                     issueItems.forEach((item) => {
                       const success = reduceStock(item.productId, issueWarehouse, item.quantity);
                       if (!success) {
-                        toast.error(`فشل صرف المخزون لـ ${item.productName}`);
+                        toast.error(`${t('warehouses.issue.issueFailed')} ${item.productName}`);
                         return;
                       }
                     });
 
                     // Create journal entry
-                    const debitAccount = issueDebitAccount === 'حساب مخصص' ? issueCustomAccount : issueDebitAccount;
+                    const debitAccount = issueDebitAccount === t('warehouses.issue.customAccount') ? issueCustomAccount : issueDebitAccount;
                     const journalEntry = createInventoryIssueToAccountEntry(
                       issueNumber,
                       totalAmount,
@@ -1164,16 +1744,16 @@ export function Warehouses() {
 
                     addJournalEntry(journalEntry);
 
-                    toast.success(`تم صرف المخزون بنجاح - ${issueNumber}`);
+                    toast.success(`${t('warehouses.messages.issueCreated')} - ${issueNumber}`);
                     setIssueItems([]);
-                    setIssueDebitAccount('مصروفات والخسائر');
+                    setIssueDebitAccount(t('warehouses.issue.expenses'));
                     setIssueCustomAccount('');
                     setIssueReason('');
                     setIssueDescription('');
                   }}
                 >
                   <ArrowUpCircle className="w-4 h-4 ml-2" />
-                  حفظ الصرف
+                  {t('warehouses.issue.save')}
                 </Button>
               </div>
             </CardContent>
@@ -1186,14 +1766,14 @@ export function Warehouses() {
             <CardHeader className="text-right">
               <CardTitle className="flex items-center gap-2">
                 <Calculator className="w-5 h-5" />
-                تسوية المخزون
+                {t('warehouses.adjustment.title')}
               </CardTitle>
-              <CardDescription>تسوية الكميات الفعلية مع الكميات المسجلة في النظام</CardDescription>
+              <CardDescription>{t('warehouses.adjustment.subtitle')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Warehouse Selection */}
               <div className="space-y-2">
-                <Label>اختر المستودع</Label>
+                <Label>{t('warehouses.adjustment.selectWarehouse')}</Label>
                 <Select value={adjustmentWarehouse} onValueChange={(value) => {
                   setAdjustmentWarehouse(value);
                   // Load products for selected warehouse
@@ -1202,7 +1782,7 @@ export function Warehouses() {
                     const product = products.find(p => p.id === item.productId);
                     return {
                       productId: item.productId,
-                      productName: product?.name || 'منتج غير معروف',
+                      productName: product?.name || t('warehouses.adjustment.unknownProduct'),
                       recordedQty: item.quantity,
                       actualQty: item.quantity,
                       difference: 0,
@@ -1216,8 +1796,8 @@ export function Warehouses() {
                   </SelectTrigger>
                   <SelectContent>
                     {warehouses.map((warehouse) => (
-                      <SelectItem key={warehouse.id} value={warehouse.id}>
-                        {warehouse.name}
+                      <SelectItem key={warehouse.id} value={warehouse.id.toString()}>
+                        {direction === 'rtl' ? warehouse.name_ar : warehouse.name_en}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1238,7 +1818,7 @@ export function Warehouses() {
                           const product = products.find(p => p.id === item.productId);
                           return {
                             productId: item.productId,
-                            productName: product?.name || 'منتج غير معروف',
+                            productName: product?.name || t('warehouses.adjustment.unknownProduct'),
                             recordedQty: item.quantity,
                             actualQty: item.quantity,
                             difference: 0,
@@ -1248,7 +1828,7 @@ export function Warehouses() {
                         }));
                       }}
                     >
-                      تحديث القائمة
+                      {t('warehouses.adjustment.refreshList')}
                     </Button>
                   </div>
                   
@@ -1257,11 +1837,11 @@ export function Warehouses() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="text-right">المنتج</TableHead>
-                            <TableHead className="text-right">الكمية المسجلة</TableHead>
-                            <TableHead className="text-right">الكمية الفعلية</TableHead>
-                            <TableHead className="text-right">الفرق</TableHead>
-                            <TableHead className="text-right">سبب التسوية</TableHead>
+                            <TableHead className="text-right">{t('warehouses.adjustment.product')}</TableHead>
+                            <TableHead className="text-right">{t('warehouses.adjustment.recordedQty')}</TableHead>
+                            <TableHead className="text-right">{t('warehouses.adjustment.actualQty')}</TableHead>
+                            <TableHead className="text-right">{t('warehouses.adjustment.difference')}</TableHead>
+                            <TableHead className="text-right">{t('warehouses.adjustment.reason')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1294,7 +1874,7 @@ export function Warehouses() {
                               </TableCell>
                               <TableCell className="text-right">
                                 <Input
-                                  placeholder="سبب التسوية"
+                                  placeholder={t('warehouses.adjustment.reason')}
                                   className="w-48"
                                   value={item.reason}
                                   onChange={(e) => {
@@ -1314,19 +1894,19 @@ export function Warehouses() {
                   {/* Summary */}
                   <div className="bg-gray-50 p-4 rounded-lg space-y-2">
                     <div className="flex justify-between">
-                      <span className="font-semibold">إجمالي الزيادة:</span>
+                      <span className="font-semibold">{t('warehouses.adjustment.totalIncrease')}:</span>
                       <span className="text-green-600 font-semibold">
                         {adjustmentProducts.filter(p => p.difference > 0).reduce((sum, p) => sum + p.difference, 0)}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="font-semibold">إجمالي النقص:</span>
+                      <span className="font-semibold">{t('warehouses.adjustment.totalDecrease')}:</span>
                       <span className="text-red-600 font-semibold">
                         {Math.abs(adjustmentProducts.filter(p => p.difference < 0).reduce((sum, p) => sum + p.difference, 0))}
                       </span>
                     </div>
                     <div className="flex justify-between border-t pt-2">
-                      <span className="font-semibold">القيمة المالية للفرق:</span>
+                      <span className="font-semibold">{t('warehouses.adjustment.financialDifference')}:</span>
                       <span className={`font-semibold ${adjustmentProducts.reduce((sum, p) => sum + (p.difference * p.costPrice), 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' }).format(
                           adjustmentProducts.reduce((sum, p) => sum + (p.difference * p.costPrice), 0)
@@ -1337,9 +1917,9 @@ export function Warehouses() {
 
                   {/* General Reason */}
                   <div className="space-y-2">
-                    <Label>سبب عام للتسوية (اختياري)</Label>
+                    <Label>{t('warehouses.adjustment.generalReason')}</Label>
                     <Input
-                      placeholder="مثال: جرد دوري - يناير 2025"
+                      placeholder={t('warehouses.adjustment.generalReasonPlaceholder')}
                       value={adjustmentReason}
                       onChange={(e) => setAdjustmentReason(e.target.value)}
                     />
@@ -1354,27 +1934,28 @@ export function Warehouses() {
                         setAdjustmentReason('');
                       }}
                     >
-                      إلغاء
+                      {t('warehouses.receipt.cancel')}
                     </Button>
                     <Button
                       onClick={() => {
                         // Validate
                         const hasChanges = adjustmentProducts.some(p => p.difference !== 0);
                         if (!hasChanges) {
-                          toast.error('لا توجد تغييرات في الكميات');
+                          toast.error(t('warehouses.adjustment.noChanges'));
                           return;
                         }
 
                         const productsWithChanges = adjustmentProducts.filter(p => p.difference !== 0);
                         const missingReasons = productsWithChanges.filter(p => !p.reason.trim());
                         if (missingReasons.length > 0) {
-                          toast.error('يرجى إدخال سبب التسوية لجميع المنتجات المتغيرة');
+                          toast.error(t('warehouses.adjustment.enterReasonForAll'));
                           return;
                         }
 
                         // Apply adjustments
                         const adjustmentNumber = `ADJ-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
-                        const warehouseName = warehouses.find(w => w.id === adjustmentWarehouse)?.name || '';
+                        const warehouse = warehouses.find(w => w.id.toString() === adjustmentWarehouse);
+                        const warehouseName = warehouse ? (direction === 'rtl' ? warehouse.name_ar : warehouse.name_en) : '';
 
                         productsWithChanges.forEach((item) => {
                           // Adjust stock
@@ -1396,13 +1977,13 @@ export function Warehouses() {
                           addJournalEntry(journalEntry);
                         });
 
-                        toast.success(`تمت تسوية المخزون بنجاح - ${adjustmentNumber}`);
+                        toast.success(`${t('warehouses.messages.adjustmentCreated')} - ${adjustmentNumber}`);
                         setAdjustmentProducts([]);
                         setAdjustmentReason('');
                       }}
                     >
                       <Calculator className="w-4 h-4 ml-2" />
-                      حفظ التسوية
+                      {t('warehouses.adjustment.save')}
                     </Button>
                   </div>
                 </div>
@@ -1411,7 +1992,213 @@ export function Warehouses() {
               {adjustmentProducts.length === 0 && (
                 <div className="text-center py-12 text-gray-500">
                   <Calculator className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                  <p>اختر مستودعاً لعرض المنتجات وتنفيذ التسوية</p>
+                  <p>{t('warehouses.adjustment.selectWarehouse')}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Storages */}
+        <TabsContent value="storages" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <Dialog open={isStorageDialogOpen} onOpenChange={setIsStorageDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button onClick={handleAddStorage} size="sm" className="gap-2">
+                      <Plus className="w-4 h-4" />
+                      {t('warehouses.storage.new')}
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent dir="rtl" className="max-w-2xl">
+                    <DialogHeader className="text-right">
+                      <DialogTitle>
+                        {editingStorage ? t('warehouses.storage.edit') : t('warehouses.storage.add')}
+                      </DialogTitle>
+                      <DialogDescription>
+                        {editingStorage ? t('warehouses.storage.edit') : t('warehouses.storage.add')}
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>{t('warehouses.storage.warehouse')} *</Label>
+                        <Select 
+                          value={storageFormData.warehouseId}
+                          onValueChange={(value) => setStorageFormData({ ...storageFormData, warehouseId: value })}
+                          disabled={!!editingStorage}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={t('warehouses.storage.selectWarehouse')} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {warehouses.map(w => (
+                              <SelectItem key={w.id} value={w.id.toString()}>
+                                {direction === 'rtl' ? w.name_ar : w.name_en}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>{t('warehouses.storage.nameAr')} *</Label>
+                          <Input
+                            value={storageFormData.name_ar}
+                            onChange={(e) => setStorageFormData({ ...storageFormData, name_ar: e.target.value })}
+                            placeholder={t('warehouses.storage.nameAr')}
+                            dir="rtl"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>{t('warehouses.storage.nameEn')} *</Label>
+                          <Input
+                            value={storageFormData.name_en}
+                            onChange={(e) => setStorageFormData({ ...storageFormData, name_en: e.target.value })}
+                            placeholder="Section A"
+                            dir="ltr"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>{t('warehouses.storage.capacity')} *</Label>
+                        <Input
+                          type="number"
+                          value={storageFormData.capacity}
+                          onChange={(e) => setStorageFormData({ ...storageFormData, capacity: e.target.value })}
+                          placeholder="1000"
+                          min="1"
+                        />
+                      </div>
+
+                      <Button 
+                        className="w-full" 
+                        onClick={handleSaveStorage}
+                        disabled={!storageFormData.name_ar || !storageFormData.name_en || !storageFormData.capacity || !storageFormData.warehouseId || isSubmittingStorage}
+                      >
+                        {isSubmittingStorage ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            {t('warehouses.storage.saving')}
+                          </>
+                        ) : (
+                          editingStorage ? t('warehouses.storage.saveChanges') : t('warehouses.storage.save')
+                        )}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                <div className="text-right">
+                  <CardTitle>{t('warehouses.storage.title')}</CardTitle>
+                  <CardDescription>{t('warehouses.storage.subtitle')}</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Filters */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Select value={selectedWarehouse} onValueChange={setSelectedWarehouse}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t('warehouses.storage.filterAll')}</SelectItem>
+                      {warehouses.map(w => (
+                        <SelectItem key={w.id} value={w.id.toString()}>
+                          {direction === 'rtl' ? w.name_ar : w.name_en}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Results Count */}
+                <div className="text-right text-sm text-gray-600">
+                  {t('warehouses.storage.showing')} <span className="font-bold text-blue-600">
+                    {storages.filter(s => selectedWarehouse === 'all' || s.warehouse_id.toString() === selectedWarehouse).length}
+                  </span> {t('warehouses.storage.of')} {storages.length} {t('warehouses.storage.storage')}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="text-right">
+              <CardTitle>{t('warehouses.storage.title')}</CardTitle>
+              <CardDescription>{t('warehouses.storage.subtitle')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {storages.length === 0 ? (
+                <div className="text-center py-12" dir="rtl">
+                  <Package className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                  <p className="text-gray-500 text-lg">{t('warehouses.storage.noStorages')}</p>
+                  <p className="text-gray-400 text-sm mt-2">{t('warehouses.storage.noStoragesSubtext')}</p>
+                </div>
+              ) : (
+                <div dir="rtl" className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-right">{t('warehouses.storage.nameAr')}</TableHead>
+                        <TableHead className="text-right">{t('warehouses.storage.warehouse')}</TableHead>
+                        <TableHead className="text-right">{t('warehouses.storage.capacity')}</TableHead>
+                        <TableHead className="text-right">{t('warehouses.storage.shelvesCount')}</TableHead>
+                        <TableHead className="text-right">{t('warehouses.storage.edit')}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {storages
+                        .filter(s => selectedWarehouse === 'all' || s.warehouse_id.toString() === selectedWarehouse)
+                        .map((storage) => {
+                          const warehouse = warehouses.find(w => w.id === storage.warehouse_id);
+                          const shelvesCount = storage.shelves?.length || 0;
+                          
+                          return (
+                            <TableRow key={storage.id}>
+                              <TableCell className="text-right font-medium">
+                                {direction === 'rtl' ? storage.name_ar : storage.name_en}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {warehouse ? (direction === 'rtl' ? warehouse.name_ar : warehouse.name_en) : '-'}
+                              </TableCell>
+                              <TableCell className="text-right font-medium">{storage.capacity}</TableCell>
+                              <TableCell className="text-right">
+                                <Badge variant="secondary">{shelvesCount} {t('warehouses.storage.shelvesCount')}</Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex gap-1 justify-end">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleEditStorage(storage)}
+                                    className="gap-1"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                    {t('warehouses.storage.editButton')}
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteStorage(storage)}
+                                    className="gap-1"
+                                    disabled={shelvesCount > 0}
+                                    title={shelvesCount > 0 ? t('warehouses.storage.cannotDelete') : ''}
+                                  >
+                                    <Trash2 className={`w-4 h-4 ${shelvesCount > 0 ? 'text-gray-400' : 'text-red-600'}`} />
+                                    {t('warehouses.storage.deleteButton')}
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </CardContent>
@@ -1427,106 +2214,140 @@ export function Warehouses() {
                   <DialogTrigger asChild>
                     <Button onClick={handleAddShelf} size="sm" className="gap-2">
                       <Plus className="w-4 h-4" />
-                      إضافة رف
+                      {t('warehouses.shelf.new')}
                     </Button>
                   </DialogTrigger>
                   <DialogContent dir="rtl">
                     <DialogHeader className="text-right">
                       <DialogTitle>
-                        {editingShelf ? 'تعديل الرف' : 'إضافة رف جديد'}
+                        {editingShelf ? t('warehouses.shelf.edit') : t('warehouses.shelf.add')}
                       </DialogTitle>
                       <DialogDescription>
-                        {editingShelf ? 'قم بتحديث بيانات الرف' : 'أدخل معلومات الرف الجديد'}
+                        {editingShelf ? t('warehouses.shelf.edit') : t('warehouses.shelf.add')}
                       </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label>كود الرف *</Label>
+                          <Label>{t('warehouses.shelf.code')} *</Label>
                           <Input
-                            defaultValue={editingShelf?.code}
+                            value={shelfFormData.code}
+                            onChange={(e) => setShelfFormData({ ...shelfFormData, code: e.target.value })}
                             placeholder="A-01"
                             className="font-mono"
                             dir="ltr"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label>المستودع *</Label>
-                          <Select defaultValue={editingShelf?.warehouseId}>
+                          <Label>{t('warehouses.shelf.warehouse')} *</Label>
+                          <Select 
+                            value={shelfFormData.warehouseId}
+                            onValueChange={(value) => {
+                              setShelfFormData({ ...shelfFormData, warehouseId: value, storageId: '' });
+                            }}
+                          >
                             <SelectTrigger>
-                              <SelectValue placeholder="اختر المستودع" />
+                              <SelectValue placeholder={t('warehouses.shelf.selectWarehouse')} />
                             </SelectTrigger>
                             <SelectContent>
                               {warehouses.map(w => (
-                                <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                                <SelectItem key={w.id} value={w.id.toString()}>
+                                  {direction === 'rtl' ? w.name_ar : w.name_en}
+                                </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         </div>
                       </div>
 
+                      <div className="space-y-2">
+                        <Label>{t('warehouses.shelf.storage')} *</Label>
+                        <Select 
+                          value={shelfFormData.storageId}
+                          onValueChange={(value) => setShelfFormData({ ...shelfFormData, storageId: value })}
+                          disabled={!shelfFormData.warehouseId}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder={shelfFormData.warehouseId ? t('warehouses.shelf.selectStorage') : t('warehouses.shelf.selectStorageFirst')} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {storages
+                              .filter(s => s.warehouse_id.toString() === shelfFormData.warehouseId)
+                              .map(s => (
+                                <SelectItem key={s.id} value={s.id.toString()}>
+                                  {direction === 'rtl' ? s.name_ar : s.name_en}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label>القسم</Label>
-                          <Input
-                            defaultValue={editingShelf?.section}
-                            placeholder="قسم A"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>المستوى</Label>
-                          <Select defaultValue={editingShelf?.level?.toString()}>
+                          <Label>{t('warehouses.shelf.level')}</Label>
+                          <Select 
+                            value={shelfFormData.level || "none"}
+                            onValueChange={(value) => setShelfFormData({ ...shelfFormData, level: value === "none" ? "" : value })}
+                          >
                             <SelectTrigger>
-                              <SelectValue placeholder="اختر المستوى" />
+                              <SelectValue placeholder={t('warehouses.shelf.selectLevel')} />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="1">المستوى 1 (أرضي)</SelectItem>
-                              <SelectItem value="2">المستوى 2</SelectItem>
-                              <SelectItem value="3">المستوى 3</SelectItem>
-                              <SelectItem value="4">المستوى 4</SelectItem>
-                              <SelectItem value="5">المستوى 5</SelectItem>
+                              <SelectItem value="none">{t('warehouses.shelf.noLevel')}</SelectItem>
+                              <SelectItem value="1">{t('warehouses.shelf.level1')}</SelectItem>
+                              <SelectItem value="2">{t('warehouses.shelf.level2')}</SelectItem>
+                              <SelectItem value="3">{t('warehouses.shelf.level3')}</SelectItem>
+                              <SelectItem value="4">{t('warehouses.shelf.level4')}</SelectItem>
+                              <SelectItem value="5">{t('warehouses.shelf.level5')}</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>السعة (عدد الوحدات)</Label>
-                        <Input
-                          type="number"
-                          defaultValue={editingShelf?.capacity}
-                          placeholder="200"
-                        />
+                        <div className="space-y-2">
+                          <Label>{t('warehouses.shelf.capacity')} *</Label>
+                          <Input
+                            type="number"
+                            value={shelfFormData.capacity}
+                            onChange={(e) => setShelfFormData({ ...shelfFormData, capacity: e.target.value })}
+                            placeholder="200"
+                            min="1"
+                          />
+                        </div>
                       </div>
 
                       <div className="flex items-center justify-between p-3 border rounded-lg">
-                        <Select defaultValue={editingShelf?.status || 'نشط'}>
+                        <Select 
+                          value={shelfFormData.is_active ? t('warehouses.shelf.active') : t('warehouses.shelf.inactive')}
+                          onValueChange={(value) => setShelfFormData({ ...shelfFormData, is_active: value === t('warehouses.shelf.active') })}
+                        >
                           <SelectTrigger className="w-32">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="نشط">نشط</SelectItem>
-                            <SelectItem value="معطل">معطل</SelectItem>
-                            <SelectItem value="صيانة">صيانة</SelectItem>
+                            <SelectItem value={t('warehouses.shelf.active')}>{t('warehouses.shelf.active')}</SelectItem>
+                            <SelectItem value={t('warehouses.shelf.inactive')}>{t('warehouses.shelf.inactive')}</SelectItem>
                           </SelectContent>
                         </Select>
                         <div className="text-right">
-                          <Label>حالة الرف</Label>
-                          <p className="text-sm text-gray-600">تفعيل أو تعطيل</p>
+                          <Label>{t('warehouses.shelf.status')}</Label>
+                          <p className="text-sm text-gray-600">{t('warehouses.shelf.statusDescription')}</p>
                         </div>
                       </div>
 
-                      <Button className="w-full" onClick={handleSaveShelf}>
-                        {editingShelf ? 'حفظ التغييرات' : 'إضافة الرف'}
+                      <Button 
+                        className="w-full" 
+                        onClick={handleSaveShelf}
+                        disabled={!shelfFormData.code || !shelfFormData.capacity || !shelfFormData.storageId}
+                      >
+                        {editingShelf ? t('warehouses.shelf.saveChanges') : t('warehouses.shelf.save')}
                       </Button>
                     </div>
                   </DialogContent>
                 </Dialog>
 
                 <div className="text-right">
-                  <CardTitle>إدارة الرفوف</CardTitle>
-                  <CardDescription>تنظيم وإدارة رفوف المستودعات</CardDescription>
+                  <CardTitle>{t('warehouses.shelf.title')}</CardTitle>
+                  <CardDescription>{t('warehouses.shelf.subtitle')}</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -1537,7 +2358,7 @@ export function Warehouses() {
                   <div className="relative">
                     <Search className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
                     <Input
-                      placeholder="ابحث عن رف بالكود، المستودع، أو القسم..."
+                      placeholder={t('warehouses.shelf.search')}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pr-10"
@@ -1549,9 +2370,11 @@ export function Warehouses() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">جميع المستودعات</SelectItem>
+                      <SelectItem value="all">{t('warehouses.shelf.filterAll')}</SelectItem>
                       {warehouses.map(w => (
-                        <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+                        <SelectItem key={w.id} value={w.id.toString()}>
+                          {direction === 'rtl' ? w.name_ar : w.name_en}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -1559,7 +2382,7 @@ export function Warehouses() {
 
                 {/* Results Count */}
                 <div className="text-right text-sm text-gray-600">
-                  عرض <span className="font-bold text-blue-600">{filteredShelves.length}</span> من {shelves.length} رف
+                  {t('warehouses.shelf.showing')} <span className="font-bold text-blue-600">{filteredShelves.length}</span> {t('warehouses.shelf.of')} {shelves.length} {t('warehouses.shelf.shelf')}
                 </div>
               </div>
             </CardContent>
@@ -1567,8 +2390,8 @@ export function Warehouses() {
 
           <Card>
             <CardHeader className="text-right">
-              <CardTitle>قائمة الرفوف</CardTitle>
-              <CardDescription>عرض وإدارة جميع الرفوف</CardDescription>
+              <CardTitle>{t('warehouses.shelf.list')}</CardTitle>
+              <CardDescription>{t('warehouses.shelf.listSubtitle')}</CardDescription>
             </CardHeader>
             <CardContent>
               {/* View Toggle */}
@@ -1576,11 +2399,11 @@ export function Warehouses() {
                 <TabsList className="mb-4">
                   <TabsTrigger value="grid" className="gap-2">
                     <Grid3x3 className="w-4 h-4" />
-                    عرض شبكي
+                    {t('warehouses.shelf.viewGrid')}
                   </TabsTrigger>
                   <TabsTrigger value="list" className="gap-2">
                     <Package className="w-4 h-4" />
-                    عرض قائمة
+                    {t('warehouses.shelf.viewList')}
                   </TabsTrigger>
                 </TabsList>
 
@@ -1589,13 +2412,14 @@ export function Warehouses() {
                   {filteredShelves.length === 0 ? (
                     <div className="text-center py-12" dir="rtl">
                       <Grid3x3 className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                      <p className="text-gray-500 text-lg">لا توجد رفوف متطابقة مع البحث</p>
-                      <p className="text-gray-400 text-sm mt-2">جرب تعديل معايير البحث</p>
+                      <p className="text-gray-500 text-lg">{t('warehouses.shelf.noShelves')}</p>
+                      <p className="text-gray-400 text-sm mt-2">{t('warehouses.shelf.noShelvesSubtext')}</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" dir="rtl">
                       {filteredShelves.map((shelf) => {
-                        const fillPercentage = (shelf.used / shelf.capacity) * 100;
+                        const used = shelf.used || 0;
+                        const fillPercentage = shelf.capacity > 0 ? (used / shelf.capacity) * 100 : 0;
                         const isAlmostFull = fillPercentage >= 90;
                         const isNearFull = fillPercentage >= 70 && fillPercentage < 90;
 
@@ -1623,11 +2447,11 @@ export function Warehouses() {
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() => handleDeleteShelf(shelf.id)}
+                                      onClick={() => handleDeleteShelf(shelf)}
                                       className="h-8 w-8 p-0"
-                                      disabled={shelf.used > 0}
+                                      disabled={(shelf.used ?? 0) > 0}
                                     >
-                                      <Trash2 className={`w-4 h-4 ${shelf.used > 0 ? 'text-gray-300' : 'text-red-600'}`} />
+                                      <Trash2 className={`w-4 h-4 ${(shelf.used ?? 0) > 0 ? 'text-gray-300' : 'text-red-600'}`} />
                                     </Button>
                                   </div>
                                   <Badge variant="outline" className="font-mono text-base px-3 py-1 font-bold">
@@ -1638,13 +2462,15 @@ export function Warehouses() {
                                 {/* Warehouse Info */}
                                 <div className="text-right space-y-1">
                                   <p className="text-sm font-medium text-gray-900">{shelf.warehouse}</p>
+                                  {shelf.storage && (
+                                    <p className="text-xs text-gray-600">{shelf.storage}</p>
+                                  )}
                                   <div className="flex items-center gap-1 justify-end flex-wrap">
-                                    <Badge variant="secondary" className="text-xs">
-                                      المستوى {shelf.level}
-                                    </Badge>
-                                    <Badge variant="secondary" className="text-xs">
-                                      {shelf.section}
-                                    </Badge>
+                                    {shelf.level && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        {t('warehouses.shelf.level')} {shelf.level}
+                                      </Badge>
+                                    )}
                                   </div>
                                 </div>
 
@@ -1657,7 +2483,7 @@ export function Warehouses() {
                                       }`}>
                                       {fillPercentage.toFixed(0)}%
                                     </span>
-                                    <span className="text-gray-600">{shelf.used} / {shelf.capacity}</span>
+                                    <span className="text-gray-600">{used} / {shelf.capacity}</span>
                                   </div>
                                   <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
                                     <div
@@ -1670,13 +2496,13 @@ export function Warehouses() {
                                 {/* Products & Status */}
                                 <div className="flex items-center justify-between pt-2 border-t">
                                   <Badge
-                                    variant={shelf.status === 'نشط' ? 'default' : shelf.status === 'صيانة' ? 'destructive' : 'secondary'}
+                                    variant={shelf.status === t('warehouses.shelf.active') ? 'default' : shelf.status === 'صيانة' ? 'destructive' : 'secondary'}
                                   >
                                     {shelf.status}
                                   </Badge>
                                   <div className="flex items-center gap-1 text-sm text-gray-600">
                                     <Boxes className="w-3 h-3" />
-                                    <span>{shelf.products} منتج</span>
+                                    <span>{shelf.products} {t('warehouses.shelf.products')}</span>
                                   </div>
                                 </div>
                               </div>
@@ -1693,29 +2519,30 @@ export function Warehouses() {
                   {filteredShelves.length === 0 ? (
                     <div className="text-center py-12" dir="rtl">
                       <Package className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                      <p className="text-gray-500 text-lg">لا توجد رفوف متطابقة مع البحث</p>
-                      <p className="text-gray-400 text-sm mt-2">جرب تعديل معايير البحث</p>
+                      <p className="text-gray-500 text-lg">{t('warehouses.shelf.noShelves')}</p>
+                      <p className="text-gray-400 text-sm mt-2">{t('warehouses.shelf.noShelvesSubtext')}</p>
                     </div>
                   ) : (
                     <div dir="rtl" className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="text-right">كود الرف</TableHead>
-                            <TableHead className="text-right">المستودع</TableHead>
-                            <TableHead className="text-right">القسم</TableHead>
-                            <TableHead className="text-right">المستوى</TableHead>
-                            <TableHead className="text-right">السعة</TableHead>
-                            <TableHead className="text-right">المستخدم</TableHead>
-                            <TableHead className="text-right">نسبة الامتلاء</TableHead>
-                            <TableHead className="text-right">المنتجات</TableHead>
-                            <TableHead className="text-right">الحالة</TableHead>
-                            <TableHead className="text-right">إجراءات</TableHead>
+                            <TableHead className="text-right">{t('warehouses.shelf.code')}</TableHead>
+                            <TableHead className="text-right">{t('warehouses.shelf.warehouse')}</TableHead>
+                            <TableHead className="text-right">{t('warehouses.shelf.storage')}</TableHead>
+                            <TableHead className="text-right">{t('warehouses.shelf.level')}</TableHead>
+                            <TableHead className="text-right">{t('warehouses.shelf.capacity')}</TableHead>
+                            <TableHead className="text-right">{t('warehouses.list.user')}</TableHead>
+                            <TableHead className="text-right">{t('warehouses.list.fillPercentage')}</TableHead>
+                            <TableHead className="text-right">{t('warehouses.shelf.products')}</TableHead>
+                            <TableHead className="text-right">{t('warehouses.list.status')}</TableHead>
+                            <TableHead className="text-right">{t('warehouses.list.actions')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {filteredShelves.map((shelf) => {
-                            const fillPercentage = (shelf.used / shelf.capacity) * 100;
+                            const used = shelf.used || 0;
+                            const fillPercentage = shelf.capacity > 0 ? (used / shelf.capacity) * 100 : 0;
                             const isAlmostFull = fillPercentage >= 90;
                             const isNearFull = fillPercentage >= 70 && fillPercentage < 90;
 
@@ -1730,12 +2557,16 @@ export function Warehouses() {
                                   </Badge>
                                 </TableCell>
                                 <TableCell className="text-right font-medium">{shelf.warehouse}</TableCell>
-                                <TableCell className="text-right">{shelf.section}</TableCell>
+                                <TableCell className="text-right">{shelf.storage || '-'}</TableCell>
                                 <TableCell className="text-right">
-                                  <Badge variant="secondary">المستوى {shelf.level}</Badge>
+                                  {shelf.level ? (
+                                    <Badge variant="secondary">المستوى {shelf.level}</Badge>
+                                  ) : (
+                                    <span className="text-gray-400">-</span>
+                                  )}
                                 </TableCell>
                                 <TableCell className="text-right font-medium">{shelf.capacity}</TableCell>
-                                <TableCell className="text-right font-bold text-blue-600">{shelf.used}</TableCell>
+                                <TableCell className="text-right font-bold text-blue-600">{used}</TableCell>
                                 <TableCell className="text-right">
                                   <div className="flex items-center gap-2 justify-start">
                                     <span className={`text-sm font-bold ${isAlmostFull ? 'text-red-600' :
@@ -1755,12 +2586,12 @@ export function Warehouses() {
                                 <TableCell className="text-right">
                                   <div className="flex items-center gap-1 text-sm text-gray-600">
                                     <Boxes className="w-3 h-3" />
-                                    <span>{shelf.products} منتج</span>
+                                    <span>{shelf.products} {t('warehouses.shelf.products')}</span>
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-right">
                                   <Badge
-                                    variant={shelf.status === 'نشط' ? 'default' : shelf.status === 'صيانة' ? 'destructive' : 'secondary'}
+                                    variant={shelf.status === t('warehouses.shelf.active') ? 'default' : shelf.status === 'صيانة' ? 'destructive' : 'secondary'}
                                   >
                                     {shelf.status}
                                   </Badge>
@@ -1774,18 +2605,18 @@ export function Warehouses() {
                                       className="gap-1"
                                     >
                                       <Edit className="w-4 h-4" />
-                                      تعديل
+                                      {t('warehouses.shelf.editButton')}
                                     </Button>
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() => handleDeleteShelf(shelf.id)}
+                                      onClick={() => handleDeleteShelf(shelf)}
                                       className="gap-1"
-                                      disabled={shelf.used > 0}
-                                      title={shelf.used > 0 ? 'لا يمكن حذف رف يحتوي على منتجات' : ''}
+                                      disabled={(shelf.used ?? 0) > 0}
+                                      title={(shelf.used ?? 0) > 0 ? t('warehouses.shelf.cannotDelete') : ''}
                                     >
-                                      <Trash2 className={`w-4 h-4 ${shelf.used > 0 ? 'text-gray-400' : 'text-red-600'}`} />
-                                      حذف
+                                      <Trash2 className={`w-4 h-4 ${(shelf.used ?? 0) > 0 ? 'text-gray-400' : 'text-red-600'}`} />
+                                      {t('warehouses.shelf.deleteButton')}
                                     </Button>
                                   </div>
                                 </TableCell>
