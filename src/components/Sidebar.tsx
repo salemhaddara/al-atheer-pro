@@ -48,6 +48,10 @@ interface SidebarProps {
   onCompanyChange: (company: string) => void;
   isCollapsed?: boolean;
   onToggle?: (collapsed: boolean) => void;
+  institutions?: any[];
+  currentInstitution?: any | null;
+  onInstitutionChange?: (institutionId: number | null) => void;
+  isSuperAdmin?: boolean;
 }
 
 // Route mapping for Next.js
@@ -95,8 +99,17 @@ const routeMap: Record<string, string> = {
   'permissions': '/settings/permissions',
 };
 
-export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, isCollapsed: controlledCollapsed, onToggle }: SidebarProps) {
-  const { t, direction } = useLanguage();
+export const Sidebar = memo(function Sidebar({ 
+  currentCompany, 
+  onCompanyChange, 
+  isCollapsed: controlledCollapsed, 
+  onToggle,
+  institutions = [],
+  currentInstitution,
+  onInstitutionChange,
+  isSuperAdmin = false
+}: SidebarProps) {
+  const { t, direction, language } = useLanguage();
   const { currentUser, logout } = useUser();
   const pathname = usePathname();
   const router = useRouter();
@@ -157,12 +170,16 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
     );
   }, []);
 
-  const companies = useMemo(() => [
-    { id: 'alamal', name: t('sidebar.companies.alamal') },
-    { id: 'alnajah', name: t('sidebar.companies.alnajah') },
-    { id: 'alreyada', name: t('sidebar.companies.alreyada') },
-    { id: 'altamayoz', name: t('sidebar.companies.altamayoz') }
-  ], [t]);
+  // Use the current company from props (which comes from settings)
+  // For now, we'll just show the current company as the only option
+  // In the future, you can add multiple companies/institutions support
+  const companies = useMemo(() => {
+    if (currentCompany) {
+      return [{ id: 'current', name: currentCompany }];
+    }
+    // Fallback to default
+    return [{ id: 'current', name: t('sidebar.companies.alamal') }];
+  }, [currentCompany, t]);
 
   const menuSections = useMemo(() => {
     const allSections = [
@@ -360,22 +377,53 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
       </div>
 
 
-      {/* Company Selector */}
+      {/* Institution Selector (for super admin) or Company Display */}
       {!isCollapsed && (
         <div className="p-4 border-b border-gray-200">
-          <label className="text-sm text-gray-600 mb-2 block">{t('sidebar.currentCompany')}</label>
-          <Select value={currentCompany} onValueChange={onCompanyChange}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {companies.map((company) => (
-                <SelectItem key={company.id} value={company.name}>
-                  {company.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {isSuperAdmin && institutions.length > 0 ? (
+            <>
+              <label className="text-sm text-gray-600 mb-2 block">{t('sidebar.currentInstitution') || 'المؤسسة الحالية'}</label>
+              <Select 
+                value={currentInstitution ? String(currentInstitution.id) : ''} 
+                onValueChange={(value) => {
+                  if (onInstitutionChange) {
+                    onInstitutionChange(value ? Number(value) : null);
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {institutions.map((institution) => (
+                    <SelectItem key={institution.id} value={String(institution.id)}>
+                      {language === 'ar' ? institution.name_ar : institution.name_en}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : currentInstitution ? (
+            <>
+              <label className="text-sm text-gray-600 mb-2 block">{t('sidebar.currentCompany') || 'الشركة الحالية'}</label>
+              <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm font-medium">
+                {(() => {
+                  // Priority: 1. Company name from settings, 2. Institution name, 3. Default
+                  if (currentCompany) return currentCompany;
+                  const institutionName = language === 'ar' ? currentInstitution.name_ar : currentInstitution.name_en;
+                  if (institutionName) return institutionName;
+                  return t('sidebar.companies.alamal');
+                })()}
+              </div>
+            </>
+          ) : (
+            <>
+              <label className="text-sm text-gray-600 mb-2 block">{t('sidebar.currentCompany') || 'الشركة الحالية'}</label>
+              <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm font-medium">
+                {currentCompany || t('sidebar.companies.alamal')}
+              </div>
+            </>
+          )}
         </div>
       )}
 

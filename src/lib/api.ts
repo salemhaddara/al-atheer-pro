@@ -136,6 +136,61 @@ export async function apiRequest<T>(
 }
 
 /**
+ * Make an authenticated API request with FormData (for file uploads)
+ */
+export async function apiRequestFormData<T>(
+    endpoint: string,
+    formData: FormData,
+    method: 'POST' | 'PUT' | 'PATCH' = 'POST'
+): Promise<ApiResult<T>> {
+    const language = getLanguage();
+    const token = getAuthToken();
+
+    // Properly construct URL with query parameters
+    const separator = endpoint.includes('?') ? '&' : '?';
+    const url = `${API_BASE_URL}${endpoint}${separator}lang=${language}`;
+
+    const headers: Record<string, string> = {
+        'Accept': 'application/json',
+        'Accept-Language': language,
+    };
+
+    // Add authorization header if token exists
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    // Note: Don't set Content-Type header - browser will set it automatically with boundary for FormData
+
+    try {
+        const response = await fetch(url, {
+            method,
+            headers,
+            body: formData,
+            credentials: 'include', // Include cookies for CSRF protection
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            return {
+                success: false,
+                message: data.message || 'Request failed',
+                errors: data.errors,
+            };
+        }
+
+        return data as ApiResponse<T>;
+    } catch (error) {
+        console.error('API request error:', error);
+        return {
+            success: false,
+            message: error instanceof Error ? error.message : 'Network error occurred',
+        };
+    }
+}
+
+/**
  * Login API call
  */
 export interface LoginRequest {
@@ -455,6 +510,18 @@ export interface User {
     phone_number: string | null;
     is_system_owner_admin: boolean;
     is_banned: boolean;
+    roles?: Array<{
+        id: number;
+        name: string;
+        slug: string;
+        description?: string;
+        is_system: boolean;
+        is_active: boolean;
+        pivot?: {
+            assigned_at: string;
+            assigned_by: number | null;
+        };
+    }>;
 }
 
 export interface UserListResponse {
@@ -835,6 +902,171 @@ export async function updateSafe(id: number, data: Partial<CreateSafeRequest>): 
 export async function deleteSafe(id: number): Promise<ApiResult<void>> {
     return apiRequest<void>(`/api/v1/safes/${id}`, {
         method: 'DELETE',
+    });
+}
+
+/**
+ * Settings API calls
+ */
+export interface Setting {
+    id: number;
+    key: string;
+    value: any;
+    type: 'string' | 'integer' | 'boolean' | 'json' | 'text';
+    group: string;
+    scope: 'system' | 'institution' | 'branch' | 'user';
+    label_en?: string | null;
+    label_ar?: string | null;
+    description_en?: string | null;
+    description_ar?: string | null;
+    is_encrypted?: boolean;
+    institution_id?: number | null;
+    branch_id?: number | null;
+    user_id?: number | null;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface SettingListResponse {
+    settings: {
+        data: Setting[];
+        current_page: number;
+        per_page: number;
+        total: number;
+        last_page: number;
+    };
+}
+
+export interface SettingResponse {
+    setting: Setting;
+}
+
+export interface CreateSettingRequest {
+    key: string;
+    value?: any;
+    type?: 'string' | 'integer' | 'boolean' | 'json' | 'text';
+    group?: string;
+    label_en?: string;
+    label_ar?: string;
+    description_en?: string;
+    description_ar?: string;
+    is_encrypted?: boolean;
+    scope: 'system' | 'institution' | 'branch' | 'user';
+    institution_id?: number;
+    branch_id?: number;
+    user_id?: number;
+}
+
+export interface UpdateSettingRequest extends Partial<CreateSettingRequest> {
+    value?: any;
+}
+
+/**
+ * Get all settings
+ */
+export async function getSettings(params?: {
+    per_page?: number;
+    scope?: 'system' | 'institution' | 'branch' | 'user';
+    group?: string;
+    institution_id?: number;
+    branch_id?: number;
+    user_id?: number;
+}): Promise<ApiResult<SettingListResponse>> {
+    const queryParams = new URLSearchParams();
+    if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
+    if (params?.scope) queryParams.append('scope', params.scope);
+    if (params?.group) queryParams.append('group', params.group);
+    if (params?.institution_id) queryParams.append('institution_id', params.institution_id.toString());
+    if (params?.branch_id) queryParams.append('branch_id', params.branch_id.toString());
+    if (params?.user_id) queryParams.append('user_id', params.user_id.toString());
+    
+    const queryString = queryParams.toString();
+    const endpoint = `/api/v1/settings${queryString ? `?${queryString}` : ''}`;
+    
+    return apiRequest<SettingListResponse>(endpoint, {
+        method: 'GET',
+    });
+}
+
+/**
+ * Get a setting by key
+ */
+export async function getSettingByKey(
+    key: string,
+    params?: {
+        scope?: 'system' | 'institution' | 'branch' | 'user';
+        institution_id?: number;
+        branch_id?: number;
+        user_id?: number;
+    }
+): Promise<ApiResult<SettingResponse>> {
+    const queryParams = new URLSearchParams();
+    if (params?.scope) queryParams.append('scope', params.scope);
+    if (params?.institution_id) queryParams.append('institution_id', params.institution_id.toString());
+    if (params?.branch_id) queryParams.append('branch_id', params.branch_id.toString());
+    if (params?.user_id) queryParams.append('user_id', params.user_id.toString());
+    
+    const queryString = queryParams.toString();
+    const endpoint = `/api/v1/settings/key/${key}${queryString ? `?${queryString}` : ''}`;
+    
+    return apiRequest<SettingResponse>(endpoint, {
+        method: 'GET',
+    });
+}
+
+/**
+ * Get a single setting by ID
+ */
+export async function getSetting(id: number): Promise<ApiResult<SettingResponse>> {
+    return apiRequest<SettingResponse>(`/api/v1/settings/${id}`, {
+        method: 'GET',
+    });
+}
+
+/**
+ * Create a new setting
+ */
+export async function createSetting(data: CreateSettingRequest): Promise<ApiResult<SettingResponse>> {
+    return apiRequest<SettingResponse>('/api/v1/settings', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+}
+
+/**
+ * Update an existing setting
+ */
+export async function updateSetting(id: number, data: UpdateSettingRequest): Promise<ApiResult<SettingResponse>> {
+    return apiRequest<SettingResponse>(`/api/v1/settings/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+    });
+}
+
+/**
+ * Delete a setting
+ */
+export async function deleteSetting(id: number): Promise<ApiResult<void>> {
+    return apiRequest<void>(`/api/v1/settings/${id}`, {
+        method: 'DELETE',
+    });
+}
+
+export interface BatchUpdateSettingsRequest {
+    settings: CreateSettingRequest[];
+}
+
+export interface BatchUpdateSettingsResponse {
+    settings: Setting[];
+}
+
+/**
+ * Batch update or create multiple settings at once
+ */
+export async function batchUpdateSettings(data: BatchUpdateSettingsRequest): Promise<ApiResult<BatchUpdateSettingsResponse>> {
+    return apiRequest<BatchUpdateSettingsResponse>('/api/v1/settings/batch', {
+        method: 'POST',
+        body: JSON.stringify(data),
     });
 }
 

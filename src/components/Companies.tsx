@@ -8,7 +8,7 @@ import { Badge } from './ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Building2, Plus, MapPin, Users, TrendingUp, Loader2, Trash2 } from 'lucide-react';
+import { Building2, Plus, MapPin, Users, TrendingUp, Loader2, Trash2, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { getInstitutions, createInstitution, updateInstitution, deleteInstitution, getUsers, getInstitutionStatistics, type Institution, type CreateInstitutionRequest, type User, type InstitutionStatistics } from '@/lib/api';
 import { getStoredUser } from '@/lib/auth';
@@ -55,6 +55,8 @@ export function Companies() {
   const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [deletingInstitutionId, setDeletingInstitutionId] = useState<number | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [formData, setFormData] = useState<InstitutionFormData>({
     name_ar: '',
     name_en: '',
@@ -151,6 +153,13 @@ export function Companies() {
       default_currency: institution.default_currency || 'SAR',
       notes: institution.notes || ''
     });
+    // Set logo preview if exists
+    if (institution.logo_url) {
+      setLogoPreview(institution.logo_url);
+    } else {
+      setLogoPreview(null);
+    }
+    setLogoFile(null);
     // Note: admin_user_id is not editable when updating
     setSelectedAdminUserId('');
     setIsDialogOpen(true);
@@ -187,6 +196,8 @@ export function Companies() {
     setIsDialogOpen(false);
     setEditingInstitution(null);
     setSelectedAdminUserId('');
+    setLogoFile(null);
+    setLogoPreview(null);
     // Reset form
     setFormData({
       name_ar: '',
@@ -205,6 +216,39 @@ export function Companies() {
       default_currency: 'SAR',
       notes: ''
     });
+  };
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error(t('institutions.messages.invalidImageType') || 'Please select a valid image file');
+        return;
+      }
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(t('institutions.messages.imageTooLarge') || 'Image size must be less than 5MB');
+        return;
+      }
+      setLogoFile(file);
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    setLogoFile(null);
+    setLogoPreview(null);
+    // Reset file input
+    const fileInput = document.getElementById('logo-input') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
   };
 
   const handleSubmit = async () => {
@@ -378,6 +422,8 @@ export function Companies() {
               // Opening dialog - reset editing state for new institution
               setEditingInstitution(null);
               setSelectedAdminUserId('');
+              setLogoFile(null);
+              setLogoPreview(null);
             } else {
               // Closing dialog - reset form
               handleCloseDialog();
@@ -566,6 +612,54 @@ export function Companies() {
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   dir={direction}
                 />
+              </div>
+
+              {/* Logo Upload */}
+              <div className="space-y-2">
+                <Label>{t('institutions.form.logo') || 'Logo'}</Label>
+                <div className="flex items-center gap-4">
+                  {logoPreview && (
+                    <div className="relative">
+                      <img 
+                        src={logoPreview} 
+                        alt="Logo preview" 
+                        className="w-24 h-24 object-cover rounded-lg border border-gray-300"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0 bg-red-500 hover:bg-red-600 text-white"
+                        onClick={handleRemoveLogo}
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <Input
+                      id="logo-input"
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/webp"
+                      onChange={handleLogoChange}
+                      className="hidden"
+                    />
+                    <Label
+                      htmlFor="logo-input"
+                      className="flex items-center justify-center gap-2 cursor-pointer border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-gray-400 transition-colors"
+                    >
+                      <Upload className="w-5 h-5 text-gray-500" />
+                      <span className="text-sm text-gray-600">
+                        {logoPreview 
+                          ? t('institutions.form.changeLogo') || 'Change Logo'
+                          : t('institutions.form.uploadLogo') || 'Upload Logo'}
+                      </span>
+                    </Label>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {t('institutions.form.logoHint') || 'JPEG, PNG, or WebP. Max 5MB'}
+                    </p>
+                  </div>
+                </div>
               </div>
 
               {/* Admin User Selection - Only show when creating new institution */}
