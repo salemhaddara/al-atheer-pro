@@ -42,14 +42,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Input } from './ui/input';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useUser } from '../contexts/UserContext';
+import { useSettings } from '../contexts/SettingsContext';
+
+// Simplified institution interface for Sidebar (only what we need)
+interface SimplifiedInstitution {
+  id: number;
+  name_ar: string;
+  name_en: string;
+}
 
 interface SidebarProps {
   currentCompany: string;
   onCompanyChange: (company: string) => void;
   isCollapsed?: boolean;
   onToggle?: (collapsed: boolean) => void;
-  institutions?: any[];
-  currentInstitution?: any | null;
+  institutions?: SimplifiedInstitution[];
+  currentInstitutionId?: number | null;
   onInstitutionChange?: (institutionId: number | null) => void;
   isSuperAdmin?: boolean;
 }
@@ -105,12 +113,22 @@ export const Sidebar = memo(function Sidebar({
   isCollapsed: controlledCollapsed,
   onToggle,
   institutions = [],
-  currentInstitution,
+  currentInstitutionId,
   onInstitutionChange,
   isSuperAdmin = false
 }: SidebarProps) {
   const { t, direction, language } = useLanguage();
   const { currentUser, logout } = useUser();
+  const { companySettings } = useSettings();
+  
+  // Get company name from settings context (prefer Arabic, fallback to English)
+  const companyNameFromSettings = companySettings.name_ar || companySettings.name_en || currentCompany;
+  
+  // Get logo from settings context (no need for institution logo_url since we use settings)
+  const logoFromSettings = companySettings.logo;
+  
+  // Get current institution name for display (if needed)
+  const currentInstitution = institutions.find(inst => inst.id === currentInstitutionId);
   const pathname = usePathname();
   const router = useRouter();
   const [internalCollapsed, setInternalCollapsed] = useState(() => {
@@ -170,16 +188,16 @@ export const Sidebar = memo(function Sidebar({
     );
   }, []);
 
-  // Use the current company from props (which comes from settings)
-  // For now, we'll just show the current company as the only option
-  // In the future, you can add multiple companies/institutions support
+  // Use the current company from settings context
+  // Priority: 1. Settings context, 2. Props, 3. Default
   const companies = useMemo(() => {
-    if (currentCompany) {
-      return [{ id: 'current', name: currentCompany }];
+    const displayName = companyNameFromSettings || currentCompany;
+    if (displayName) {
+      return [{ id: 'current', name: displayName }];
     }
     // Fallback to default
     return [{ id: 'current', name: t('sidebar.noCompany') }];
-  }, [currentCompany, t]);
+  }, [companyNameFromSettings, currentCompany, t]);
 
   const menuSections = useMemo(() => {
     const allSections = [
@@ -342,11 +360,11 @@ export const Sidebar = memo(function Sidebar({
       <div className={`border-b border-gray-200 relative ${isCollapsed ? 'p-3' : 'p-6'}`}>
         {isCollapsed ? (
           <div className="flex flex-col items-center gap-3">
-            {currentInstitution?.logo_url ? (
+            {logoFromSettings ? (
               <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center p-1 shadow-sm overflow-hidden">
                 <img
-                  src={currentInstitution.logo_url}
-                  alt={currentCompany || "Logo"}
+                  src={logoFromSettings}
+                  alt={companyNameFromSettings || currentCompany || "Logo"}
                   className="w-full h-full object-contain"
                 />
               </div>
@@ -370,11 +388,11 @@ export const Sidebar = memo(function Sidebar({
         ) : (
           <>
             <div className="flex items-center gap-3 pr-10">
-              {currentInstitution?.logo_url && (
+              {logoFromSettings && (
                 <div className="w-10 h-10 rounded-lg bg-white border border-gray-100 flex flex-shrink-0 items-center justify-center p-0.5 overflow-hidden">
                   <img
-                    src={currentInstitution.logo_url}
-                    alt="Logo"
+                    src={logoFromSettings}
+                    alt={companyNameFromSettings || currentCompany || "Logo"}
                     className="w-full h-full object-contain"
                   />
                 </div>
@@ -407,7 +425,7 @@ export const Sidebar = memo(function Sidebar({
             <>
               <label className="text-sm text-gray-600 mb-2 block">{t('sidebar.currentInstitution') || 'المؤسسة الحالية'}</label>
               <Select
-                value={currentInstitution ? String(currentInstitution.id) : ''}
+                value={currentInstitutionId ? String(currentInstitutionId) : ''}
                 onValueChange={(value) => {
                   if (onInstitutionChange) {
                     onInstitutionChange(value ? Number(value) : null);
@@ -431,7 +449,8 @@ export const Sidebar = memo(function Sidebar({
               <label className="text-sm text-gray-600 mb-2 block">{t('sidebar.currentCompany') || 'الشركة الحالية'}</label>
               <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm font-medium">
                 {(() => {
-                  // Priority: 1. Company name from settings, 2. Institution name, 3. Default
+                  // Priority: 1. Company name from settings context, 2. Props, 3. Institution name, 4. Default
+                  if (companyNameFromSettings) return companyNameFromSettings;
                   if (currentCompany) return currentCompany;
                   const institutionName = language === 'ar' ? currentInstitution.name_ar : currentInstitution.name_en;
                   if (institutionName) return institutionName;
@@ -443,7 +462,7 @@ export const Sidebar = memo(function Sidebar({
             <>
               <label className="text-sm text-gray-600 mb-2 block">{t('sidebar.currentCompany') || 'الشركة الحالية'}</label>
               <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm font-medium">
-                {currentCompany || t('sidebar.noCompany')}
+                {companyNameFromSettings || currentCompany || t('sidebar.noCompany')}
               </div>
             </>
           )}

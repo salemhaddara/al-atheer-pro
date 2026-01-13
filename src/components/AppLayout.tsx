@@ -1,10 +1,17 @@
 'use client';
 
-import { ReactNode, useState, useEffect, useRef } from 'react';
+import { ReactNode, useState, useEffect, useRef, useMemo } from 'react';
 import { Sidebar } from './Sidebar';
 import { useLanguage } from '../contexts/LanguageContext';
-import { getSettings, getInstitutions, getInstitution, type Institution } from '../lib/api';
+import { getSettings, getInstitutions, type Institution } from '../lib/api';
 import { getStoredUser } from '../lib/auth';
+
+// Simplified institution interface for Sidebar (only what we need)
+interface SimplifiedInstitution {
+  id: number;
+  name_ar: string;
+  name_en: string;
+}
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -17,10 +24,10 @@ export function AppLayout({ children }: AppLayoutProps) {
     }
     return '';
   });
-  const [currentInstitution, setCurrentInstitution] = useState<Institution | null>(() => {
+  const [currentInstitutionId, setCurrentInstitutionId] = useState<number | null>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('cached_current_institution');
-      return saved ? JSON.parse(saved) : null;
+      const saved = localStorage.getItem('selected_institution_id');
+      return saved ? Number(saved) : null;
     }
     return null;
   });
@@ -34,16 +41,25 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   // Use refs to avoid stale closures in event handlers
-  const currentInstitutionRef = useRef<Institution | null>(null);
+  const currentInstitutionIdRef = useRef<number | null>(null);
   const institutionsRef = useRef<Institution[]>([]);
+
+  // Create simplified institutions array for Sidebar (only id, name_ar, name_en)
+  const simplifiedInstitutions = useMemo<SimplifiedInstitution[]>(() => {
+    return institutions.map(inst => ({
+      id: inst.id,
+      name_ar: inst.name_ar || '',
+      name_en: inst.name_en || '',
+    }));
+  }, [institutions]);
 
   // Keep refs and localStorage in sync with state
   useEffect(() => {
-    currentInstitutionRef.current = currentInstitution;
-    if (typeof window !== 'undefined' && currentInstitution) {
-      localStorage.setItem('cached_current_institution', JSON.stringify(currentInstitution));
+    currentInstitutionIdRef.current = currentInstitutionId;
+    if (typeof window !== 'undefined' && currentInstitutionId) {
+      localStorage.setItem('selected_institution_id', String(currentInstitutionId));
     }
-  }, [currentInstitution]);
+  }, [currentInstitutionId]);
 
   useEffect(() => {
     institutionsRef.current = institutions;
@@ -97,7 +113,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 (inst: Institution) => inst.id === Number(savedInstitutionId)
               );
               if (institution) {
-                setCurrentInstitution(institution);
+                setCurrentInstitutionId(institution.id);
                 await loadCompanyName(institution.id);
                 return;
               }
@@ -106,10 +122,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             // Use first institution if available
             if (result.data.institutions.data.length > 0) {
               const firstInstitution = result.data.institutions.data[0];
-              setCurrentInstitution(firstInstitution);
-              if (typeof window !== 'undefined') {
-                localStorage.setItem('selected_institution_id', String(firstInstitution.id));
-              }
+              setCurrentInstitutionId(firstInstitution.id);
               await loadCompanyName(firstInstitution.id);
             } else {
               // No institutions, load system settings
@@ -144,10 +157,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               }
             }
 
-            setCurrentInstitution(selectedInstitution);
-            if (typeof window !== 'undefined') {
-              localStorage.setItem('selected_institution_id', String(selectedInstitution.id));
-            }
+            setCurrentInstitutionId(selectedInstitution.id);
             // Set company name from institution name immediately as fallback
             const institutionName = language === 'ar' ? selectedInstitution.name_ar : selectedInstitution.name_en;
             if (institutionName) {
@@ -158,7 +168,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           } else {
             // No institution assigned, use system settings
             setInstitutions([]);
-            setCurrentInstitution(null);
+            setCurrentInstitutionId(null);
             await loadCompanyName(null);
           }
         }
@@ -216,20 +226,11 @@ export function AppLayout({ children }: AppLayoutProps) {
     // Listen for settings updates (when settings are saved)
     const handleSettingsUpdate = async () => {
       if (!isMounted) return;
-      // Use ref to get current institution (avoids stale closure)
-      const currentInst = currentInstitutionRef.current;
-      if (currentInst) {
-        // Refresh institution data to get updated logo
-        try {
-          const result = await getInstitution(currentInst.id);
-          if (isMounted && result.success && result.data?.institution) {
-            setCurrentInstitution(result.data.institution);
-          }
-        } catch (error) {
-          console.error('Error refreshing institution:', error);
-        }
-
-        loadCompanyName(currentInst.id);
+      // Use ref to get current institution ID (avoids stale closure)
+      const currentInstId = currentInstitutionIdRef.current;
+      if (currentInstId) {
+        // No need to refresh institution data - logo comes from settings context
+        loadCompanyName(currentInstId);
       } else {
         loadCompanyName(null);
       }
@@ -239,14 +240,12 @@ export function AppLayout({ children }: AppLayoutProps) {
     const handleInstitutionChange = (event: Event) => {
       if (!isMounted) return;
       const customEvent = event as CustomEvent<{ institutionId: number | null }>;
-      if (customEvent.detail) {
-        // Use ref to get institutions (avoids stale closure)
-        const currentInsts = institutionsRef.current;
-        const institution = currentInsts.find(inst => inst.id === customEvent.detail.institutionId);
-        if (institution) {
-          setCurrentInstitution(institution);
-          loadCompanyName(institution.id);
-        }
+      if (customEvent.detail?.institutionId) {
+        setCurrentInstitutionId(customEvent.detail.institutionId);
+        loadCompanyName(customEvent.detail.institutionId);
+      } else {
+        setCurrentInstitutionId(null);
+        loadCompanyName(null);
       }
     };
 
@@ -269,18 +268,10 @@ export function AppLayout({ children }: AppLayoutProps) {
   };
 
   const handleInstitutionChange = (institutionId: number | null) => {
-    if (institutionId) {
-      const institution = institutions.find(inst => inst.id === institutionId);
-      if (institution) {
-        setCurrentInstitution(institution);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('selected_institution_id', String(institutionId));
-        }
-        // Dispatch event to reload settings
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('institutionChanged', { detail: { institutionId } }));
-        }
-      }
+    setCurrentInstitutionId(institutionId);
+    // Dispatch event to reload settings
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('institutionChanged', { detail: { institutionId } }));
     }
   };
 
@@ -291,8 +282,8 @@ export function AppLayout({ children }: AppLayoutProps) {
         onCompanyChange={setCurrentCompany}
         isCollapsed={isSidebarCollapsed}
         onToggle={handleSidebarToggle}
-        institutions={institutions}
-        currentInstitution={currentInstitution}
+        institutions={simplifiedInstitutions}
+        currentInstitutionId={currentInstitutionId}
         onInstitutionChange={handleInstitutionChange}
         isSuperAdmin={isSuperAdmin}
       />
