@@ -76,6 +76,9 @@ export function clearAuthData(): void {
     if (typeof window !== 'undefined') {
         localStorage.removeItem('current_user');
         localStorage.removeItem('auth_user');
+        localStorage.removeItem('cached_company_name');
+        localStorage.removeItem('cached_current_institution');
+        localStorage.removeItem('cached_institutions');
     }
 }
 

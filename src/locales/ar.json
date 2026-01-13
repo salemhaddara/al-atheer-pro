@@ -389,7 +389,8 @@
   "sidebar": {
     "systemTitle": "نظام ERP المتكامل",
     "systemSubtitle": "إدارة موارد المؤسسة",
-    "currentCompany": "الشركة الحالية",
+    "currentInstitution": "الشركة الحالية",
+    "noCompany": "لا توجد شركة متاحة",
     "search": "ابحث في القائمة...",
     "companies": {
       "alamal": "شركة الأمل للتجارة",
@@ -1252,6 +1253,10 @@
   "settings": {
     "title": "الإعدادات العامة",
     "subtitle": "إدارة جميع إعدادات النظام",
+    "noInstitutionWarning": {
+      "title": "لم يتم اختيار مؤسسة - أنت تقوم بتعديل إعدادات النظام العامة",
+      "description": "الإعدادات التي تكتبها هنا ستكون هي القيم الافتراضية لأي مؤسسة لا تملك إعدادات خاصة بها."
+    },
     "saveSuccess": "تم حفظ الإعدادات بنجاح",
     "saveChanges": "حفظ التغييرات",
     "tabs": {
@@ -1266,7 +1271,7 @@
     "company": {
       "title": "بيانات المؤسسة",
       "titleEn": "بيانات المؤسسة",
-      "subtitle": "تحديث البيانات الأساسية للمؤسسة (Branches Table)",
+      "subtitle": "تحديث البيانات الأساسية للمؤسسة",
       "nameAr": "اسم المؤسسة (عربي)",
       "nameArPlaceholder": "أدخل اسم المؤسسة",
       "nameEn": "اسم المؤسسة (انجليزي)",
@@ -1623,6 +1628,65 @@
     "title": "إدارة البنوك وأجهزة الصراف",
     "subtitle": "إدارة الحسابات البنكية وأجهزة الصراف الآلي ونقاط البيع"
   },
+  "safes": {
+    "title": "إدارة الخزائن",
+    "subtitle": "إدارة الخزائن والأرصدة النقدية",
+    "newSafe": "خزينة جديدة",
+    "editSafe": "تعديل الخزينة",
+    "addSafe": "إضافة خزينة جديدة",
+    "safeData": "بيانات الخزينة",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "form": {
+      "nameAr": "اسم الخزينة (عربي) *",
+      "nameArPlaceholder": "خزينة الفرع الشرقي",
+      "nameEn": "الاسم بالإنجليزية *",
+      "nameEnPlaceholder": "East Branch Safe",
+      "linkedBranch": "الفرع المرتبط *",
+      "selectBranch": "اختر الفرع",
+      "initialBalance": "الرصيد الافتتاحي (ر.س)",
+      "status": "حالة الخزينة",
+      "statusDesc": "تفعيل أو تعطيل الخزينة",
+      "notes": "ملاحظات",
+      "notesPlaceholder": "أدخل أي ملاحظات إضافية..."
+    },
+    "stats": {
+      "totalSafes": "إجمالي الخزائن",
+      "activeSafes": "الخزائن النشطة",
+      "totalBalances": "إجمالي الأرصدة",
+      "registeredSafe": "خزينة مسجلة",
+      "activeSafe": "خزينة نشطة",
+      "totalBalance": "الرصيد الإجمالي"
+    },
+    "table": {
+      "title": "قائمة الخزائن",
+      "subtitle": "عرض وإدارة جميع الخزائن",
+      "nameAr": "اسم الخزينة (عربي)",
+      "branch": "الفرع المرتبط",
+      "balance": "الرصيد الحالي",
+      "status": "الحالة",
+      "notes": "ملاحظات",
+      "actions": "إجراءات",
+      "edit": "تعديل",
+      "history": "سجل الحركات",
+      "active": "نشط",
+      "inactive": "غير نشط",
+      "noSafes": "لم يتم العثور على خزائن"
+    },
+    "messages": {
+      "loadFailed": "فشل تحميل الخزائن",
+      "loadError": "حدث خطأ أثناء تحميل الخزائن",
+      "fillRequired": "يرجى ملء جميع الحقول المطلوبة",
+      "updateSuccess": "تم تحديث الخزينة بنجاح",
+      "createSuccess": "تم إضافة الخزينة بنجاح",
+      "saveFailed": "فشل حفظ الخزينة",
+      "saveError": "حدث خطأ أثناء حفظ الخزينة",
+      "deleteConfirm": "هل أنت متأكد من حذف هذه الخزينة؟",
+      "deleteSuccess": "تم حذف الخزينة بنجاح",
+      "deleteFailed": "فشل حذف الخزينة",
+      "deleteError": "حدث خطأ أثناء حذف الخزينة"
+    }
+  },
   "openingInventory": {
     "title": "مخزون أول المدة",
     "subtitle": "نظام المخزون الأولي",
@@ -1822,7 +1886,7 @@
       "actions": "إجراءات",
       "edit": "تعديل",
       "delete": "حذف",
-      "noInstitutions": "لا توجد مؤسسات مسجلة",
+      "noInstitutions": "لا توجد شركة متاحة",
       "loading": "جاري التحميل..."
     },
     "messages": {
@@ -1958,6 +2022,7 @@
       "statusDescription": "تفعيل أو تعطيل",
       "active": "نشط",
       "inactive": "معطل",
+      "maintenance": "صيانة",
       "save": "إضافة الرف",
       "saveChanges": "حفظ التغييرات",
       "list": "قائمة الرفوف",
@@ -2018,6 +2083,9 @@
       "toWarehouse": "إلى",
       "status": "الحالة",
       "completed": "مكتمل",
+      "statusCompleted": "مكتمل",
+      "statusInTransit": "قيد النقل",
+      "statusPending": "معلق",
       "inTransit": "قيد النقل",
       "pending": "معلق",
       "transferCreated": "تم إنشاء طلب النقل"
@@ -2120,6 +2188,7 @@
       "subtitle": "متابعة المنتجات في المستودعات",
       "searchPlaceholder": "بحث عن منتج أو باركود...",
       "advancedSearch": "بحث متقدم",
+      "statusAvailable": "متوفر",
       "product": "المنتج",
       "barcode": "الباركود",
       "warehouse": "المستودع",

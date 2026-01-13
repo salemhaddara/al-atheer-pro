@@ -284,6 +284,7 @@ export interface CreateInstitutionRequest {
     default_currency?: string;
     notes?: string;
     admin_user_id: number;
+    logo?: string;
 }
 
 export interface InstitutionResponse {
@@ -318,10 +319,10 @@ export async function getInstitutions(params?: { per_page?: number; system_type?
     if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
     if (params?.system_type) queryParams.append('system_type', params.system_type);
     if (params?.country) queryParams.append('country', params.country);
-    
+
     const queryString = queryParams.toString();
     const endpoint = `/api/v1/institutions${queryString ? `?${queryString}` : ''}`;
-    
+
     return apiRequest<InstitutionListResponse>(endpoint, {
         method: 'GET',
     });
@@ -419,10 +420,10 @@ export async function getBranches(params?: { per_page?: number; institution_id?:
     if (params?.institution_id) queryParams.append('institution_id', params.institution_id.toString());
     if (params?.is_active !== undefined) queryParams.append('is_active', params.is_active.toString());
     if (params?.is_main !== undefined) queryParams.append('is_main', params.is_main.toString());
-    
+
     const queryString = queryParams.toString();
     const endpoint = `/api/v1/branches${queryString ? `?${queryString}` : ''}`;
-    
+
     return apiRequest<BranchListResponse>(endpoint, {
         method: 'GET',
     });
@@ -541,10 +542,10 @@ export async function getUsers(params?: { per_page?: number; search?: string }):
     const queryParams = new URLSearchParams();
     if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
     if (params?.search) queryParams.append('search', params.search);
-    
+
     const queryString = queryParams.toString();
     const endpoint = `/api/v1/admin/users${queryString ? `?${queryString}` : ''}`;
-    
+
     const result = await apiRequest<UserListResponse>(endpoint, {
         method: 'GET',
     });
@@ -553,7 +554,7 @@ export async function getUsers(params?: { per_page?: number; search?: string }):
         // Extract users array from paginated response
         const usersData = result.data.users;
         const usersList = usersData?.data || (Array.isArray(usersData) ? usersData : []);
-        
+
         return {
             success: true,
             message: result.message,
@@ -618,10 +619,10 @@ export async function getWarehouses(params?: { per_page?: number; branch_id?: nu
     if (params?.branch_id) queryParams.append('branch_id', params.branch_id.toString());
     if (params?.is_active !== undefined) queryParams.append('is_active', params.is_active.toString());
     if (params?.is_default !== undefined) queryParams.append('is_default', params.is_default.toString());
-    
+
     const queryString = queryParams.toString();
     const endpoint = `/api/v1/warehouses${queryString ? `?${queryString}` : ''}`;
-    
+
     return apiRequest<WarehouseListResponse>(endpoint, {
         method: 'GET',
     });
@@ -864,7 +865,7 @@ export async function getSafes(params?: { per_page?: number; branch_id?: number;
     if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
     if (params?.branch_id) queryParams.append('branch_id', params.branch_id.toString());
     if (params?.is_active !== undefined) queryParams.append('is_active', params.is_active.toString());
-    
+
     const queryString = queryParams.toString();
     return apiRequest<SafesResponse>(`/api/v1/safes${queryString ? `?${queryString}` : ''}`);
 }
@@ -979,10 +980,10 @@ export async function getSettings(params?: {
     if (params?.institution_id) queryParams.append('institution_id', params.institution_id.toString());
     if (params?.branch_id) queryParams.append('branch_id', params.branch_id.toString());
     if (params?.user_id) queryParams.append('user_id', params.user_id.toString());
-    
+
     const queryString = queryParams.toString();
     const endpoint = `/api/v1/settings${queryString ? `?${queryString}` : ''}`;
-    
+
     return apiRequest<SettingListResponse>(endpoint, {
         method: 'GET',
     });
@@ -1005,10 +1006,10 @@ export async function getSettingByKey(
     if (params?.institution_id) queryParams.append('institution_id', params.institution_id.toString());
     if (params?.branch_id) queryParams.append('branch_id', params.branch_id.toString());
     if (params?.user_id) queryParams.append('user_id', params.user_id.toString());
-    
+
     const queryString = queryParams.toString();
     const endpoint = `/api/v1/settings/key/${key}${queryString ? `?${queryString}` : ''}`;
-    
+
     return apiRequest<SettingResponse>(endpoint, {
         method: 'GET',
     });

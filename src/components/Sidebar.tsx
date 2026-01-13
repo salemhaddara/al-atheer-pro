@@ -99,10 +99,10 @@ const routeMap: Record<string, string> = {
   'permissions': '/settings/permissions',
 };
 
-export const Sidebar = memo(function Sidebar({ 
-  currentCompany, 
-  onCompanyChange, 
-  isCollapsed: controlledCollapsed, 
+export const Sidebar = memo(function Sidebar({
+  currentCompany,
+  onCompanyChange,
+  isCollapsed: controlledCollapsed,
   onToggle,
   institutions = [],
   currentInstitution,
@@ -178,7 +178,7 @@ export const Sidebar = memo(function Sidebar({
       return [{ id: 'current', name: currentCompany }];
     }
     // Fallback to default
-    return [{ id: 'current', name: t('sidebar.companies.alamal') }];
+    return [{ id: 'current', name: t('sidebar.noCompany') }];
   }, [currentCompany, t]);
 
   const menuSections = useMemo(() => {
@@ -342,9 +342,19 @@ export const Sidebar = memo(function Sidebar({
       <div className={`border-b border-gray-200 relative ${isCollapsed ? 'p-3' : 'p-6'}`}>
         {isCollapsed ? (
           <div className="flex flex-col items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-sm">
-              <LayoutDashboard className="w-5 h-5 text-white" />
-            </div>
+            {currentInstitution?.logo_url ? (
+              <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center p-1 shadow-sm overflow-hidden">
+                <img
+                  src={currentInstitution.logo_url}
+                  alt={currentCompany || "Logo"}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            ) : (
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-sm">
+                <LayoutDashboard className="w-5 h-5 text-white" />
+              </div>
+            )}
             <button
               onClick={toggleCollapse}
               className="p-1.5 rounded-lg hover:bg-gray-100 active:scale-95 transition-all text-gray-600 hover:text-gray-900"
@@ -359,8 +369,21 @@ export const Sidebar = memo(function Sidebar({
           </div>
         ) : (
           <>
-            <h1 className="text-blue-600 font-semibold pr-10">{t('sidebar.systemTitle')}</h1>
-            <p className="text-gray-500 text-sm mt-1 pr-10">{t('sidebar.systemSubtitle')}</p>
+            <div className="flex items-center gap-3 pr-10">
+              {currentInstitution?.logo_url && (
+                <div className="w-10 h-10 rounded-lg bg-white border border-gray-100 flex flex-shrink-0 items-center justify-center p-0.5 overflow-hidden">
+                  <img
+                    src={currentInstitution.logo_url}
+                    alt="Logo"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              )}
+              <div>
+                <h1 className="text-blue-600 font-semibold leading-tight">{t('sidebar.systemTitle')}</h1>
+                <p className="text-gray-500 text-sm">{t('sidebar.systemSubtitle')}</p>
+              </div>
+            </div>
             <button
               onClick={toggleCollapse}
               className={`absolute top-4 ${direction === 'rtl' ? 'left-4' : 'right-4'} p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-600 hover:text-gray-900`}
@@ -383,8 +406,8 @@ export const Sidebar = memo(function Sidebar({
           {isSuperAdmin && institutions.length > 0 ? (
             <>
               <label className="text-sm text-gray-600 mb-2 block">{t('sidebar.currentInstitution') || 'المؤسسة الحالية'}</label>
-              <Select 
-                value={currentInstitution ? String(currentInstitution.id) : ''} 
+              <Select
+                value={currentInstitution ? String(currentInstitution.id) : ''}
                 onValueChange={(value) => {
                   if (onInstitutionChange) {
                     onInstitutionChange(value ? Number(value) : null);
@@ -412,7 +435,7 @@ export const Sidebar = memo(function Sidebar({
                   if (currentCompany) return currentCompany;
                   const institutionName = language === 'ar' ? currentInstitution.name_ar : currentInstitution.name_en;
                   if (institutionName) return institutionName;
-                  return t('sidebar.companies.alamal');
+                  return t('sidebar.noCompany');
                 })()}
               </div>
             </>
@@ -420,7 +443,7 @@ export const Sidebar = memo(function Sidebar({
             <>
               <label className="text-sm text-gray-600 mb-2 block">{t('sidebar.currentCompany') || 'الشركة الحالية'}</label>
               <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm font-medium">
-                {currentCompany || t('sidebar.companies.alamal')}
+                {currentCompany || t('sidebar.noCompany')}
               </div>
             </>
           )}

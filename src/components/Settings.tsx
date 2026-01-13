@@ -19,6 +19,7 @@ import { Building2, Bell, Lock, Palette, DollarSign, Percent, Plus, FileText, Ed
 
 // Utilities
 import { toast } from 'sonner';
+import { compressAndConvertToBase64 } from '@/lib/image-utils';
 
 // Contexts
 import { useLanguage } from '../contexts/LanguageContext';
@@ -37,7 +38,6 @@ import {
   type OtherRecipient
 } from '../data/vouchers';
 
-// API
 import { getSettingByKey, createSetting, updateSetting, getSettings, batchUpdateSettings, getInstitution, updateInstitution, type Setting, type Institution } from '../lib/api';
 
 export function Settings() {
@@ -47,7 +47,7 @@ export function Settings() {
   const [priceModificationIncludesTax, setPriceModificationIncludesTax] = useState(true);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  
+
   // Cache existing settings to avoid checking existence on save
   const [existingSettingsMap, setExistingSettingsMap] = useState<Map<string, Setting>>(new Map());
 
@@ -66,6 +66,7 @@ export function Settings() {
     business_registry: '',
     default_currency: 'SAR',
     notes: '',
+    logo: null as string | null,
   });
   // Financial settings state
   const [financialSettings, setFinancialSettings] = useState({
@@ -158,7 +159,7 @@ export function Settings() {
     try {
       // Use cached existing settings to avoid extra API call
       const existingSetting = existingSettingsMap.get(key);
-      
+
       if (existingSetting) {
         // Update existing setting
         const updateResult = await updateSetting(existingSetting.id, { value });
@@ -203,12 +204,12 @@ export function Settings() {
   // Function to fetch institution data and populate company settings
   const loadInstitutionData = async (institutionId: number | null) => {
     if (!institutionId) return;
-    
+
     try {
       const result = await getInstitution(institutionId);
       if (result.success && result.data?.institution) {
         const institution = result.data.institution;
-        
+
         // Populate company settings from institution data
         // Use institution values if they exist, otherwise keep previous values
         setCompanySettings(prev => ({
@@ -225,6 +226,7 @@ export function Settings() {
           business_registry: institution.business_registry ? String(institution.business_registry) : prev.business_registry,
           default_currency: institution.default_currency ? String(institution.default_currency) : (prev.default_currency || 'SAR'),
           notes: institution.notes ? String(institution.notes) : prev.notes,
+          logo: institution.logo_url || null,
         }));
       }
     } catch (error) {
@@ -239,8 +241,8 @@ export function Settings() {
       setIsLoadingSettings(true);
       try {
         // Get current institution from localStorage
-        const selectedInstitutionId = typeof window !== 'undefined' 
-          ? localStorage.getItem('selected_institution_id') 
+        const selectedInstitutionId = typeof window !== 'undefined'
+          ? localStorage.getItem('selected_institution_id')
           : null;
 
         // Fetch institution data first to populate company settings (unless skipped)
@@ -259,10 +261,10 @@ export function Settings() {
 
         // Fetch all settings in ONE API call instead of 30+ sequential calls
         const result = await getSettings(params);
-        
+
         // Handle empty settings (valid case - no settings created yet)
         let settingsData: Setting[] = [];
-        
+
         if (result.success && 'data' in result) {
           settingsData = result.data?.settings?.data || [];
         } else {
@@ -277,7 +279,7 @@ export function Settings() {
           settingsMap.set(setting.key, setting.value);
           existingSettings.set(setting.key, setting);
         });
-        
+
         // Cache existing settings for save optimization
         setExistingSettingsMap(existingSettings);
 
@@ -327,6 +329,7 @@ export function Settings() {
           business_registry: String(getValue('company_business_registry', prev.business_registry) || prev.business_registry),
           default_currency: String(getValue('company_default_currency', prev.default_currency) || prev.default_currency || 'SAR'),
           notes: String(getValue('company_notes', prev.notes) || prev.notes),
+          logo: prev.logo, // Logo is not stored in settings, only in institution
         }));
 
         // Load financial settings - ensure string values are never null
@@ -404,10 +407,10 @@ export function Settings() {
     // Listen for institution changes
     const handleInstitutionChange = async (event?: Event) => {
       const customEvent = event as CustomEvent<{ institutionId: number | null }> | undefined;
-      const institutionId = customEvent?.detail?.institutionId 
-        ? customEvent.detail.institutionId 
+      const institutionId = customEvent?.detail?.institutionId
+        ? customEvent.detail.institutionId
         : (typeof window !== 'undefined' ? localStorage.getItem('selected_institution_id') : null);
-      
+
       // Load institution data first, then load settings (skip institution load in loadSettings)
       if (institutionId) {
         await loadInstitutionData(Number(institutionId));
@@ -427,8 +430,8 @@ export function Settings() {
     setIsSaving(true);
     try {
       // Get current institution from localStorage
-      const selectedInstitutionId = typeof window !== 'undefined' 
-        ? localStorage.getItem('selected_institution_id') 
+      const selectedInstitutionId = typeof window !== 'undefined'
+        ? localStorage.getItem('selected_institution_id')
         : null;
 
       // Determine scope and institution_id
@@ -447,55 +450,56 @@ export function Settings() {
         label_en: string;
         label_ar: string;
       }> = [
-        { key: 'system_type', value: systemType, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'System Type', label_ar: 'نوع النظام' },
-        { key: 'prices_include_tax', value: pricesIncludeTax, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Prices Include Tax', label_ar: 'الأسعار شاملة الضريبة' },
-        { key: 'price_modification_includes_tax', value: priceModificationIncludesTax, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Price Modification Includes Tax', label_ar: 'تعديل السعر يشمل الضريبة' },
-        // Company settings
-        { key: 'company_name_ar', value: companySettings.name_ar, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Name (Arabic)', label_ar: 'اسم الشركة (عربي)' },
-        { key: 'company_name_en', value: companySettings.name_en, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Name (English)', label_ar: 'اسم الشركة (إنجليزي)' },
-        { key: 'company_activity_ar', value: companySettings.activity_ar, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Activity (Arabic)', label_ar: 'نشاط الشركة (عربي)' },
-        { key: 'company_activity_en', value: companySettings.activity_en, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Activity (English)', label_ar: 'نشاط الشركة (إنجليزي)' },
-        { key: 'company_phone_number', value: companySettings.phone_number, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Phone Number', label_ar: 'رقم هاتف الشركة' },
-        { key: 'company_secondary_phone_number', value: companySettings.secondary_phone_number, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Secondary Phone', label_ar: 'رقم هاتف الشركة الثانوي' },
-        { key: 'company_email', value: companySettings.email, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Email', label_ar: 'بريد الشركة الإلكتروني' },
-        { key: 'company_website', value: companySettings.website, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Website', label_ar: 'موقع الشركة الإلكتروني' },
-        { key: 'company_address', value: companySettings.address, type: 'text' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Address', label_ar: 'عنوان الشركة' },
-        { key: 'company_tax_number', value: companySettings.tax_number, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Tax Number', label_ar: 'الرقم الضريبي للشركة' },
-        { key: 'company_business_registry', value: companySettings.business_registry, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Business Registry', label_ar: 'السجل التجاري للشركة' },
-        { key: 'company_default_currency', value: companySettings.default_currency, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Default Currency', label_ar: 'العملة الافتراضية للشركة' },
-        { key: 'company_notes', value: companySettings.notes, type: 'text' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Notes', label_ar: 'ملاحظات الشركة' },
-        // Financial settings
-        { key: 'financial_fiscal_year', value: financialSettings.fiscal_year, type: 'string' as const, group: 'financial', scope, institution_id: institutionId, label_en: 'Fiscal Year', label_ar: 'السنة المالية' },
-        { key: 'financial_costing_method', value: financialSettings.costing_method, type: 'string' as const, group: 'financial', scope, institution_id: institutionId, label_en: 'Costing Method', label_ar: 'طريقة التكلفة' },
-        { key: 'financial_auto_entries', value: financialSettings.auto_entries, type: 'boolean' as const, group: 'financial', scope, institution_id: institutionId, label_en: 'Auto Entries', label_ar: 'القيد التلقائي' },
-        { key: 'financial_approve_entries', value: financialSettings.approve_entries, type: 'boolean' as const, group: 'financial', scope, institution_id: institutionId, label_en: 'Approve Entries', label_ar: 'اعتماد القيود' },
-        // Tax settings
-        { key: 'tax_default_vat_rate', value: taxSettings.default_vat_rate, type: 'string' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Default VAT Rate', label_ar: 'نسبة ضريبة القيمة المضافة الافتراضية' },
-        { key: 'tax_institution_tax_number', value: taxSettings.institution_tax_number, type: 'string' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Institution Tax Number', label_ar: 'الرقم الضريبي للمؤسسة' },
-        { key: 'tax_enable_vat', value: taxSettings.enable_vat, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Enable VAT', label_ar: 'تفعيل ضريبة القيمة المضافة' },
-        { key: 'tax_show_prices_with_vat', value: taxSettings.show_prices_with_vat, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Show Prices With VAT', label_ar: 'عرض الأسعار مع الضريبة' },
-        { key: 'tax_show_vat_details', value: taxSettings.show_vat_details, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Show VAT Details', label_ar: 'عرض تفاصيل الضريبة' },
-        { key: 'tax_discount_timing', value: taxSettings.discount_timing, type: 'string' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Discount Timing', label_ar: 'توقيت الخصم' },
-        { key: 'tax_tobacco_tax', value: taxSettings.tobacco_tax, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Tobacco Tax', label_ar: 'ضريبة التبغ' },
-        { key: 'tax_e_invoicing', value: taxSettings.e_invoicing, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'E-Invoicing', label_ar: 'الفواتير الإلكترونية' },
-        // Notification settings
-        { key: 'notification_low_stock', value: notificationSettings.low_stock, type: 'boolean' as const, group: 'notifications', scope, institution_id: institutionId, label_en: 'Low Stock Notifications', label_ar: 'إشعارات المخزون المنخفض' },
-        { key: 'notification_payments', value: notificationSettings.payments, type: 'boolean' as const, group: 'notifications', scope, institution_id: institutionId, label_en: 'Payment Notifications', label_ar: 'إشعارات المدفوعات' },
-        { key: 'notification_daily_reports', value: notificationSettings.daily_reports, type: 'boolean' as const, group: 'notifications', scope, institution_id: institutionId, label_en: 'Daily Reports', label_ar: 'التقارير اليومية' },
-        { key: 'notification_email_notifications', value: notificationSettings.email_notifications, type: 'boolean' as const, group: 'notifications', scope, institution_id: institutionId, label_en: 'Email Notifications', label_ar: 'الإشعارات البريدية' },
-        { key: 'notification_sms_notifications', value: notificationSettings.sms_notifications, type: 'boolean' as const, group: 'notifications', scope, institution_id: institutionId, label_en: 'SMS Notifications', label_ar: 'إشعارات الرسائل النصية' },
-        // Security settings
-        { key: 'security_two_factor', value: securitySettings.two_factor, type: 'boolean' as const, group: 'security', scope, institution_id: institutionId, label_en: 'Two Factor Authentication', label_ar: 'المصادقة الثنائية' },
-        { key: 'security_auto_logout', value: securitySettings.auto_logout, type: 'boolean' as const, group: 'security', scope, institution_id: institutionId, label_en: 'Auto Logout', label_ar: 'تسجيل الخروج التلقائي' },
-        // Appearance settings
-        { key: 'appearance_theme', value: appearanceSettings.theme, type: 'string' as const, group: 'appearance', scope, institution_id: institutionId, label_en: 'Theme', label_ar: 'المظهر' },
-        { key: 'appearance_font_size', value: appearanceSettings.font_size, type: 'string' as const, group: 'appearance', scope, institution_id: institutionId, label_en: 'Font Size', label_ar: 'حجم الخط' },
-        { key: 'appearance_date_format', value: appearanceSettings.date_format, type: 'string' as const, group: 'appearance', scope, institution_id: institutionId, label_en: 'Date Format', label_ar: 'تنسيق التاريخ' },
-      ];
+          { key: 'system_type', value: systemType, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'System Type', label_ar: 'نوع النظام' },
+          { key: 'prices_include_tax', value: pricesIncludeTax, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Prices Include Tax', label_ar: 'الأسعار شاملة الضريبة' },
+          { key: 'price_modification_includes_tax', value: priceModificationIncludesTax, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Price Modification Includes Tax', label_ar: 'تعديل السعر يشمل الضريبة' },
+          // Company settings
+          { key: 'company_name_ar', value: companySettings.name_ar, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Name (Arabic)', label_ar: 'اسم الشركة (عربي)' },
+          { key: 'company_name_en', value: companySettings.name_en, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Name (English)', label_ar: 'اسم الشركة (إنجليزي)' },
+          { key: 'company_activity_ar', value: companySettings.activity_ar, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Activity (Arabic)', label_ar: 'نشاط الشركة (عربي)' },
+          { key: 'company_activity_en', value: companySettings.activity_en, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Activity (English)', label_ar: 'نشاط الشركة (إنجليزي)' },
+          { key: 'company_phone_number', value: companySettings.phone_number, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Phone Number', label_ar: 'رقم هاتف الشركة' },
+          { key: 'company_secondary_phone_number', value: companySettings.secondary_phone_number, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Secondary Phone', label_ar: 'رقم هاتف الشركة الثانوي' },
+          { key: 'company_email', value: companySettings.email, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Email', label_ar: 'بريد الشركة الإلكتروني' },
+          { key: 'company_website', value: companySettings.website, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Website', label_ar: 'موقع الشركة الإلكتروني' },
+          { key: 'company_address', value: companySettings.address, type: 'text' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Address', label_ar: 'عنوان الشركة' },
+          { key: 'company_tax_number', value: companySettings.tax_number, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Tax Number', label_ar: 'الرقم الضريبي للشركة' },
+          { key: 'company_business_registry', value: companySettings.business_registry, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Business Registry', label_ar: 'السجل التجاري للشركة' },
+          { key: 'company_default_currency', value: companySettings.default_currency, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Default Currency', label_ar: 'العملة الافتراضية للشركة' },
+          { key: 'company_notes', value: companySettings.notes, type: 'text' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Notes', label_ar: 'ملاحظات الشركة' },
+
+          // Financial settings
+          { key: 'financial_fiscal_year', value: financialSettings.fiscal_year, type: 'string' as const, group: 'financial', scope, institution_id: institutionId, label_en: 'Fiscal Year', label_ar: 'السنة المالية' },
+          { key: 'financial_costing_method', value: financialSettings.costing_method, type: 'string' as const, group: 'financial', scope, institution_id: institutionId, label_en: 'Costing Method', label_ar: 'طريقة التكلفة' },
+          { key: 'financial_auto_entries', value: financialSettings.auto_entries, type: 'boolean' as const, group: 'financial', scope, institution_id: institutionId, label_en: 'Auto Entries', label_ar: 'القيد التلقائي' },
+          { key: 'financial_approve_entries', value: financialSettings.approve_entries, type: 'boolean' as const, group: 'financial', scope, institution_id: institutionId, label_en: 'Approve Entries', label_ar: 'اعتماد القيود' },
+          // Tax settings
+          { key: 'tax_default_vat_rate', value: taxSettings.default_vat_rate, type: 'string' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Default VAT Rate', label_ar: 'نسبة ضريبة القيمة المضافة الافتراضية' },
+          { key: 'tax_institution_tax_number', value: taxSettings.institution_tax_number, type: 'string' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Institution Tax Number', label_ar: 'الرقم الضريبي للمؤسسة' },
+          { key: 'tax_enable_vat', value: taxSettings.enable_vat, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Enable VAT', label_ar: 'تفعيل ضريبة القيمة المضافة' },
+          { key: 'tax_show_prices_with_vat', value: taxSettings.show_prices_with_vat, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Show Prices With VAT', label_ar: 'عرض الأسعار مع الضريبة' },
+          { key: 'tax_show_vat_details', value: taxSettings.show_vat_details, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Show VAT Details', label_ar: 'عرض تفاصيل الضريبة' },
+          { key: 'tax_discount_timing', value: taxSettings.discount_timing, type: 'string' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Discount Timing', label_ar: 'توقيت الخصم' },
+          { key: 'tax_tobacco_tax', value: taxSettings.tobacco_tax, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Tobacco Tax', label_ar: 'ضريبة التبغ' },
+          { key: 'tax_e_invoicing', value: taxSettings.e_invoicing, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'E-Invoicing', label_ar: 'الفواتير الإلكترونية' },
+          // Notification settings
+          { key: 'notification_low_stock', value: notificationSettings.low_stock, type: 'boolean' as const, group: 'notifications', scope, institution_id: institutionId, label_en: 'Low Stock Notifications', label_ar: 'إشعارات المخزون المنخفض' },
+          { key: 'notification_payments', value: notificationSettings.payments, type: 'boolean' as const, group: 'notifications', scope, institution_id: institutionId, label_en: 'Payment Notifications', label_ar: 'إشعارات المدفوعات' },
+          { key: 'notification_daily_reports', value: notificationSettings.daily_reports, type: 'boolean' as const, group: 'notifications', scope, institution_id: institutionId, label_en: 'Daily Reports', label_ar: 'التقارير اليومية' },
+          { key: 'notification_email_notifications', value: notificationSettings.email_notifications, type: 'boolean' as const, group: 'notifications', scope, institution_id: institutionId, label_en: 'Email Notifications', label_ar: 'الإشعارات البريدية' },
+          { key: 'notification_sms_notifications', value: notificationSettings.sms_notifications, type: 'boolean' as const, group: 'notifications', scope, institution_id: institutionId, label_en: 'SMS Notifications', label_ar: 'إشعارات الرسائل النصية' },
+          // Security settings
+          { key: 'security_two_factor', value: securitySettings.two_factor, type: 'boolean' as const, group: 'security', scope, institution_id: institutionId, label_en: 'Two Factor Authentication', label_ar: 'المصادقة الثنائية' },
+          { key: 'security_auto_logout', value: securitySettings.auto_logout, type: 'boolean' as const, group: 'security', scope, institution_id: institutionId, label_en: 'Auto Logout', label_ar: 'تسجيل الخروج التلقائي' },
+          // Appearance settings
+          { key: 'appearance_theme', value: appearanceSettings.theme, type: 'string' as const, group: 'appearance', scope, institution_id: institutionId, label_en: 'Theme', label_ar: 'المظهر' },
+          { key: 'appearance_font_size', value: appearanceSettings.font_size, type: 'string' as const, group: 'appearance', scope, institution_id: institutionId, label_en: 'Font Size', label_ar: 'حجم الخط' },
+          { key: 'appearance_date_format', value: appearanceSettings.date_format, type: 'string' as const, group: 'appearance', scope, institution_id: institutionId, label_en: 'Date Format', label_ar: 'تنسيق التاريخ' },
+        ];
 
       // Save all settings in ONE batch API call
       const result = await batchUpdateSettings({ settings: settingsToSave });
-      
+
       if (result.success && result.data?.settings) {
         // Update cache with saved settings
         const updatedMap = new Map<string, Setting>();
@@ -503,7 +507,7 @@ export function Settings() {
           updatedMap.set(setting.key, setting);
         });
         setExistingSettingsMap(updatedMap);
-        
+
         // Also update the Institution table if we have an institution ID
         if (institutionId) {
           try {
@@ -511,7 +515,7 @@ export function Settings() {
             const institutionResult = await getInstitution(institutionId);
             if (institutionResult.success && institutionResult.data?.institution) {
               const currentInstitution = institutionResult.data.institution;
-              
+
               // Update institution with company settings
               // For required fields: use company settings if not empty, otherwise keep current
               // For optional fields: use company settings (can be empty to clear)
@@ -531,6 +535,7 @@ export function Settings() {
                 system_type: 'restaurant' | 'retail';
                 default_currency?: string;
                 notes?: string;
+                logo?: string;
               }> = {
                 name_ar: companySettings.name_ar.trim() || currentInstitution.name_ar,
                 name_en: companySettings.name_en.trim() || currentInstitution.name_en,
@@ -549,7 +554,12 @@ export function Settings() {
               institutionUpdateData.tax_number = companySettings.tax_number.trim();
               institutionUpdateData.business_registry = companySettings.business_registry.trim();
               institutionUpdateData.default_currency = companySettings.default_currency.trim();
+              institutionUpdateData.default_currency = companySettings.default_currency.trim();
               institutionUpdateData.notes = companySettings.notes.trim();
+
+              if (companySettings.logo) {
+                institutionUpdateData.logo = companySettings.logo;
+              }
 
               // Update the institution
               const updateResult = await updateInstitution(institutionId, institutionUpdateData);
@@ -563,20 +573,20 @@ export function Settings() {
             // Don't throw - settings were saved successfully, just log the error
           }
         }
-        
+
         // Dispatch event to update company name in navbar
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new Event('settingsUpdated'));
         }
-        
+
         toast.success(t('settings.saveSuccess') || 'Settings saved successfully');
       } else {
         const errorMessage = result.message || t('settings.saveError') || 'Failed to save settings';
         throw new Error(errorMessage);
       }
     } catch (error) {
-      const errorMessage = error instanceof Error 
-        ? error.message 
+      const errorMessage = error instanceof Error
+        ? error.message
         : (t('settings.saveError') || 'Failed to save settings');
       toast.error(errorMessage);
     } finally {
@@ -714,6 +724,20 @@ export function Settings() {
         <p className={`text-gray-600 ${direction === 'rtl' ? 'text-right' : 'text-left'}`}>{t('settings.subtitle')}</p>
       </div>
 
+      {!localStorage.getItem('selected_institution_id') && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center gap-3 text-amber-800">
+            <Building2 className="w-5 h-5 text-amber-600" />
+            <div className="font-medium">
+              {t('settings.noInstitutionWarning.title')}
+            </div>
+          </div>
+          <p className={`mt-1 text-sm text-amber-700 ${direction === 'rtl' ? 'mr-8' : 'ml-8'}`}>
+            {t('settings.noInstitutionWarning.description')}
+          </p>
+        </div>
+      )}
+
       <Tabs defaultValue="company" className="space-y-6" dir={direction}>
         <TabsList className="flex w-full flex-nowrap overflow-x-auto" dir={direction}>
           <TabsTrigger value="company" className="gap-1.5 flex-shrink-0 text-xs sm:text-sm">
@@ -742,7 +766,7 @@ export function Settings() {
           </TabsTrigger>
           <TabsTrigger value="vouchers" className="gap-1.5 flex-shrink-0 text-xs sm:text-sm">
             <FileText className="w-4 h-4" />
-           {t('settings.tabs.vouchers')}
+            {t('settings.tabs.vouchers')}
           </TabsTrigger>
         </TabsList>
 
@@ -750,25 +774,33 @@ export function Settings() {
           <Card>
             <CardHeader>
               <CardTitle>{t('settings.company.title')}</CardTitle>
-              <CardDescription>{t('settings.company.subtitle')}</CardDescription>
+              <CardDescription>
+                {t('settings.company.subtitle')}
+                {!localStorage.getItem('selected_institution_id') && (
+                  <span className="text-amber-600 font-medium block mt-1">
+                    ({t('sidebar.noCompany')})
+                  </span>
+                )}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>{t('settings.company.nameAr')}</Label>
-                  <Input 
-                    placeholder={t('settings.company.nameArPlaceholder')} 
+                  <Input
+                    placeholder={t('settings.company.nameArPlaceholder')}
                     value={ensureString(companySettings.name_ar)}
                     onChange={(e) => setCompanySettings({ ...companySettings, name_ar: e.target.value })}
                   />
                 </div>
                 <div>
                   <Label>{t('settings.company.nameEn')}</Label>
-                  <Input 
-                    placeholder={t('settings.company.nameEnPlaceholder')} 
+                  <Input
+                    placeholder={t('settings.company.nameEnPlaceholder')}
                     value={ensureString(companySettings.name_en)}
                     onChange={(e) => setCompanySettings({ ...companySettings, name_en: e.target.value })}
-                    dir="ltr" 
+                    dir="ltr"
                   />
                 </div>
               </div>
@@ -776,19 +808,19 @@ export function Settings() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>{t('settings.company.activityAr')}</Label>
-                  <Input 
-                    placeholder={t('settings.company.activityArPlaceholder')} 
+                  <Input
+                    placeholder={t('settings.company.activityArPlaceholder')}
                     value={ensureString(companySettings.activity_ar)}
                     onChange={(e) => setCompanySettings({ ...companySettings, activity_ar: e.target.value })}
                   />
                 </div>
                 <div>
                   <Label>{t('settings.company.activityEn')}</Label>
-                  <Input 
-                    placeholder={t('settings.company.activityEnPlaceholder')} 
+                  <Input
+                    placeholder={t('settings.company.activityEnPlaceholder')}
                     value={ensureString(companySettings.activity_en)}
                     onChange={(e) => setCompanySettings({ ...companySettings, activity_en: e.target.value })}
-                    dir="ltr" 
+                    dir="ltr"
                   />
                 </div>
               </div>
@@ -796,22 +828,22 @@ export function Settings() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>{t('settings.company.mobile')}</Label>
-                  <Input 
-                    placeholder={t('settings.company.mobilePlaceholder')} 
+                  <Input
+                    placeholder={t('settings.company.mobilePlaceholder')}
                     value={ensureString(companySettings.phone_number)}
                     onChange={(e) => setCompanySettings({ ...companySettings, phone_number: e.target.value })}
-                    dir="ltr" 
-                    type="tel" 
+                    dir="ltr"
+                    type="tel"
                   />
                 </div>
                 <div>
                   <Label>{t('settings.company.phone')}</Label>
-                  <Input 
-                    placeholder={t('settings.company.phonePlaceholder')} 
+                  <Input
+                    placeholder={t('settings.company.phonePlaceholder')}
                     value={ensureString(companySettings.secondary_phone_number)}
                     onChange={(e) => setCompanySettings({ ...companySettings, secondary_phone_number: e.target.value })}
-                    dir="ltr" 
-                    type="tel" 
+                    dir="ltr"
+                    type="tel"
                   />
                 </div>
               </div>
@@ -819,29 +851,29 @@ export function Settings() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>{t('settings.company.email')}</Label>
-                  <Input 
-                    type="email" 
-                    placeholder={t('settings.company.emailPlaceholder')} 
+                  <Input
+                    type="email"
+                    placeholder={t('settings.company.emailPlaceholder')}
                     value={ensureString(companySettings.email)}
                     onChange={(e) => setCompanySettings({ ...companySettings, email: e.target.value })}
-                    dir="ltr" 
+                    dir="ltr"
                   />
                 </div>
                 <div>
                   <Label>{t('settings.company.website')}</Label>
-                  <Input 
-                    placeholder={t('settings.company.websitePlaceholder')} 
+                  <Input
+                    placeholder={t('settings.company.websitePlaceholder')}
                     value={ensureString(companySettings.website)}
                     onChange={(e) => setCompanySettings({ ...companySettings, website: e.target.value })}
-                    dir="ltr" 
+                    dir="ltr"
                   />
                 </div>
               </div>
 
               <div>
                 <Label>{t('settings.company.address')}</Label>
-                <Input 
-                  placeholder={t('settings.company.addressPlaceholder')} 
+                <Input
+                  placeholder={t('settings.company.addressPlaceholder')}
                   value={ensureString(companySettings.address)}
                   onChange={(e) => setCompanySettings({ ...companySettings, address: e.target.value })}
                 />
@@ -850,20 +882,20 @@ export function Settings() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>{t('settings.company.commercialReg')}</Label>
-                  <Input 
-                    placeholder={t('settings.company.commercialRegPlaceholder')} 
+                  <Input
+                    placeholder={t('settings.company.commercialRegPlaceholder')}
                     value={ensureString(companySettings.business_registry)}
                     onChange={(e) => setCompanySettings({ ...companySettings, business_registry: e.target.value })}
-                    dir="ltr" 
+                    dir="ltr"
                   />
                 </div>
                 <div>
                   <Label>{t('settings.company.vatNumber')}</Label>
-                  <Input 
-                    placeholder={t('settings.company.vatNumberPlaceholder')} 
+                  <Input
+                    placeholder={t('settings.company.vatNumberPlaceholder')}
                     value={ensureString(companySettings.tax_number)}
                     onChange={(e) => setCompanySettings({ ...companySettings, tax_number: e.target.value })}
-                    dir="ltr" 
+                    dir="ltr"
                   />
                 </div>
               </div>
@@ -879,21 +911,52 @@ export function Settings() {
                 />
               </div>
 
-              <div>
-                <Label>{t('settings.company.logo')}</Label>
+              {/* Logo Upload */}
+              <div className="space-y-2">
+                <Label>{t('settings.company.logo') || 'Company Logo'}</Label>
                 <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                  <input type="file" id="logo" className="hidden" accept="image/*" />
-                  <label htmlFor="logo" className="cursor-pointer">
-                    <Building2 className="w-12 h-12 mx-auto text-gray-400 mb-2" />
-                    <p className="text-sm text-gray-600">{t('settings.company.logoUpload')}</p>
-                    <p className="text-xs text-gray-400 mt-1">{t('settings.company.logoFormat')}</p>
+                  <input
+                    type="file"
+                    id="logo"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        try {
+                          const base64 = await compressAndConvertToBase64(file);
+                          setCompanySettings({ ...companySettings, logo: base64 });
+                        } catch (error) {
+                          console.error('Image processing error:', error);
+                          toast.error('Error processing image. Please try another file.');
+                        }
+                      }
+                    }}
+                  />
+                  <label htmlFor="logo" className="cursor-pointer relative block">
+                    {companySettings.logo ? (
+                      <div className="relative inline-block">
+                        <img
+                          src={companySettings.logo}
+                          alt="Company Logo"
+                          className="cursor-pointer relative block w-full h-full"
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <Building2 className="w-12 h-12 mx-auto text-gray-400 mb-2" />
+                        <p className="text-sm text-gray-600">{t('settings.company.logoUpload')}</p>
+                        <p className="text-xs text-gray-400 mt-1">{t('settings.company.logoFormat')}</p>
+                      </>
+                    )}
                   </label>
                 </div>
               </div>
 
+
               <div>
                 <Label>{t('settings.company.currency')}</Label>
-                <Select 
+                <Select
                   value={companySettings.default_currency}
                   onValueChange={(value) => setCompanySettings({ ...companySettings, default_currency: value })}
                 >
@@ -917,12 +980,12 @@ export function Settings() {
                     setSystemType(value);
                     const success = await saveSettingValue('system_type', value, 'string', 'company', 'system', 'System Type', 'نوع النظام');
                     if (success) {
-                    if (typeof window !== 'undefined') {
+                      if (typeof window !== 'undefined') {
                         // Keep localStorage as backup
-                      localStorage.setItem('system_type', value);
-                      // Dispatch custom event to update POS page immediately
-                      window.dispatchEvent(new Event('systemTypeChanged'));
-                      toast.success(t('settings.company.systemTypeSaved'));
+                        localStorage.setItem('system_type', value);
+                        // Dispatch custom event to update POS page immediately
+                        window.dispatchEvent(new Event('systemTypeChanged'));
+                        toast.success(t('settings.company.systemTypeSaved'));
                       }
                     } else {
                       toast.error('Failed to save system type');
@@ -966,7 +1029,7 @@ export function Settings() {
             <CardContent className="space-y-6">
               <div className="space-y-2">
                 <Label>{t('settings.financial.fiscalYear')}</Label>
-                <Select 
+                <Select
                   value={financialSettings.fiscal_year}
                   onValueChange={(value) => setFinancialSettings({ ...financialSettings, fiscal_year: value })}
                 >
@@ -982,7 +1045,7 @@ export function Settings() {
 
               <div className="space-y-2">
                 <Label>{t('settings.financial.costingMethod')}</Label>
-                <Select 
+                <Select
                   value={financialSettings.costing_method}
                   onValueChange={(value) => setFinancialSettings({ ...financialSettings, costing_method: value })}
                 >
@@ -1002,7 +1065,7 @@ export function Settings() {
                   <Label>{t('settings.financial.autoEntries')}</Label>
                   <p className="text-sm text-gray-600">{t('settings.financial.autoEntriesDesc')}</p>
                 </div>
-                <Switch 
+                <Switch
                   checked={financialSettings.auto_entries}
                   onCheckedChange={(checked) => setFinancialSettings({ ...financialSettings, auto_entries: checked })}
                 />
@@ -1013,7 +1076,7 @@ export function Settings() {
                   <Label>{t('settings.financial.approveEntries')}</Label>
                   <p className="text-sm text-gray-600">{t('settings.financial.approveEntriesDesc')}</p>
                 </div>
-                <Switch 
+                <Switch
                   checked={financialSettings.approve_entries}
                   onCheckedChange={(checked) => setFinancialSettings({ ...financialSettings, approve_entries: checked })}
                 />
@@ -1090,20 +1153,20 @@ export function Settings() {
               <CardContent className="space-y-6">
                 <div className="space-y-2">
                   <Label>{t('settings.taxes.defaultVatRate')}</Label>
-                  <Input 
-                    type="number" 
+                  <Input
+                    type="number"
                     value={ensureString(taxSettings.default_vat_rate)}
                     onChange={(e) => setTaxSettings({ ...taxSettings, default_vat_rate: e.target.value })}
-                    dir="ltr" 
+                    dir="ltr"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label>{t('settings.taxes.institutionTaxNumber')}</Label>
-                  <Input 
+                  <Input
                     value={ensureString(taxSettings.institution_tax_number)}
                     onChange={(e) => setTaxSettings({ ...taxSettings, institution_tax_number: e.target.value })}
-                    dir="ltr" 
+                    dir="ltr"
                   />
                 </div>
 
@@ -1112,7 +1175,7 @@ export function Settings() {
                     <Label>{t('settings.taxes.enableVat')}</Label>
                     <p className="text-sm text-gray-600">{t('settings.taxes.enableVatDesc')}</p>
                   </div>
-                  <Switch 
+                  <Switch
                     checked={taxSettings.enable_vat}
                     onCheckedChange={(checked) => setTaxSettings({ ...taxSettings, enable_vat: checked })}
                   />
@@ -1131,9 +1194,9 @@ export function Settings() {
                       if (success) {
                         if (typeof window !== 'undefined') {
                           // Keep localStorage as backup
-                      localStorage.setItem('prices_include_tax', String(checked));
+                          localStorage.setItem('prices_include_tax', String(checked));
                         }
-                      toast.success(checked ? 'تم تفعيل: الأسعار شاملة الضريبة' : 'تم إلغاء: الأسعار غير شاملة للضريبة');
+                        toast.success(checked ? 'تم تفعيل: الأسعار شاملة الضريبة' : 'تم إلغاء: الأسعار غير شاملة للضريبة');
                       } else {
                         toast.error('Failed to save setting');
                       }
@@ -1155,11 +1218,11 @@ export function Settings() {
                       if (success) {
                         if (typeof window !== 'undefined') {
                           // Keep localStorage as backup
-                      localStorage.setItem('price_modification_includes_tax', String(checked));
-                      // Dispatch custom event to update POS page immediately
-                      window.dispatchEvent(new Event('priceModificationSettingChanged'));
+                          localStorage.setItem('price_modification_includes_tax', String(checked));
+                          // Dispatch custom event to update POS page immediately
+                          window.dispatchEvent(new Event('priceModificationSettingChanged'));
                         }
-                      toast.success(checked ? t('settings.taxes.priceModificationIncludesTaxEnabled') : t('settings.taxes.priceModificationIncludesTaxDisabled'));
+                        toast.success(checked ? t('settings.taxes.priceModificationIncludesTaxEnabled') : t('settings.taxes.priceModificationIncludesTaxDisabled'));
                       } else {
                         toast.error('Failed to save setting');
                       }
@@ -1173,7 +1236,7 @@ export function Settings() {
                     <Label>{t('settings.taxes.showPricesWithVat')}</Label>
                     <p className="text-sm text-gray-600">{t('settings.taxes.showPricesWithVatDesc')}</p>
                   </div>
-                  <Switch 
+                  <Switch
                     checked={taxSettings.show_prices_with_vat}
                     onCheckedChange={(checked) => setTaxSettings({ ...taxSettings, show_prices_with_vat: checked })}
                   />
@@ -1184,7 +1247,7 @@ export function Settings() {
                     <Label>{t('settings.taxes.showVatDetails')}</Label>
                     <p className="text-sm text-gray-600">{t('settings.taxes.showVatDetailsDesc')}</p>
                   </div>
-                  <Switch 
+                  <Switch
                     checked={taxSettings.show_vat_details}
                     onCheckedChange={(checked) => setTaxSettings({ ...taxSettings, show_vat_details: checked })}
                   />
@@ -1192,7 +1255,7 @@ export function Settings() {
 
                 <div className="space-y-2">
                   <Label>{t('settings.taxes.discountTiming')}</Label>
-                  <Select 
+                  <Select
                     value={taxSettings.discount_timing}
                     onValueChange={(value) => setTaxSettings({ ...taxSettings, discount_timing: value })}
                   >
@@ -1211,7 +1274,7 @@ export function Settings() {
                     <Label>{t('settings.taxes.tobaccoTax')}</Label>
                     <p className="text-sm text-gray-600">{t('settings.taxes.tobaccoTaxDesc')}</p>
                   </div>
-                  <Switch 
+                  <Switch
                     checked={taxSettings.tobacco_tax}
                     onCheckedChange={(checked) => setTaxSettings({ ...taxSettings, tobacco_tax: checked })}
                   />
@@ -1222,22 +1285,22 @@ export function Settings() {
                     <Label>{t('settings.taxes.eInvoicing')}</Label>
                     <p className="text-sm text-gray-600">{t('settings.taxes.eInvoicingDesc')}</p>
                   </div>
-                  <Switch 
+                  <Switch
                     checked={taxSettings.e_invoicing}
                     onCheckedChange={(checked) => setTaxSettings({ ...taxSettings, e_invoicing: checked })}
                   />
                 </div>
 
                 <Button onClick={handleSave} disabled={isSaving || isLoadingSettings}>
-                {isSaving ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  t('settings.saveChanges')
-                )}
-              </Button>
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    t('settings.saveChanges')
+                  )}
+                </Button>
               </CardContent>
             </Card>
           </div>
@@ -1255,7 +1318,7 @@ export function Settings() {
                   <p className="mb-1">{t('settings.notifications.lowStock')}</p>
                   <p className="text-sm text-gray-600">{t('settings.notifications.lowStockDesc')}</p>
                 </div>
-                <Switch 
+                <Switch
                   checked={notificationSettings.low_stock}
                   onCheckedChange={(checked) => setNotificationSettings({ ...notificationSettings, low_stock: checked })}
                 />
@@ -1265,7 +1328,7 @@ export function Settings() {
                   <p className="mb-1">{t('settings.notifications.payments')}</p>
                   <p className="text-sm text-gray-600">{t('settings.notifications.paymentsDesc')}</p>
                 </div>
-                <Switch 
+                <Switch
                   checked={notificationSettings.payments}
                   onCheckedChange={(checked) => setNotificationSettings({ ...notificationSettings, payments: checked })}
                 />
@@ -1275,7 +1338,7 @@ export function Settings() {
                   <p className="mb-1">{t('settings.notifications.dailyReports')}</p>
                   <p className="text-sm text-gray-600">{t('settings.notifications.dailyReportsDesc')}</p>
                 </div>
-                <Switch 
+                <Switch
                   checked={notificationSettings.daily_reports}
                   onCheckedChange={(checked) => setNotificationSettings({ ...notificationSettings, daily_reports: checked })}
                 />
@@ -1285,7 +1348,7 @@ export function Settings() {
                   <p className="mb-1">{t('settings.notifications.emailNotifications')}</p>
                   <p className="text-sm text-gray-600">{t('settings.notifications.emailNotificationsDesc')}</p>
                 </div>
-                <Switch 
+                <Switch
                   checked={notificationSettings.email_notifications}
                   onCheckedChange={(checked) => setNotificationSettings({ ...notificationSettings, email_notifications: checked })}
                 />
@@ -1295,7 +1358,7 @@ export function Settings() {
                   <p className="mb-1">{t('settings.notifications.smsNotifications')}</p>
                   <p className="text-sm text-gray-600">{t('settings.notifications.smsNotificationsDesc')}</p>
                 </div>
-                <Switch 
+                <Switch
                   checked={notificationSettings.sms_notifications}
                   onCheckedChange={(checked) => setNotificationSettings({ ...notificationSettings, sms_notifications: checked })}
                 />
@@ -1339,7 +1402,7 @@ export function Settings() {
                     <p className="mb-1">{t('settings.security.twoFactor')}</p>
                     <p className="text-sm text-gray-600">{t('settings.security.twoFactorDesc')}</p>
                   </div>
-                  <Switch 
+                  <Switch
                     checked={securitySettings.two_factor}
                     onCheckedChange={(checked) => setSecuritySettings({ ...securitySettings, two_factor: checked })}
                   />
@@ -1349,7 +1412,7 @@ export function Settings() {
                     <p className="mb-1">{t('settings.security.autoLogout')}</p>
                     <p className="text-sm text-gray-600">{t('settings.security.autoLogoutDesc')}</p>
                   </div>
-                  <Switch 
+                  <Switch
                     checked={securitySettings.auto_logout}
                     onCheckedChange={(checked) => setSecuritySettings({ ...securitySettings, auto_logout: checked })}
                   />
@@ -1369,7 +1432,7 @@ export function Settings() {
             <CardContent className="space-y-4">
               <div>
                 <Label>{t('settings.appearance.theme')}</Label>
-                <Select 
+                <Select
                   value={appearanceSettings.theme}
                   onValueChange={(value) => setAppearanceSettings({ ...appearanceSettings, theme: value })}
                 >
@@ -1397,7 +1460,7 @@ export function Settings() {
               </div>
               <div>
                 <Label>{t('settings.appearance.fontSize')}</Label>
-                <Select 
+                <Select
                   value={appearanceSettings.font_size}
                   onValueChange={(value) => setAppearanceSettings({ ...appearanceSettings, font_size: value })}
                 >
@@ -1413,7 +1476,7 @@ export function Settings() {
               </div>
               <div>
                 <Label>{t('settings.appearance.dateFormat')}</Label>
-                <Select 
+                <Select
                   value={appearanceSettings.date_format}
                   onValueChange={(value) => setAppearanceSettings({ ...appearanceSettings, date_format: value })}
                 >
@@ -1642,7 +1705,7 @@ export function Settings() {
               <DialogHeader>
                 <DialogTitle>{editingRecipient ? t('settings.vouchers.editRecipient') : t('settings.vouchers.addRecipient')}</DialogTitle>
                 <DialogDescription>
-                {editingRecipient ? t('settings.vouchers.editRecipientDesc') : t('settings.vouchers.addRecipientDesc')}
+                  {editingRecipient ? t('settings.vouchers.editRecipientDesc') : t('settings.vouchers.addRecipientDesc')}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">

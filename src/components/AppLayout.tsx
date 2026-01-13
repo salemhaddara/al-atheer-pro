@@ -3,7 +3,7 @@
 import { ReactNode, useState, useEffect, useRef } from 'react';
 import { Sidebar } from './Sidebar';
 import { useLanguage } from '../contexts/LanguageContext';
-import { getSettings, getInstitutions, type Institution } from '../lib/api';
+import { getSettings, getInstitutions, getInstitution, type Institution } from '../lib/api';
 import { getStoredUser } from '../lib/auth';
 
 interface AppLayoutProps {
@@ -11,24 +11,53 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
-  const [currentCompany, setCurrentCompany] = useState('');
-  const [currentInstitution, setCurrentInstitution] = useState<Institution | null>(null);
-  const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [currentCompany, setCurrentCompany] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('cached_company_name') || '';
+    }
+    return '';
+  });
+  const [currentInstitution, setCurrentInstitution] = useState<Institution | null>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('cached_current_institution');
+      return saved ? JSON.parse(saved) : null;
+    }
+    return null;
+  });
+  const [institutions, setInstitutions] = useState<Institution[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('cached_institutions');
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  
+
   // Use refs to avoid stale closures in event handlers
   const currentInstitutionRef = useRef<Institution | null>(null);
   const institutionsRef = useRef<Institution[]>([]);
-  
-  // Keep refs in sync with state
+
+  // Keep refs and localStorage in sync with state
   useEffect(() => {
     currentInstitutionRef.current = currentInstitution;
+    if (typeof window !== 'undefined' && currentInstitution) {
+      localStorage.setItem('cached_current_institution', JSON.stringify(currentInstitution));
+    }
   }, [currentInstitution]);
-  
+
   useEffect(() => {
     institutionsRef.current = institutions;
+    if (typeof window !== 'undefined' && institutions.length > 0) {
+      localStorage.setItem('cached_institutions', JSON.stringify(institutions));
+    }
   }, [institutions]);
-  
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && currentCompany) {
+      localStorage.setItem('cached_company_name', currentCompany);
+    }
+  }, [currentCompany]);
+
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('sidebar_collapsed');
@@ -54,15 +83,15 @@ export function AppLayout({ children }: AppLayoutProps) {
           // Super admin: fetch all institutions
           const result = await getInstitutions({ per_page: 100 });
           if (!isMounted) return;
-          
+
           if (result.success && result.data?.institutions?.data) {
             setInstitutions(result.data.institutions.data);
-            
+
             // Get selected institution from localStorage or use first one
-            const savedInstitutionId = typeof window !== 'undefined' 
-              ? localStorage.getItem('selected_institution_id') 
+            const savedInstitutionId = typeof window !== 'undefined'
+              ? localStorage.getItem('selected_institution_id')
               : null;
-            
+
             if (savedInstitutionId) {
               const institution = result.data.institutions.data.find(
                 (inst: Institution) => inst.id === Number(savedInstitutionId)
@@ -73,7 +102,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 return;
               }
             }
-            
+
             // Use first institution if available
             if (result.data.institutions.data.length > 0) {
               const firstInstitution = result.data.institutions.data[0];
@@ -94,18 +123,18 @@ export function AppLayout({ children }: AppLayoutProps) {
           // The API filters institutions by user access automatically
           const result = await getInstitutions({ per_page: 100 });
           if (!isMounted) return;
-          
+
           if (result.success && result.data?.institutions?.data && result.data.institutions.data.length > 0) {
             const userInstitutions = result.data.institutions.data;
             setInstitutions(userInstitutions);
-            
+
             // Get saved institution or use first one
-            const savedInstitutionId = typeof window !== 'undefined' 
-              ? localStorage.getItem('selected_institution_id') 
+            const savedInstitutionId = typeof window !== 'undefined'
+              ? localStorage.getItem('selected_institution_id')
               : null;
-            
+
             let selectedInstitution = userInstitutions[0]; // Default to first
-            
+
             if (savedInstitutionId) {
               const savedInstitution = userInstitutions.find(
                 (inst: Institution) => inst.id === Number(savedInstitutionId)
@@ -114,7 +143,7 @@ export function AppLayout({ children }: AppLayoutProps) {
                 selectedInstitution = savedInstitution;
               }
             }
-            
+
             setCurrentInstitution(selectedInstitution);
             if (typeof window !== 'undefined') {
               localStorage.setItem('selected_institution_id', String(selectedInstitution.id));
@@ -145,7 +174,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
     const loadCompanyName = async (institutionId: number | null) => {
       if (!isMounted) return;
-      
+
       try {
         const params: any = { per_page: 100 };
         if (institutionId) {
@@ -157,7 +186,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
         const result = await getSettings(params);
         if (!isMounted) return;
-        
+
         if (result.success && result.data?.settings?.data) {
           const settingsMap = new Map<string, any>();
           result.data.settings.data.forEach((setting: any) => {
@@ -167,7 +196,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           // Get company name based on current language
           const companyKey = language === 'ar' ? 'company_name_ar' : 'company_name_en';
           const companyName = settingsMap.get(companyKey) || settingsMap.get('company_name_ar') || settingsMap.get('company_name_en');
-          
+
           // Only update if we have a company name from settings, otherwise keep the institution name
           if (companyName) {
             setCurrentCompany(companyName);
@@ -185,11 +214,21 @@ export function AppLayout({ children }: AppLayoutProps) {
     loadInstitutions();
 
     // Listen for settings updates (when settings are saved)
-    const handleSettingsUpdate = () => {
+    const handleSettingsUpdate = async () => {
       if (!isMounted) return;
       // Use ref to get current institution (avoids stale closure)
       const currentInst = currentInstitutionRef.current;
       if (currentInst) {
+        // Refresh institution data to get updated logo
+        try {
+          const result = await getInstitution(currentInst.id);
+          if (isMounted && result.success && result.data?.institution) {
+            setCurrentInstitution(result.data.institution);
+          }
+        } catch (error) {
+          console.error('Error refreshing institution:', error);
+        }
+
         loadCompanyName(currentInst.id);
       } else {
         loadCompanyName(null);

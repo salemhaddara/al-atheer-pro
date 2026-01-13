@@ -12,13 +12,13 @@ import { Warehouse, Package, TrendingDown, AlertTriangle, Plus, Search, ArrowRig
 import { toast } from 'sonner';
 import { getStock, adjustStock, getCostPrice, getWarehouseProducts, increaseStock, reduceStock } from '../data/inventory';
 import { createInventoryAdjustmentEntry, createInventoryReceiptFromAccountEntry, createInventoryIssueToAccountEntry, addJournalEntry } from '../data/journalEntries';
-import { 
-  getWarehouses, 
-  getBranches, 
+import {
+  getWarehouses,
+  getBranches,
   createWarehouse,
   updateWarehouse,
-  type Warehouse as WarehouseType, 
-  type Branch, 
+  type Warehouse as WarehouseType,
+  type Branch,
   type CreateWarehouseRequest,
   getWarehouseStorages,
   createWarehouseStorage,
@@ -131,15 +131,15 @@ export function Warehouses() {
 
   const fetchAllShelves = async () => {
     try {
-      const allShelves: Array<WarehouseStorageShelfType & { 
-        warehouseId?: number; 
-        warehouse?: string; 
+      const allShelves: Array<WarehouseStorageShelfType & {
+        warehouseId?: number;
+        warehouse?: string;
         storage?: string;
         used?: number;
         products?: number;
         status?: string;
       }> = [];
-      
+
       for (const storage of storages) {
         const warehouse = warehouses.find(w => w.id === storage.warehouse_id);
         if (!warehouse) continue;
@@ -165,9 +165,9 @@ export function Warehouses() {
     }
   };
 
-  const [shelves, setShelves] = useState<Array<WarehouseStorageShelfType & { 
-    warehouseId?: number; 
-    warehouse?: string; 
+  const [shelves, setShelves] = useState<Array<WarehouseStorageShelfType & {
+    warehouseId?: number;
+    warehouse?: string;
     storage?: string;
     used?: number;
     products?: number;
@@ -198,7 +198,7 @@ export function Warehouses() {
     warehouseId: ''
   });
   const [isSubmittingStorage, setIsSubmittingStorage] = useState(false);
-  
+
   // Inventory Adjustment State
   const [adjustmentWarehouse, setAdjustmentWarehouse] = useState<string>('1');
   const [adjustmentProducts, setAdjustmentProducts] = useState<Array<{
@@ -243,26 +243,26 @@ export function Warehouses() {
   const [issueDescription, setIssueDescription] = useState<string>('');
 
   const [inventory, setInventory] = useState([
-    { id: '1', product: 'كمبيوتر محمول HP', barcode: '1234567890', warehouse: 'المستودع الرئيسي', shelf: 'A-01', quantity: 45, minStock: 10, status: 'متوفر' },
-    { id: '2', product: 'طابعة Canon', barcode: '1234567891', warehouse: 'المستودع الرئيسي', shelf: 'A-02', quantity: 8, minStock: 15, status: 'منخفض' },
-    { id: '3', product: 'شاشة Samsung 27"', barcode: '1234567892', warehouse: 'مستودع الفرع الشمالي', shelf: 'B-01', quantity: 32, minStock: 10, status: 'متوفر' },
-    { id: '4', product: 'لوحة مفاتيح Logitech', barcode: '1234567893', warehouse: 'المستودع الرئيسي', shelf: 'A-03', quantity: 2, minStock: 20, status: 'نفد' }
+    { id: '1', product_ar: 'كمبيوتر محمول HP', product_en: 'HP Laptop', barcode: '1234567890', warehouse_ar: 'المستودع الرئيسي', warehouse_en: 'Main Warehouse', shelf: 'A-01', quantity: 45, minStock: 10, status: 'available' },
+    { id: '2', product_ar: 'طابعة Canon', product_en: 'Canon Printer', barcode: '1234567891', warehouse_ar: 'المستودع الرئيسي', warehouse_en: 'Main Warehouse', shelf: 'A-02', quantity: 8, minStock: 15, status: 'low' },
+    { id: '3', product_ar: 'شاشة Samsung 27"', product_en: 'Samsung Monitor 27"', barcode: '1234567892', warehouse_ar: 'مستودع الفرع الشمالي', warehouse_en: 'North Branch Warehouse', shelf: 'B-01', quantity: 32, minStock: 10, status: 'available' },
+    { id: '4', product_ar: 'لوحة مفاتيح Logitech', product_en: 'Logitech Keyboard', barcode: '1234567893', warehouse_ar: 'المستودع الرئيسي', warehouse_en: 'Main Warehouse', shelf: 'A-03', quantity: 2, minStock: 20, status: 'out' }
   ]);
 
   const [transfers, setTransfers] = useState([
-    { id: 'TR-001', date: '2025-01-25', from: 'المستودع الرئيسي', to: 'مستودع الفرع الشمالي', product: 'كمبيوتر محمول HP', quantity: 10, status: 'مكتمل' },
-    { id: 'TR-002', date: '2025-01-28', from: 'مستودع الفرع الشمالي', to: 'مستودع الفرع الجنوبي', product: 'طابعة Canon', quantity: 5, status: 'قيد النقل' },
-    { id: 'TR-003', date: '2025-01-29', from: 'المستودع الرئيسي', to: 'مستودع الفرع الجنوبي', product: 'شاشة Samsung', quantity: 8, status: 'معلق' }
+    { id: 'TR-001', date: '2025-01-25', from_ar: 'المستودع الرئيسي', from_en: 'Main Warehouse', to_ar: 'مستودع الفرع الشمالي', to_en: 'North Branch Warehouse', product: 'HP Laptop', quantity: 10, status: 'completed' },
+    { id: 'TR-002', date: '2025-01-28', from_ar: 'مستودع الفرع الشمالي', from_en: 'North Branch Warehouse', to_ar: 'مستودع الفرع الجنوبي', to_en: 'South Branch Warehouse', product: 'Canon Printer', quantity: 5, status: 'in-transit' },
+    { id: 'TR-003', date: '2025-01-29', from_ar: 'المستودع الرئيسي', from_en: 'Main Warehouse', to_ar: 'مستودع الفرع الجنوبي', to_en: 'South Branch Warehouse', product: 'Samsung Monitor', quantity: 8, status: 'pending' }
   ]);
 
   // Products list for adjustment
   const products = [
-    { id: '1', name: 'كمبيوتر محمول HP' },
-    { id: '2', name: 'طابعة Canon' },
-    { id: '3', name: 'شاشة Samsung 27"' },
-    { id: '4', name: 'لوحة مفاتيح Logitech' },
-    { id: '5', name: 'ماوس Logitech' },
-    { id: '6', name: 'كاميرا ويب HD' }
+    { id: '1', name_ar: 'كمبيوتر محمول HP', name_en: 'HP Laptop' },
+    { id: '2', name_ar: 'طابعة Canon', name_en: 'Canon Printer' },
+    { id: '3', name_ar: 'شاشة Samsung 27"', name_en: 'Samsung Monitor 27"' },
+    { id: '4', name_ar: 'لوحة مفاتيح Logitech', name_en: 'Logitech Keyboard' },
+    { id: '5', name_ar: 'ماوس Logitech', name_en: 'Logitech Mouse' },
+    { id: '6', name_ar: 'كاميرا ويب HD', name_en: 'HD Webcam' }
   ];
 
   // Storage management handlers
@@ -296,7 +296,7 @@ export function Warehouses() {
 
     try {
       const result = await deleteWarehouseStorage(storage.warehouse_id, storage.id);
-      
+
       if (result.success) {
         toast.success(t('warehouses.messages.storageDeleted'));
         await fetchAllStorages();
@@ -328,7 +328,7 @@ export function Warehouses() {
       if (editingStorage) {
         // Update existing storage
         const result = await updateWarehouseStorage(warehouseId, editingStorage.id, storageData);
-        
+
         if (result.success) {
           toast.success(t('warehouses.messages.storageUpdated'));
           setIsStorageDialogOpen(false);
@@ -341,7 +341,7 @@ export function Warehouses() {
       } else {
         // Create new storage
         const result = await createWarehouseStorage(warehouseId, storageData);
-        
+
         if (result.success) {
           toast.success(t('warehouses.messages.storageCreated'));
           setIsStorageDialogOpen(false);
@@ -408,7 +408,7 @@ export function Warehouses() {
         shelf.warehouse_storage_id,
         shelf.id
       );
-      
+
       if (result.success) {
         toast.success(t('warehouses.messages.shelfDeleted'));
         // Refresh storages and shelves
@@ -452,7 +452,7 @@ export function Warehouses() {
           editingShelf.id,
           shelfData
         );
-        
+
         if (result.success) {
           toast.success(t('warehouses.messages.shelfUpdated'));
           setIsShelfDialogOpen(false);
@@ -469,7 +469,7 @@ export function Warehouses() {
           storageId,
           shelfData
         );
-        
+
         if (result.success) {
           toast.success(t('warehouses.messages.shelfCreated'));
           setIsShelfDialogOpen(false);
@@ -526,9 +526,9 @@ export function Warehouses() {
   };
 
   const handleSaveWarehouse = async () => {
-    if (!warehouseFormData.name_ar || !warehouseFormData.name_en || !warehouseFormData.branch_id || 
-        !warehouseFormData.location_ar || !warehouseFormData.location_en || !warehouseFormData.capacity) {
-        toast.error(t('warehouses.messages.fillAllRequired'));
+    if (!warehouseFormData.name_ar || !warehouseFormData.name_en || !warehouseFormData.branch_id ||
+      !warehouseFormData.location_ar || !warehouseFormData.location_en || !warehouseFormData.capacity) {
+      toast.error(t('warehouses.messages.fillAllRequired'));
       return;
     }
 
@@ -598,16 +598,17 @@ export function Warehouses() {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ar-SA').format(amount);
+    return new Intl.NumberFormat(direction === 'rtl' ? 'ar-SA' : 'en-US', {
+      style: 'currency',
+      currency: 'SAR'
+    }).format(amount);
   };
 
   const getStockStatus = (status: string) => {
-    switch (status) {
-      case t('warehouses.inventory.status'): return 'default';
-      case t('warehouses.stats.lowStock'): return 'secondary';
-      case t('warehouses.stats.outOfStock'): return 'destructive';
-      default: return 'outline';
-    }
+    if (status === t('warehouses.inventory.statusAvailable')) return 'default';
+    if (status === t('warehouses.stats.lowStock')) return 'secondary';
+    if (status === t('warehouses.stats.outOfStock')) return 'destructive';
+    return 'outline';
   };
 
   const getShelfFillColor = (percentage: number) => {
@@ -628,9 +629,9 @@ export function Warehouses() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="text-right flex-1">
-          <h1>{t('warehouses.title')}</h1>
+      <div className={`flex items-center justify-between ${direction === 'rtl' ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+          <h1 className="text-2xl font-bold">{t('warehouses.title')}</h1>
           <p className="text-gray-600">{t('warehouses.subtitle')}</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -640,25 +641,25 @@ export function Warehouses() {
               {t('warehouses.warehouse.new')}
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-h-[90vh] overflow-y-auto" dir="rtl">
-            <DialogHeader className="text-right">
+          <DialogContent className="max-h-[90vh] overflow-y-auto" dir={direction}>
+            <DialogHeader className={direction === 'rtl' ? 'text-right' : 'text-left'}>
               <DialogTitle>{editingWarehouse ? t('warehouses.warehouse.edit') : t('warehouses.warehouse.add')}</DialogTitle>
               <DialogDescription>{t('warehouses.warehouse.editDescription')}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>{t('warehouses.warehouse.nameAr')} *</Label>
-                  <Input 
+                  <Label className={direction === 'rtl' ? 'text-right block' : 'text-left block'}>{t('warehouses.warehouse.nameAr')} *</Label>
+                  <Input
                     value={warehouseFormData.name_ar}
                     onChange={(e) => setWarehouseFormData({ ...warehouseFormData, name_ar: e.target.value })}
                     placeholder={t('warehouses.warehouse.nameAr')}
-                    dir={direction}
+                    dir="rtl"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>{t('warehouses.warehouse.nameEn')} *</Label>
-                  <Input 
+                  <Label className={direction === 'rtl' ? 'text-right block' : 'text-left block'}>{t('warehouses.warehouse.nameEn')} *</Label>
+                  <Input
                     value={warehouseFormData.name_en}
                     onChange={(e) => setWarehouseFormData({ ...warehouseFormData, name_en: e.target.value })}
                     placeholder="West Branch Warehouse"
@@ -668,12 +669,12 @@ export function Warehouses() {
               </div>
 
               <div className="space-y-2">
-                <Label>{t('warehouses.warehouse.branch')} *</Label>
+                <Label className={direction === 'rtl' ? 'text-right block' : 'text-left block'}>{t('warehouses.warehouse.branch')} *</Label>
                 <Select
                   value={warehouseFormData.branch_id}
                   onValueChange={(value) => setWarehouseFormData({ ...warehouseFormData, branch_id: value })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger dir={direction}>
                     <SelectValue placeholder={t('warehouses.warehouse.selectBranch')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -681,13 +682,13 @@ export function Warehouses() {
                       const authUser = getStoredUser();
                       const isSuperAdmin = authUser?.is_system_owner_admin === true;
                       const branchName = direction === 'rtl' ? branch.name_ar : branch.name_en;
-                      const institutionName = branch.institution 
+                      const institutionName = branch.institution
                         ? (direction === 'rtl' ? branch.institution.name_ar : branch.institution.name_en)
                         : '';
-                      
+
                       return (
                         <SelectItem key={branch.id} value={branch.id.toString()}>
-                          {isSuperAdmin && institutionName 
+                          {isSuperAdmin && institutionName
                             ? `${branchName} - ${institutionName}`
                             : branchName}
                         </SelectItem>
@@ -699,17 +700,17 @@ export function Warehouses() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>{t('warehouses.warehouse.locationAr')} *</Label>
-                  <Input 
+                  <Label className={direction === 'rtl' ? 'text-right block' : 'text-left block'}>{t('warehouses.warehouse.locationAr')} *</Label>
+                  <Input
                     value={warehouseFormData.location_ar}
                     onChange={(e) => setWarehouseFormData({ ...warehouseFormData, location_ar: e.target.value })}
                     placeholder={t('warehouses.warehouse.locationAr')}
-                    dir={direction}
+                    dir="rtl"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>{t('warehouses.warehouse.locationEn')} *</Label>
-                  <Input 
+                  <Label className={direction === 'rtl' ? 'text-right block' : 'text-left block'}>{t('warehouses.warehouse.locationEn')} *</Label>
+                  <Input
                     value={warehouseFormData.location_en}
                     onChange={(e) => setWarehouseFormData({ ...warehouseFormData, location_en: e.target.value })}
                     placeholder="Riyadh - Al Sulaimaniyah"
@@ -719,9 +720,9 @@ export function Warehouses() {
               </div>
 
               <div className="space-y-2">
-                <Label>{t('warehouses.warehouse.capacity')} *</Label>
-                <Input 
-                  type="number" 
+                <Label className={direction === 'rtl' ? 'text-right block' : 'text-left block'}>{t('warehouses.warehouse.capacity')} *</Label>
+                <Input
+                  type="number"
                   value={warehouseFormData.capacity}
                   onChange={(e) => setWarehouseFormData({ ...warehouseFormData, capacity: e.target.value })}
                   placeholder="5000"
@@ -729,28 +730,29 @@ export function Warehouses() {
                 />
               </div>
 
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="text-right">
+              <div className={`flex items-center justify-between p-3 border rounded-lg ${direction === 'rtl' ? 'flex-row-reverse' : 'flex-row'}`}>
+                <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                   <Label>{t('warehouses.warehouse.status')}</Label>
                   <p className="text-sm text-gray-600">{t('warehouses.warehouse.statusDescription')}</p>
                 </div>
-                <select 
+                <select
                   className="border rounded px-3 py-1"
                   value={warehouseFormData.is_active ? 'active' : 'inactive'}
                   onChange={(e) => setWarehouseFormData({ ...warehouseFormData, is_active: e.target.value === 'active' })}
+                  dir={direction}
                 >
                   <option value="active">{t('warehouses.warehouse.active')}</option>
                   <option value="inactive">{t('warehouses.warehouse.inactive')}</option>
                 </select>
               </div>
 
-              <div className="flex items-center justify-between p-3 border rounded-lg bg-blue-50">
-                <div className="text-right">
+              <div className={`flex items-center justify-between p-3 border rounded-lg bg-blue-50 ${direction === 'rtl' ? 'flex-row-reverse' : 'flex-row'}`}>
+                <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                   <Label>{t('warehouses.warehouse.isDefault')}</Label>
                   <p className="text-sm text-gray-600">{t('warehouses.warehouse.isDefaultDescription')}</p>
                 </div>
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   className="w-5 h-5"
                   checked={warehouseFormData.is_default}
                   onChange={(e) => setWarehouseFormData({ ...warehouseFormData, is_default: e.target.checked })}
@@ -758,9 +760,9 @@ export function Warehouses() {
               </div>
 
               <div className="space-y-2">
-                <Label>{t('warehouses.warehouse.notes')}</Label>
+                <Label className={direction === 'rtl' ? 'text-right block' : 'text-left block'}>{t('warehouses.warehouse.notes')}</Label>
                 <textarea
-                  className="w-full border rounded-lg p-2 text-right"
+                  className="w-full border rounded-lg p-2"
                   rows={3}
                   placeholder={t('warehouses.warehouse.notesPlaceholder')}
                   value={warehouseFormData.notes}
@@ -770,8 +772,8 @@ export function Warehouses() {
               </div>
 
               <div className="flex gap-3 pt-4 border-t">
-                <Button 
-                  className="flex-1" 
+                <Button
+                  className="flex-1"
                   onClick={handleSaveWarehouse}
                   disabled={isSubmitting}
                 >
@@ -784,8 +786,8 @@ export function Warehouses() {
                     editingWarehouse ? t('warehouses.warehouse.saveChanges') : t('warehouses.warehouse.save')
                   )}
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setIsDialogOpen(false)}
                   disabled={isSubmitting}
                 >
@@ -798,44 +800,44 @@ export function Warehouses() {
       </div>
 
       {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className={`grid grid-cols-1 md:grid-cols-4 gap-4 ${direction === 'rtl' ? 'rtl' : 'ltr'}`}>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardHeader className={`flex flex-row items-center justify-between pb-2 ${direction === 'rtl' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+            <CardTitle className="text-sm font-medium">{t('warehouses.stats.warehouseCount')}</CardTitle>
             <Warehouse className="w-4 h-4 text-blue-600" />
-            <CardTitle className="text-sm">{t('warehouses.stats.warehouseCount')}</CardTitle>
           </CardHeader>
-          <CardContent className="text-right">
-            <div className="text-2xl">8</div>
+          <CardContent className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+            <div className="text-2xl">{warehouses.length}</div>
             <p className="text-xs text-gray-600 mt-1">{t('warehouses.stats.activeWarehouses')}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardHeader className={`flex flex-row items-center justify-between pb-2 ${direction === 'rtl' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+            <CardTitle className="text-sm font-medium">{t('warehouses.stats.totalProducts')}</CardTitle>
             <Package className="w-4 h-4 text-green-600" />
-            <CardTitle className="text-sm">{t('warehouses.stats.totalProducts')}</CardTitle>
           </CardHeader>
-          <CardContent className="text-right">
-            <div className="text-2xl">{formatCurrency(6500)}</div>
+          <CardContent className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+            <div className="text-2xl">-</div>
             <p className="text-xs text-gray-600 mt-1">{t('warehouses.stats.storedUnits')}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardHeader className={`flex flex-row items-center justify-between pb-2 ${direction === 'rtl' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+            <CardTitle className="text-sm font-medium">{t('warehouses.stats.lowStock')}</CardTitle>
             <TrendingDown className="w-4 h-4 text-orange-600" />
-            <CardTitle className="text-sm">{t('warehouses.stats.lowStock')}</CardTitle>
           </CardHeader>
-          <CardContent className="text-right">
-            <div className="text-2xl">12</div>
+          <CardContent className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+            <div className="text-2xl">-</div>
             <p className="text-xs text-gray-600 mt-1">{t('warehouses.stats.needsReorder')}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardHeader className={`flex flex-row items-center justify-between pb-2 ${direction === 'rtl' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+            <CardTitle className="text-sm font-medium">{t('warehouses.stats.outOfStock')}</CardTitle>
             <AlertTriangle className="w-4 h-4 text-red-600" />
-            <CardTitle className="text-sm">{t('warehouses.stats.outOfStock')}</CardTitle>
           </CardHeader>
-          <CardContent className="text-right">
-            <div className="text-2xl">3</div>
+          <CardContent className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+            <div className="text-2xl">- </div>
             <p className="text-xs text-gray-600 mt-1">{t('warehouses.stats.outOfStockProducts')}</p>
           </CardContent>
         </Card>
@@ -857,23 +859,23 @@ export function Warehouses() {
         {/* Warehouses */}
         <TabsContent value="warehouses" className="space-y-4">
           <Card>
-            <CardHeader className="text-right">
+            <CardHeader className={direction === 'rtl' ? 'text-right' : 'text-left'}>
               <CardTitle>{t('warehouses.list.title')}</CardTitle>
               <CardDescription>{t('warehouses.list.subtitle')}</CardDescription>
             </CardHeader>
             <CardContent>
-              <div dir="rtl">
+              <div dir={direction}>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-right">{t('warehouses.list.warehouseName')}</TableHead>
-                      <TableHead className="text-right">{t('warehouses.list.location')}</TableHead>
-                      <TableHead className="text-right">{t('warehouses.list.capacity')}</TableHead>
-                      <TableHead className="text-right">{t('warehouses.list.user')}</TableHead>
-                      <TableHead className="text-right">{t('warehouses.list.fillPercentage')}</TableHead>
-                      <TableHead className="text-right">{t('warehouses.list.manager')}</TableHead>
-                      <TableHead className="text-right">{t('warehouses.list.status')}</TableHead>
-                      <TableHead className="text-right">{t('warehouses.list.actions')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.list.warehouseName')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.list.location')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.list.capacity')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.list.user')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.list.fillPercentage')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.list.manager')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.list.status')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.list.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -919,7 +921,7 @@ export function Warehouses() {
                               </div>
                             </TableCell>
                             <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
-                              {warehouse.branch 
+                              {warehouse.branch
                                 ? (direction === 'rtl' ? warehouse.branch.name_ar : warehouse.branch.name_en)
                                 : '-'}
                             </TableCell>
@@ -929,8 +931,8 @@ export function Warehouses() {
                               </Badge>
                             </TableCell>
                             <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
-                              <Button 
-                                variant="ghost" 
+                              <Button
+                                variant="ghost"
                                 size="sm"
                                 onClick={() => handleEditWarehouse(warehouse)}
                                 title={t('warehouses.list.edit')}
@@ -953,56 +955,67 @@ export function Warehouses() {
         <TabsContent value="inventory" className="space-y-4">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className={`flex items-center justify-between ${direction === 'rtl' ? 'flex-row-reverse' : 'flex-row'}`}>
+                <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                  <CardTitle>{t('warehouses.inventory.title')}</CardTitle>
+                  <CardDescription>{t('warehouses.inventory.subtitle')}</CardDescription>
+                </div>
                 <Button variant="outline" size="sm" className="gap-2">
                   <Search className="w-4 h-4" />
                   {t('warehouses.inventory.advancedSearch')}
                 </Button>
-                <div className="text-right">
-                  <CardTitle>{t('warehouses.inventory.title')}</CardTitle>
-                  <CardDescription>{t('warehouses.inventory.subtitle')}</CardDescription>
-                </div>
               </div>
             </CardHeader>
             <CardContent>
               <div className="mb-4">
-                <Input placeholder={t('warehouses.inventory.searchPlaceholder')} className="text-right" dir="rtl" />
+                <Input placeholder={t('warehouses.inventory.searchPlaceholder')} dir={direction} />
               </div>
-              <div dir="rtl">
+              <div dir={direction}>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-right">{t('warehouses.inventory.product')}</TableHead>
-                      <TableHead className="text-right">{t('warehouses.inventory.barcode')}</TableHead>
-                      <TableHead className="text-right">{t('warehouses.inventory.warehouse')}</TableHead>
-                      <TableHead className="text-right">{t('warehouses.inventory.shelf')}</TableHead>
-                      <TableHead className="text-right">{t('warehouses.inventory.quantity')}</TableHead>
-                      <TableHead className="text-right">{t('warehouses.inventory.minStock')}</TableHead>
-                      <TableHead className="text-right">{t('warehouses.inventory.status')}</TableHead>
-                      <TableHead className="text-right">{t('warehouses.inventory.actions')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.inventory.product')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.inventory.barcode')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.inventory.warehouse')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.inventory.shelf')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.inventory.quantity')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.inventory.minStock')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.inventory.status')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.inventory.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {inventory.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="text-right">{item.product}</TableCell>
-                        <TableCell className="text-right">{item.barcode}</TableCell>
-                        <TableCell className="text-right">{item.warehouse}</TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant="outline">{item.shelf}</Badge>
-                        </TableCell>
-                        <TableCell className="text-right">{item.quantity}</TableCell>
-                        <TableCell className="text-right">{item.minStock}</TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant={getStockStatus(item.status)}>
-                            {item.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm">{t('warehouses.list.edit')}</Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {inventory.map((item) => {
+                      const statusLabel =
+                        item.status === 'available' ? t('warehouses.inventory.statusAvailable') :
+                          item.status === 'low' ? t('warehouses.stats.lowStock') :
+                            item.status === 'out' ? t('warehouses.stats.outOfStock') : item.status;
+
+                      return (
+                        <TableRow key={item.id}>
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                            {direction === 'rtl' ? item.product_ar : item.product_en}
+                          </TableCell>
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{item.barcode}</TableCell>
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                            {direction === 'rtl' ? item.warehouse_ar : item.warehouse_en}
+                          </TableCell>
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                            <Badge variant="outline">{item.shelf}</Badge>
+                          </TableCell>
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{item.quantity}</TableCell>
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{item.minStock}</TableCell>
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                            <Badge variant={getStockStatus(statusLabel)}>
+                              {statusLabel}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                            <Button variant="ghost" size="sm">{t('warehouses.list.edit')}</Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -1014,7 +1027,12 @@ export function Warehouses() {
         <TabsContent value="transfers" className="space-y-4">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className={`flex items-center justify-between ${direction === 'rtl' ? 'flex-row-reverse' : 'flex-row'}`}>
+                <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                  <CardTitle>{t('warehouses.transfers.title')}</CardTitle>
+                  <CardDescription>{t('warehouses.transfers.subtitle')}</CardDescription>
+                </div>
+
                 <Dialog>
                   <DialogTrigger asChild>
                     <Button size="sm" className="gap-2">
@@ -1022,8 +1040,8 @@ export function Warehouses() {
                       {t('warehouses.transfers.new')}
                     </Button>
                   </DialogTrigger>
-                  <DialogContent dir="rtl">
-                    <DialogHeader className="text-right">
+                  <DialogContent dir={direction}>
+                    <DialogHeader className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                       <DialogTitle>{t('warehouses.transfers.newTransfer')}</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4">
@@ -1063,9 +1081,12 @@ export function Warehouses() {
                           <SelectTrigger>
                             <SelectValue placeholder={t('warehouses.transfers.selectProduct')} />
                           </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1">كمبيوتر محمول HP</SelectItem>
-                            <SelectItem value="2">طابعة Canon</SelectItem>
+                          <SelectContent dir={direction}>
+                            {products.map((product) => (
+                              <SelectItem key={product.id} value={product.id}>
+                                {direction === 'rtl' ? product.name_ar : product.name_en}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
@@ -1079,42 +1100,49 @@ export function Warehouses() {
                     </div>
                   </DialogContent>
                 </Dialog>
-                <div className="text-right">
-                  <CardTitle>{t('warehouses.transfers.title')}</CardTitle>
-                  <CardDescription>{t('warehouses.transfers.subtitle')}</CardDescription>
-                </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div dir="rtl">
+              <div dir={direction}>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-right">{t('warehouses.transfers.transferNumber')}</TableHead>
-                      <TableHead className="text-right">{t('warehouses.transfers.date')}</TableHead>
-                      <TableHead className="text-right">{t('warehouses.transfers.fromWarehouse')}</TableHead>
-                      <TableHead className="text-right">{t('warehouses.transfers.toWarehouse')}</TableHead>
-                      <TableHead className="text-right">{t('warehouses.transfers.product')}</TableHead>
-                      <TableHead className="text-right">{t('warehouses.transfers.quantity')}</TableHead>
-                      <TableHead className="text-right">{t('warehouses.transfers.status')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.transfers.transferNumber')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.transfers.date')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.transfers.fromWarehouse')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.transfers.toWarehouse')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.transfers.product')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.transfers.quantity')}</TableHead>
+                      <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.transfers.status')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {transfers.map((transfer) => (
-                      <TableRow key={transfer.id}>
-                        <TableCell className="text-right">{transfer.id}</TableCell>
-                        <TableCell className="text-right">{transfer.date}</TableCell>
-                        <TableCell className="text-right">{transfer.from}</TableCell>
-                        <TableCell className="text-right">{transfer.to}</TableCell>
-                        <TableCell className="text-right">{transfer.product}</TableCell>
-                        <TableCell className="text-right">{transfer.quantity}</TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant={transfer.status === t('warehouses.transfers.completed') ? 'default' : 'secondary'}>
-                            {transfer.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {transfers.map((transfer) => {
+                      const statusLabel =
+                        transfer.status === 'completed' ? t('warehouses.transfers.statusCompleted') :
+                          transfer.status === 'in-transit' ? t('warehouses.transfers.statusInTransit') :
+                            transfer.status === 'pending' ? t('warehouses.transfers.statusPending') : transfer.status;
+
+                      return (
+                        <TableRow key={transfer.id}>
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{transfer.id}</TableCell>
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{transfer.date}</TableCell>
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                            {direction === 'rtl' ? transfer.from_ar : transfer.from_en}
+                          </TableCell>
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                            {direction === 'rtl' ? transfer.to_ar : transfer.to_en}
+                          </TableCell>
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{transfer.product}</TableCell>
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{transfer.quantity}</TableCell>
+                          <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                            <Badge variant={transfer.status === 'completed' ? 'default' : 'secondary'}>
+                              {statusLabel}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -1125,8 +1153,8 @@ export function Warehouses() {
         {/* Inventory Receipt */}
         <TabsContent value="receipt" className="space-y-4">
           <Card>
-            <CardHeader className="text-right">
-              <CardTitle className="flex items-center gap-2">
+            <CardHeader className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+              <CardTitle className={`flex items-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : 'flex-row'}`}>
                 <ArrowDownCircle className="w-5 h-5 text-green-600" />
                 {t('warehouses.receipt.title')}
               </CardTitle>
@@ -1176,32 +1204,33 @@ export function Warehouses() {
 
                 {receiptItems.length > 0 && (
                   <div className="border rounded-lg overflow-hidden">
-                    <div dir="rtl">
+                    <div dir={direction}>
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="text-right">{t('warehouses.receipt.products')}</TableHead>
-                            <TableHead className="text-right">{t('warehouses.receipt.quantity')}</TableHead>
-                            <TableHead className="text-right">{t('warehouses.receipt.purchasePrice')}</TableHead>
-                            <TableHead className="text-right">{t('warehouses.receipt.tax')}</TableHead>
-                            <TableHead className="text-right">{t('warehouses.receipt.total')}</TableHead>
-                            <TableHead className="text-right">{t('warehouses.storage.actions')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.receipt.products')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.receipt.quantity')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.receipt.purchasePrice')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.receipt.tax')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.receipt.total')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.storage.actions')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {receiptItems.map((item, index) => (
                             <TableRow key={index}>
-                              <TableCell className="text-right">
+                              <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                                 <Select
                                   value={item.productId}
                                   onValueChange={(value) => {
                                     const product = products.find(p => p.id === value);
                                     const costPrice = getCostPrice(value, receiptWarehouse) || 0;
+                                    const productName = product ? (direction === 'rtl' ? product.name_ar : product.name_en) : '';
                                     const updated = [...receiptItems];
                                     updated[index] = {
                                       ...item,
                                       productId: value,
-                                      productName: product?.name || '',
+                                      productName: productName,
                                       costPrice,
                                       taxAmount: receiptIncludeTax ? costPrice * item.quantity * (item.taxRate / 100) : 0,
                                       totalAmount: costPrice * item.quantity + (receiptIncludeTax ? costPrice * item.quantity * (item.taxRate / 100) : 0)
@@ -1209,19 +1238,19 @@ export function Warehouses() {
                                     setReceiptItems(updated);
                                   }}
                                 >
-                                  <SelectTrigger className="w-48">
+                                  <SelectTrigger className="w-48" dir={direction}>
                                     <SelectValue placeholder={t('warehouses.transfers.selectProduct')} />
                                   </SelectTrigger>
-                                  <SelectContent>
+                                  <SelectContent dir={direction}>
                                     {products.map((product) => (
                                       <SelectItem key={product.id} value={product.id}>
-                                        {product.name}
+                                        {direction === 'rtl' ? product.name_ar : product.name_en}
                                       </SelectItem>
                                     ))}
                                   </SelectContent>
                                 </Select>
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                                 <Input
                                   type="number"
                                   className="w-20"
@@ -1237,9 +1266,10 @@ export function Warehouses() {
                                     };
                                     setReceiptItems(updated);
                                   }}
+                                  dir="ltr"
                                 />
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                                 <Input
                                   type="number"
                                   className="w-24"
@@ -1255,9 +1285,10 @@ export function Warehouses() {
                                     };
                                     setReceiptItems(updated);
                                   }}
+                                  dir="ltr"
                                 />
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                                 {receiptIncludeTax ? (
                                   <Select
                                     value={item.taxRate.toString()}
@@ -1273,10 +1304,10 @@ export function Warehouses() {
                                       setReceiptItems(updated);
                                     }}
                                   >
-                                    <SelectTrigger className="w-24">
+                                    <SelectTrigger className="w-24" dir={direction}>
                                       <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent dir={direction}>
                                       <SelectItem value="0">0%</SelectItem>
                                       <SelectItem value="15">15%</SelectItem>
                                       <SelectItem value="5">5%</SelectItem>
@@ -1286,10 +1317,10 @@ export function Warehouses() {
                                   <span className="text-gray-400">{t('warehouses.receipt.noTax')}</span>
                                 )}
                               </TableCell>
-                              <TableCell className="text-right font-semibold">
-                                {new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' }).format(item.totalAmount)}
+                              <TableCell className={`${direction === 'rtl' ? 'text-right' : 'text-left'} font-semibold`}>
+                                {formatCurrency(item.totalAmount)}
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -1370,25 +1401,19 @@ export function Warehouses() {
               {/* Summary */}
               {receiptItems.length > 0 && (
                 <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                  <div className="flex justify-between">
+                  <div className={`flex justify-between ${direction === 'rtl' ? 'flex-row-reverse' : 'flex-row'}`}>
                     <span className="font-semibold">{t('warehouses.receipt.subtotal')}:</span>
-                    <span>{new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' }).format(
-                      receiptItems.reduce((sum, item) => sum + (item.costPrice * item.quantity), 0)
-                    )}</span>
+                    <span>{formatCurrency(receiptItems.reduce((sum, item) => sum + (item.costPrice * item.quantity), 0))}</span>
                   </div>
                   {receiptIncludeTax && (
-                    <div className="flex justify-between">
+                    <div className={`flex justify-between ${direction === 'rtl' ? 'flex-row-reverse' : 'flex-row'}`}>
                       <span className="font-semibold">{t('warehouses.receipt.taxAmount')}:</span>
-                      <span>{new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' }).format(
-                        receiptItems.reduce((sum, item) => sum + item.taxAmount, 0)
-                      )}</span>
+                      <span>{formatCurrency(receiptItems.reduce((sum, item) => sum + item.taxAmount, 0))}</span>
                     </div>
                   )}
-                  <div className="flex justify-between border-t pt-2">
+                  <div className={`flex justify-between border-t pt-2 ${direction === 'rtl' ? 'flex-row-reverse' : 'flex-row'}`}>
                     <span className="font-semibold">{t('warehouses.receipt.grandTotal')}:</span>
-                    <span className="text-lg font-bold text-green-600">{new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' }).format(
-                      receiptItems.reduce((sum, item) => sum + item.totalAmount, 0)
-                    )}</span>
+                    <span className="text-lg font-bold text-green-600">{formatCurrency(receiptItems.reduce((sum, item) => sum + item.totalAmount, 0))}</span>
                   </div>
                 </div>
               )}
@@ -1469,8 +1494,8 @@ export function Warehouses() {
         {/* Inventory Issue */}
         <TabsContent value="issue" className="space-y-4">
           <Card>
-            <CardHeader className="text-right">
-              <CardTitle className="flex items-center gap-2">
+            <CardHeader className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+              <CardTitle className={`flex items-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : 'flex-row'}`}>
                 <ArrowUpCircle className="w-5 h-5 text-red-600" />
                 {t('warehouses.issue.title')}
               </CardTitle>
@@ -1518,57 +1543,58 @@ export function Warehouses() {
 
                 {issueItems.length > 0 && (
                   <div className="border rounded-lg overflow-hidden">
-                    <div dir="rtl">
+                    <div dir={direction}>
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="text-right">{t('warehouses.issue.product')}</TableHead>
-                            <TableHead className="text-right">{t('warehouses.issue.availableQty')}</TableHead>
-                            <TableHead className="text-right">{t('warehouses.issue.quantity')}</TableHead>
-                            <TableHead className="text-right">{t('warehouses.issue.costPrice')}</TableHead>
-                            <TableHead className="text-right">{t('warehouses.issue.total')}</TableHead>
-                            <TableHead className="text-right">{t('warehouses.storage.actions')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.issue.product')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.issue.availableQty')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.issue.quantity')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.issue.costPrice')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.issue.total')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.storage.actions')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {issueItems.map((item, index) => (
                             <TableRow key={index}>
-                              <TableCell className="text-right">
+                              <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                                 <Select
                                   value={item.productId}
                                   onValueChange={(value) => {
                                     const product = products.find(p => p.id === value);
                                     const costPrice = getCostPrice(value, issueWarehouse) || 0;
                                     const stock = getStock(value, issueWarehouse);
+                                    const productName = product ? (direction === 'rtl' ? product.name_ar : product.name_en) : '';
                                     const updated = [...issueItems];
                                     updated[index] = {
                                       ...item,
                                       productId: value,
-                                      productName: product?.name || '',
+                                      productName: productName,
                                       costPrice,
                                       totalAmount: costPrice * item.quantity
                                     };
                                     setIssueItems(updated);
                                   }}
                                 >
-                                  <SelectTrigger className="w-48">
+                                  <SelectTrigger className="w-48" dir={direction}>
                                     <SelectValue placeholder={t('warehouses.transfers.selectProduct')} />
                                   </SelectTrigger>
-                                  <SelectContent>
+                                  <SelectContent dir={direction}>
                                     {products.map((product) => (
                                       <SelectItem key={product.id} value={product.id}>
-                                        {product.name}
+                                        {direction === 'rtl' ? product.name_ar : product.name_en}
                                       </SelectItem>
                                     ))}
                                   </SelectContent>
                                 </Select>
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                                 <span className={getStock(item.productId, issueWarehouse) <= 0 ? 'text-red-600' : ''}>
                                   {item.productId ? getStock(item.productId, issueWarehouse) : '-'}
                                 </span>
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                                 <Input
                                   type="number"
                                   className="w-20"
@@ -1583,15 +1609,16 @@ export function Warehouses() {
                                     };
                                     setIssueItems(updated);
                                   }}
+                                  dir="ltr"
                                 />
                               </TableCell>
-                              <TableCell className="text-right">
-                                <span>{new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' }).format(item.costPrice)}</span>
+                              <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                                <span>{formatCurrency(item.costPrice)}</span>
                               </TableCell>
-                              <TableCell className="text-right font-semibold">
-                                {new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' }).format(item.totalAmount)}
+                              <TableCell className={`${direction === 'rtl' ? 'text-right' : 'text-left'} font-semibold`}>
+                                {formatCurrency(item.totalAmount)}
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -1662,11 +1689,9 @@ export function Warehouses() {
               {/* Summary */}
               {issueItems.length > 0 && (
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="flex justify-between">
+                  <div className={`flex justify-between ${direction === 'rtl' ? 'flex-row-reverse' : 'flex-row'}`}>
                     <span className="font-semibold">{t('warehouses.issue.total')}:</span>
-                    <span className="text-lg font-bold text-red-600">{new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' }).format(
-                      issueItems.reduce((sum, item) => sum + item.totalAmount, 0)
-                    )}</span>
+                    <span className="text-lg font-bold text-red-600">{formatCurrency(issueItems.reduce((sum, item) => sum + item.totalAmount, 0))}</span>
                   </div>
                 </div>
               )}
@@ -1763,8 +1788,8 @@ export function Warehouses() {
         {/* Inventory Adjustment */}
         <TabsContent value="adjustment" className="space-y-4">
           <Card>
-            <CardHeader className="text-right">
-              <CardTitle className="flex items-center gap-2">
+            <CardHeader className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+              <CardTitle className={`flex items-center gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : 'flex-row'}`}>
                 <Calculator className="w-5 h-5" />
                 {t('warehouses.adjustment.title')}
               </CardTitle>
@@ -1780,9 +1805,10 @@ export function Warehouses() {
                   const warehouseProducts = getWarehouseProducts(value);
                   setAdjustmentProducts(warehouseProducts.map(item => {
                     const product = products.find(p => p.id === item.productId);
+                    const productName = product ? (direction === 'rtl' ? product.name_ar : product.name_en) : t('warehouses.adjustment.unknownProduct');
                     return {
                       productId: item.productId,
-                      productName: product?.name || t('warehouses.adjustment.unknownProduct'),
+                      productName: productName,
                       recordedQty: item.quantity,
                       actualQty: item.quantity,
                       difference: 0,
@@ -1808,7 +1834,7 @@ export function Warehouses() {
               {adjustmentProducts.length > 0 && (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <Label className="text-lg">المنتجات</Label>
+                    <Label className="text-lg">{t('warehouses.adjustment.products')}</Label>
                     <Button
                       variant="outline"
                       size="sm"
@@ -1816,9 +1842,10 @@ export function Warehouses() {
                         const warehouseProducts = getWarehouseProducts(adjustmentWarehouse);
                         setAdjustmentProducts(warehouseProducts.map(item => {
                           const product = products.find(p => p.id === item.productId);
+                          const productName = product ? (direction === 'rtl' ? product.name_ar : product.name_en) : t('warehouses.adjustment.unknownProduct');
                           return {
                             productId: item.productId,
-                            productName: product?.name || t('warehouses.adjustment.unknownProduct'),
+                            productName: productName,
                             recordedQty: item.quantity,
                             actualQty: item.quantity,
                             difference: 0,
@@ -1831,25 +1858,25 @@ export function Warehouses() {
                       {t('warehouses.adjustment.refreshList')}
                     </Button>
                   </div>
-                  
+
                   <div className="border rounded-lg overflow-hidden">
-                    <div dir="rtl">
+                    <div dir={direction}>
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="text-right">{t('warehouses.adjustment.product')}</TableHead>
-                            <TableHead className="text-right">{t('warehouses.adjustment.recordedQty')}</TableHead>
-                            <TableHead className="text-right">{t('warehouses.adjustment.actualQty')}</TableHead>
-                            <TableHead className="text-right">{t('warehouses.adjustment.difference')}</TableHead>
-                            <TableHead className="text-right">{t('warehouses.adjustment.reason')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.adjustment.product')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.adjustment.recordedQty')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.adjustment.actualQty')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.adjustment.difference')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.adjustment.reason')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {adjustmentProducts.map((item, index) => (
                             <TableRow key={item.productId}>
-                              <TableCell className="text-right font-medium">{item.productName}</TableCell>
-                              <TableCell className="text-right">{item.recordedQty}</TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className={`${direction === 'rtl' ? 'text-right' : 'text-left'} font-medium`}>{item.productName}</TableCell>
+                              <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{item.recordedQty}</TableCell>
+                              <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                                 <Input
                                   type="number"
                                   className="w-24"
@@ -1865,14 +1892,15 @@ export function Warehouses() {
                                     };
                                     setAdjustmentProducts(updated);
                                   }}
+                                  dir="ltr"
                                 />
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                                 <span className={`font-semibold ${item.difference > 0 ? 'text-green-600' : item.difference < 0 ? 'text-red-600' : 'text-gray-600'}`}>
                                   {item.difference > 0 ? '+' : ''}{item.difference}
                                 </span>
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                                 <Input
                                   placeholder={t('warehouses.adjustment.reason')}
                                   className="w-48"
@@ -1882,6 +1910,7 @@ export function Warehouses() {
                                     updated[index] = { ...item, reason: e.target.value };
                                     setAdjustmentProducts(updated);
                                   }}
+                                  dir={direction}
                                 />
                               </TableCell>
                             </TableRow>
@@ -1893,24 +1922,22 @@ export function Warehouses() {
 
                   {/* Summary */}
                   <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                    <div className="flex justify-between">
+                    <div className={`flex justify-between ${direction === 'rtl' ? 'flex-row-reverse' : 'flex-row'}`}>
                       <span className="font-semibold">{t('warehouses.adjustment.totalIncrease')}:</span>
                       <span className="text-green-600 font-semibold">
                         {adjustmentProducts.filter(p => p.difference > 0).reduce((sum, p) => sum + p.difference, 0)}
                       </span>
                     </div>
-                    <div className="flex justify-between">
+                    <div className={`flex justify-between ${direction === 'rtl' ? 'flex-row-reverse' : 'flex-row'}`}>
                       <span className="font-semibold">{t('warehouses.adjustment.totalDecrease')}:</span>
                       <span className="text-red-600 font-semibold">
                         {Math.abs(adjustmentProducts.filter(p => p.difference < 0).reduce((sum, p) => sum + p.difference, 0))}
                       </span>
                     </div>
-                    <div className="flex justify-between border-t pt-2">
+                    <div className={`flex justify-between border-t pt-2 ${direction === 'rtl' ? 'flex-row-reverse' : 'flex-row'}`}>
                       <span className="font-semibold">{t('warehouses.adjustment.financialDifference')}:</span>
                       <span className={`font-semibold ${adjustmentProducts.reduce((sum, p) => sum + (p.difference * p.costPrice), 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {new Intl.NumberFormat('ar-SA', { style: 'currency', currency: 'SAR' }).format(
-                          adjustmentProducts.reduce((sum, p) => sum + (p.difference * p.costPrice), 0)
-                        )}
+                        {formatCurrency(adjustmentProducts.reduce((sum, p) => sum + (p.difference * p.costPrice), 0))}
                       </span>
                     </div>
                   </div>
@@ -1965,7 +1992,7 @@ export function Warehouses() {
                           const adjustmentAmount = Math.abs(item.difference * item.costPrice);
                           const adjustmentType = item.difference > 0 ? 'increase' : 'decrease';
                           const reason = item.reason || adjustmentReason || 'تسوية مخزون';
-                          
+
                           const journalEntry = createInventoryAdjustmentEntry(
                             `${adjustmentNumber}-${item.productId}`,
                             adjustmentAmount,
@@ -1973,7 +2000,7 @@ export function Warehouses() {
                             reason,
                             warehouseName
                           );
-                          
+
                           addJournalEntry(journalEntry);
                         });
 
@@ -2003,7 +2030,12 @@ export function Warehouses() {
         <TabsContent value="storages" className="space-y-4">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between" dir={direction}>
+                <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                  <CardTitle>{t('warehouses.storage.title')}</CardTitle>
+                  <CardDescription>{t('warehouses.storage.subtitle')}</CardDescription>
+                </div>
+
                 <Dialog open={isStorageDialogOpen} onOpenChange={setIsStorageDialogOpen}>
                   <DialogTrigger asChild>
                     <Button onClick={handleAddStorage} size="sm" className="gap-2">
@@ -2011,25 +2043,25 @@ export function Warehouses() {
                       {t('warehouses.storage.new')}
                     </Button>
                   </DialogTrigger>
-                  <DialogContent dir="rtl" className="max-w-2xl">
-                    <DialogHeader className="text-right">
+                  <DialogContent dir={direction} className="max-w-2xl">
+                    <DialogHeader className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                       <DialogTitle>
                         {editingStorage ? t('warehouses.storage.edit') : t('warehouses.storage.add')}
                       </DialogTitle>
                       <DialogDescription>
-                        {editingStorage ? t('warehouses.storage.edit') : t('warehouses.storage.add')}
+                        {editingStorage ? t('warehouses.storage.editDescription') : t('warehouses.storage.addDescription')}
                       </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label>{t('warehouses.storage.warehouse')} *</Label>
-                        <Select 
+                        <Label className={direction === 'rtl' ? 'text-right block' : 'text-left block'}>{t('warehouses.storage.warehouse')} *</Label>
+                        <Select
                           value={storageFormData.warehouseId}
                           onValueChange={(value) => setStorageFormData({ ...storageFormData, warehouseId: value })}
                           disabled={!!editingStorage}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger dir={direction}>
                             <SelectValue placeholder={t('warehouses.storage.selectWarehouse')} />
                           </SelectTrigger>
                           <SelectContent>
@@ -2044,7 +2076,7 @@ export function Warehouses() {
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label>{t('warehouses.storage.nameAr')} *</Label>
+                          <Label className={direction === 'rtl' ? 'text-right block' : 'text-left block'}>{t('warehouses.storage.nameAr')} *</Label>
                           <Input
                             value={storageFormData.name_ar}
                             onChange={(e) => setStorageFormData({ ...storageFormData, name_ar: e.target.value })}
@@ -2053,7 +2085,7 @@ export function Warehouses() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label>{t('warehouses.storage.nameEn')} *</Label>
+                          <Label className={direction === 'rtl' ? 'text-right block' : 'text-left block'}>{t('warehouses.storage.nameEn')} *</Label>
                           <Input
                             value={storageFormData.name_en}
                             onChange={(e) => setStorageFormData({ ...storageFormData, name_en: e.target.value })}
@@ -2064,18 +2096,19 @@ export function Warehouses() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label>{t('warehouses.storage.capacity')} *</Label>
+                        <Label className={direction === 'rtl' ? 'text-right block' : 'text-left block'}>{t('warehouses.storage.capacity')} *</Label>
                         <Input
                           type="number"
                           value={storageFormData.capacity}
                           onChange={(e) => setStorageFormData({ ...storageFormData, capacity: e.target.value })}
                           placeholder="1000"
                           min="1"
+                          dir="ltr"
                         />
                       </div>
 
-                      <Button 
-                        className="w-full" 
+                      <Button
+                        className="w-full"
                         onClick={handleSaveStorage}
                         disabled={!storageFormData.name_ar || !storageFormData.name_en || !storageFormData.capacity || !storageFormData.warehouseId || isSubmittingStorage}
                       >
@@ -2091,11 +2124,6 @@ export function Warehouses() {
                     </div>
                   </DialogContent>
                 </Dialog>
-
-                <div className="text-right">
-                  <CardTitle>{t('warehouses.storage.title')}</CardTitle>
-                  <CardDescription>{t('warehouses.storage.subtitle')}</CardDescription>
-                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -2103,10 +2131,10 @@ export function Warehouses() {
                 {/* Filters */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <Select value={selectedWarehouse} onValueChange={setSelectedWarehouse}>
-                    <SelectTrigger>
+                    <SelectTrigger dir={direction}>
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent dir={direction}>
                       <SelectItem value="all">{t('warehouses.storage.filterAll')}</SelectItem>
                       {warehouses.map(w => (
                         <SelectItem key={w.id} value={w.id.toString()}>
@@ -2118,7 +2146,7 @@ export function Warehouses() {
                 </div>
 
                 {/* Results Count */}
-                <div className="text-right text-sm text-gray-600">
+                <div className={`${direction === 'rtl' ? 'text-right' : 'text-left'} text-sm text-gray-600`}>
                   {t('warehouses.storage.showing')} <span className="font-bold text-blue-600">
                     {storages.filter(s => selectedWarehouse === 'all' || s.warehouse_id.toString() === selectedWarehouse).length}
                   </span> {t('warehouses.storage.of')} {storages.length} {t('warehouses.storage.storage')}
@@ -2128,27 +2156,27 @@ export function Warehouses() {
           </Card>
 
           <Card>
-            <CardHeader className="text-right">
+            <CardHeader className={direction === 'rtl' ? 'text-right' : 'text-left'}>
               <CardTitle>{t('warehouses.storage.title')}</CardTitle>
               <CardDescription>{t('warehouses.storage.subtitle')}</CardDescription>
             </CardHeader>
             <CardContent>
               {storages.length === 0 ? (
-                <div className="text-center py-12" dir="rtl">
+                <div className="text-center py-12" dir={direction}>
                   <Package className="w-16 h-16 mx-auto mb-4 text-gray-300" />
                   <p className="text-gray-500 text-lg">{t('warehouses.storage.noStorages')}</p>
                   <p className="text-gray-400 text-sm mt-2">{t('warehouses.storage.noStoragesSubtext')}</p>
                 </div>
               ) : (
-                <div dir="rtl" className="overflow-x-auto">
+                <div dir={direction} className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-right">{t('warehouses.storage.nameAr')}</TableHead>
-                        <TableHead className="text-right">{t('warehouses.storage.warehouse')}</TableHead>
-                        <TableHead className="text-right">{t('warehouses.storage.capacity')}</TableHead>
-                        <TableHead className="text-right">{t('warehouses.storage.shelvesCount')}</TableHead>
-                        <TableHead className="text-right">{t('warehouses.storage.edit')}</TableHead>
+                        <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.storage.nameAr')}</TableHead>
+                        <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.storage.warehouse')}</TableHead>
+                        <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.storage.capacity')}</TableHead>
+                        <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.storage.shelvesCount')}</TableHead>
+                        <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.storage.edit')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -2157,21 +2185,21 @@ export function Warehouses() {
                         .map((storage) => {
                           const warehouse = warehouses.find(w => w.id === storage.warehouse_id);
                           const shelvesCount = storage.shelves?.length || 0;
-                          
+
                           return (
                             <TableRow key={storage.id}>
-                              <TableCell className="text-right font-medium">
+                              <TableCell className={`${direction === 'rtl' ? 'text-right' : 'text-left'} font-medium`}>
                                 {direction === 'rtl' ? storage.name_ar : storage.name_en}
                               </TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                                 {warehouse ? (direction === 'rtl' ? warehouse.name_ar : warehouse.name_en) : '-'}
                               </TableCell>
-                              <TableCell className="text-right font-medium">{storage.capacity}</TableCell>
-                              <TableCell className="text-right">
+                              <TableCell className={`${direction === 'rtl' ? 'text-right' : 'text-left'} font-medium`}>{storage.capacity}</TableCell>
+                              <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                                 <Badge variant="secondary">{shelvesCount} {t('warehouses.storage.shelvesCount')}</Badge>
                               </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex gap-1 justify-end">
+                              <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                                <div className={`flex gap-1 ${direction === 'rtl' ? 'justify-end' : 'justify-start'}`}>
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -2209,7 +2237,12 @@ export function Warehouses() {
         <TabsContent value="shelves" className="space-y-4">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between" dir={direction}>
+                <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                  <CardTitle>{t('warehouses.shelf.title')}</CardTitle>
+                  <CardDescription>{t('warehouses.shelf.subtitle')}</CardDescription>
+                </div>
+
                 <Dialog open={isShelfDialogOpen} onOpenChange={setIsShelfDialogOpen}>
                   <DialogTrigger asChild>
                     <Button onClick={handleAddShelf} size="sm" className="gap-2">
@@ -2217,20 +2250,20 @@ export function Warehouses() {
                       {t('warehouses.shelf.new')}
                     </Button>
                   </DialogTrigger>
-                  <DialogContent dir="rtl">
-                    <DialogHeader className="text-right">
+                  <DialogContent dir={direction}>
+                    <DialogHeader className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                       <DialogTitle>
                         {editingShelf ? t('warehouses.shelf.edit') : t('warehouses.shelf.add')}
                       </DialogTitle>
                       <DialogDescription>
-                        {editingShelf ? t('warehouses.shelf.edit') : t('warehouses.shelf.add')}
+                        {editingShelf ? t('warehouses.shelf.editDescription') : t('warehouses.shelf.addDescription')}
                       </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label>{t('warehouses.shelf.code')} *</Label>
+                          <Label className={direction === 'rtl' ? 'text-right block' : 'text-left block'}>{t('warehouses.shelf.code')} *</Label>
                           <Input
                             value={shelfFormData.code}
                             onChange={(e) => setShelfFormData({ ...shelfFormData, code: e.target.value })}
@@ -2240,14 +2273,14 @@ export function Warehouses() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label>{t('warehouses.shelf.warehouse')} *</Label>
-                          <Select 
+                          <Label className={direction === 'rtl' ? 'text-right block' : 'text-left block'}>{t('warehouses.shelf.warehouse')} *</Label>
+                          <Select
                             value={shelfFormData.warehouseId}
                             onValueChange={(value) => {
                               setShelfFormData({ ...shelfFormData, warehouseId: value, storageId: '' });
                             }}
                           >
-                            <SelectTrigger>
+                            <SelectTrigger dir={direction}>
                               <SelectValue placeholder={t('warehouses.shelf.selectWarehouse')} />
                             </SelectTrigger>
                             <SelectContent>
@@ -2262,13 +2295,13 @@ export function Warehouses() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label>{t('warehouses.shelf.storage')} *</Label>
-                        <Select 
+                        <Label className={direction === 'rtl' ? 'text-right block' : 'text-left block'}>{t('warehouses.shelf.storage')} *</Label>
+                        <Select
                           value={shelfFormData.storageId}
                           onValueChange={(value) => setShelfFormData({ ...shelfFormData, storageId: value })}
                           disabled={!shelfFormData.warehouseId}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger dir={direction}>
                             <SelectValue placeholder={shelfFormData.warehouseId ? t('warehouses.shelf.selectStorage') : t('warehouses.shelf.selectStorageFirst')} />
                           </SelectTrigger>
                           <SelectContent>
@@ -2285,12 +2318,12 @@ export function Warehouses() {
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label>{t('warehouses.shelf.level')}</Label>
-                          <Select 
+                          <Label className={direction === 'rtl' ? 'text-right block' : 'text-left block'}>{t('warehouses.shelf.level')}</Label>
+                          <Select
                             value={shelfFormData.level || "none"}
                             onValueChange={(value) => setShelfFormData({ ...shelfFormData, level: value === "none" ? "" : value })}
                           >
-                            <SelectTrigger>
+                            <SelectTrigger dir={direction}>
                               <SelectValue placeholder={t('warehouses.shelf.selectLevel')} />
                             </SelectTrigger>
                             <SelectContent>
@@ -2304,38 +2337,39 @@ export function Warehouses() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label>{t('warehouses.shelf.capacity')} *</Label>
+                          <Label className={direction === 'rtl' ? 'text-right block' : 'text-left block'}>{t('warehouses.shelf.capacity')} *</Label>
                           <Input
                             type="number"
                             value={shelfFormData.capacity}
                             onChange={(e) => setShelfFormData({ ...shelfFormData, capacity: e.target.value })}
                             placeholder="200"
                             min="1"
+                            dir="ltr"
                           />
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between p-3 border rounded-lg">
-                        <Select 
+                      <div className={`flex items-center justify-between p-3 border rounded-lg ${direction === 'rtl' ? 'flex-row-reverse' : 'flex-row'}`}>
+                        <Select
                           value={shelfFormData.is_active ? t('warehouses.shelf.active') : t('warehouses.shelf.inactive')}
                           onValueChange={(value) => setShelfFormData({ ...shelfFormData, is_active: value === t('warehouses.shelf.active') })}
                         >
-                          <SelectTrigger className="w-32">
+                          <SelectTrigger className="w-32" dir={direction}>
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent dir={direction}>
                             <SelectItem value={t('warehouses.shelf.active')}>{t('warehouses.shelf.active')}</SelectItem>
                             <SelectItem value={t('warehouses.shelf.inactive')}>{t('warehouses.shelf.inactive')}</SelectItem>
                           </SelectContent>
                         </Select>
-                        <div className="text-right">
+                        <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                           <Label>{t('warehouses.shelf.status')}</Label>
                           <p className="text-sm text-gray-600">{t('warehouses.shelf.statusDescription')}</p>
                         </div>
                       </div>
 
-                      <Button 
-                        className="w-full" 
+                      <Button
+                        className="w-full"
                         onClick={handleSaveShelf}
                         disabled={!shelfFormData.code || !shelfFormData.capacity || !shelfFormData.storageId}
                       >
@@ -2344,11 +2378,6 @@ export function Warehouses() {
                     </div>
                   </DialogContent>
                 </Dialog>
-
-                <div className="text-right">
-                  <CardTitle>{t('warehouses.shelf.title')}</CardTitle>
-                  <CardDescription>{t('warehouses.shelf.subtitle')}</CardDescription>
-                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -2356,20 +2385,20 @@ export function Warehouses() {
                 {/* Filters */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="relative">
-                    <Search className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
+                    <Search className={`absolute ${direction === 'rtl' ? 'right-3' : 'left-3'} mt-2 w-4 h-4 text-gray-300`} />
                     <Input
                       placeholder={t('warehouses.shelf.search')}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pr-10"
-                      dir="rtl"
+                      className={direction === 'rtl' ? 'pr-10' : 'pl-10'}
+                      dir={direction}
                     />
                   </div>
                   <Select value={selectedWarehouse} onValueChange={setSelectedWarehouse}>
-                    <SelectTrigger>
+                    <SelectTrigger dir={direction}>
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent dir={direction}>
                       <SelectItem value="all">{t('warehouses.shelf.filterAll')}</SelectItem>
                       {warehouses.map(w => (
                         <SelectItem key={w.id} value={w.id.toString()}>
@@ -2381,7 +2410,7 @@ export function Warehouses() {
                 </div>
 
                 {/* Results Count */}
-                <div className="text-right text-sm text-gray-600">
+                <div className={`${direction === 'rtl' ? 'text-right' : 'text-left'} text-sm text-gray-600`}>
                   {t('warehouses.shelf.showing')} <span className="font-bold text-blue-600">{filteredShelves.length}</span> {t('warehouses.shelf.of')} {shelves.length} {t('warehouses.shelf.shelf')}
                 </div>
               </div>
@@ -2389,13 +2418,13 @@ export function Warehouses() {
           </Card>
 
           <Card>
-            <CardHeader className="text-right">
+            <CardHeader className={direction === 'rtl' ? 'text-right' : 'text-left'}>
               <CardTitle>{t('warehouses.shelf.list')}</CardTitle>
               <CardDescription>{t('warehouses.shelf.listSubtitle')}</CardDescription>
             </CardHeader>
             <CardContent>
               {/* View Toggle */}
-              <Tabs defaultValue="grid" className="w-full" dir="rtl">
+              <Tabs defaultValue="grid" className="w-full" dir={direction}>
                 <TabsList className="mb-4">
                   <TabsTrigger value="grid" className="gap-2">
                     <Grid3x3 className="w-4 h-4" />
@@ -2410,13 +2439,13 @@ export function Warehouses() {
                 {/* Grid View */}
                 <TabsContent value="grid">
                   {filteredShelves.length === 0 ? (
-                    <div className="text-center py-12" dir="rtl">
+                    <div className="text-center py-12" dir={direction}>
                       <Grid3x3 className="w-16 h-16 mx-auto mb-4 text-gray-300" />
                       <p className="text-gray-500 text-lg">{t('warehouses.shelf.noShelves')}</p>
                       <p className="text-gray-400 text-sm mt-2">{t('warehouses.shelf.noShelvesSubtext')}</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" dir="rtl">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" dir={direction}>
                       {filteredShelves.map((shelf) => {
                         const used = shelf.used || 0;
                         const fillPercentage = shelf.capacity > 0 ? (used / shelf.capacity) * 100 : 0;
@@ -2434,8 +2463,8 @@ export function Warehouses() {
                             <CardContent className="p-4">
                               <div className="space-y-3">
                                 {/* Header with Code */}
-                                <div className="flex items-center justify-between">
-                                  <div className="flex gap-1">
+                                <div className={`flex items-center justify-between ${direction === 'rtl' ? 'flex-row-reverse' : 'flex-row'}`}>
+                                  <div className={`flex gap-1 ${direction === 'rtl' ? 'flex-row-reverse' : 'flex-row'}`}>
                                     <Button
                                       variant="ghost"
                                       size="sm"
@@ -2460,12 +2489,12 @@ export function Warehouses() {
                                 </div>
 
                                 {/* Warehouse Info */}
-                                <div className="text-right space-y-1">
+                                <div className={`${direction === 'rtl' ? 'text-right' : 'text-left'} space-y-1`}>
                                   <p className="text-sm font-medium text-gray-900">{shelf.warehouse}</p>
                                   {shelf.storage && (
                                     <p className="text-xs text-gray-600">{shelf.storage}</p>
                                   )}
-                                  <div className="flex items-center gap-1 justify-end flex-wrap">
+                                  <div className={`flex items-center gap-1 mt-1 flex-wrap ${direction === 'rtl' ? 'justify-end' : 'justify-start'}`}>
                                     {shelf.level && (
                                       <Badge variant="secondary" className="text-xs">
                                         {t('warehouses.shelf.level')} {shelf.level}
@@ -2476,7 +2505,7 @@ export function Warehouses() {
 
                                 {/* Capacity Visualization */}
                                 <div className="space-y-2">
-                                  <div className="flex justify-between text-sm">
+                                  <div className={`flex justify-between text-sm ${direction === 'rtl' ? 'flex-row-reverse' : 'flex-row'}`}>
                                     <span className={`font-medium ${isAlmostFull ? 'text-red-600' :
                                       isNearFull ? 'text-yellow-600' :
                                         'text-green-600'
@@ -2494,13 +2523,13 @@ export function Warehouses() {
                                 </div>
 
                                 {/* Products & Status */}
-                                <div className="flex items-center justify-between pt-2 border-t">
+                                <div className={`flex items-center justify-between pt-2 border-t ${direction === 'rtl' ? 'flex-row-reverse' : 'flex-row'}`}>
                                   <Badge
-                                    variant={shelf.status === t('warehouses.shelf.active') ? 'default' : shelf.status === 'صيانة' ? 'destructive' : 'secondary'}
+                                    variant={shelf.status === t('warehouses.shelf.active') ? 'default' : shelf.status === t('warehouses.shelf.maintenance') ? 'destructive' : 'secondary'}
                                   >
                                     {shelf.status}
                                   </Badge>
-                                  <div className="flex items-center gap-1 text-sm text-gray-600">
+                                  <div className={`flex items-center gap-1 text-sm text-gray-600 ${direction === 'rtl' ? 'flex-row-reverse' : 'flex-row'}`}>
                                     <Boxes className="w-3 h-3" />
                                     <span>{shelf.products} {t('warehouses.shelf.products')}</span>
                                   </div>
@@ -2517,26 +2546,26 @@ export function Warehouses() {
                 {/* List View */}
                 <TabsContent value="list">
                   {filteredShelves.length === 0 ? (
-                    <div className="text-center py-12" dir="rtl">
+                    <div className="text-center py-12" dir={direction}>
                       <Package className="w-16 h-16 mx-auto mb-4 text-gray-300" />
                       <p className="text-gray-500 text-lg">{t('warehouses.shelf.noShelves')}</p>
                       <p className="text-gray-400 text-sm mt-2">{t('warehouses.shelf.noShelvesSubtext')}</p>
                     </div>
                   ) : (
-                    <div dir="rtl" className="overflow-x-auto">
+                    <div dir={direction} className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="text-right">{t('warehouses.shelf.code')}</TableHead>
-                            <TableHead className="text-right">{t('warehouses.shelf.warehouse')}</TableHead>
-                            <TableHead className="text-right">{t('warehouses.shelf.storage')}</TableHead>
-                            <TableHead className="text-right">{t('warehouses.shelf.level')}</TableHead>
-                            <TableHead className="text-right">{t('warehouses.shelf.capacity')}</TableHead>
-                            <TableHead className="text-right">{t('warehouses.list.user')}</TableHead>
-                            <TableHead className="text-right">{t('warehouses.list.fillPercentage')}</TableHead>
-                            <TableHead className="text-right">{t('warehouses.shelf.products')}</TableHead>
-                            <TableHead className="text-right">{t('warehouses.list.status')}</TableHead>
-                            <TableHead className="text-right">{t('warehouses.list.actions')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.shelf.code')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.shelf.warehouse')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.shelf.storage')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.shelf.level')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.shelf.capacity')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.list.user')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.list.fillPercentage')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.shelf.products')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.list.status')}</TableHead>
+                            <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('warehouses.list.actions')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -2551,24 +2580,24 @@ export function Warehouses() {
                                 key={shelf.id}
                                 className={isAlmostFull ? 'bg-red-50/50' : ''}
                               >
-                                <TableCell className="text-right">
+                                <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                                   <Badge variant="outline" className="font-mono font-bold text-base px-3 py-1">
                                     {shelf.code}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="text-right font-medium">{shelf.warehouse}</TableCell>
-                                <TableCell className="text-right">{shelf.storage || '-'}</TableCell>
-                                <TableCell className="text-right">
+                                <TableCell className={`${direction === 'rtl' ? 'text-right' : 'text-left'} font-medium`}>{shelf.warehouse}</TableCell>
+                                <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>{shelf.storage || '-'}</TableCell>
+                                <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                                   {shelf.level ? (
-                                    <Badge variant="secondary">المستوى {shelf.level}</Badge>
+                                    <Badge variant="secondary">{t('warehouses.shelf.level')} {shelf.level}</Badge>
                                   ) : (
                                     <span className="text-gray-400">-</span>
                                   )}
                                 </TableCell>
-                                <TableCell className="text-right font-medium">{shelf.capacity}</TableCell>
-                                <TableCell className="text-right font-bold text-blue-600">{used}</TableCell>
-                                <TableCell className="text-right">
-                                  <div className="flex items-center gap-2 justify-start">
+                                <TableCell className={`${direction === 'rtl' ? 'text-right' : 'text-left'} font-medium`}>{shelf.capacity}</TableCell>
+                                <TableCell className={`${direction === 'rtl' ? 'text-right' : 'text-left'} font-bold text-blue-600`}>{used}</TableCell>
+                                <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                                  <div className={`flex items-center gap-2 ${direction === 'rtl' ? 'justify-end' : 'justify-start'}`}>
                                     <span className={`text-sm font-bold ${isAlmostFull ? 'text-red-600' :
                                       isNearFull ? 'text-yellow-600' :
                                         'text-green-600'
@@ -2583,21 +2612,21 @@ export function Warehouses() {
                                     </div>
                                   </div>
                                 </TableCell>
-                                <TableCell className="text-right">
-                                  <div className="flex items-center gap-1 text-sm text-gray-600">
+                                <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                                  <div className={`flex items-center gap-1 text-sm text-gray-600 ${direction === 'rtl' ? 'flex-row-reverse' : 'flex-row'}`}>
                                     <Boxes className="w-3 h-3" />
                                     <span>{shelf.products} {t('warehouses.shelf.products')}</span>
                                   </div>
                                 </TableCell>
-                                <TableCell className="text-right">
+                                <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                                   <Badge
-                                    variant={shelf.status === t('warehouses.shelf.active') ? 'default' : shelf.status === 'صيانة' ? 'destructive' : 'secondary'}
+                                    variant={shelf.status === t('warehouses.shelf.active') ? 'default' : shelf.status === t('warehouses.shelf.maintenance') ? 'destructive' : 'secondary'}
                                   >
                                     {shelf.status}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="text-right">
-                                  <div className="flex gap-1 justify-end">
+                                <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                                  <div className={`flex gap-1 ${direction === 'rtl' ? 'justify-end' : 'justify-start'}`}>
                                     <Button
                                       variant="ghost"
                                       size="sm"
