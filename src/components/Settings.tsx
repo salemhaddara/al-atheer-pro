@@ -38,7 +38,7 @@ import {
 } from '../data/vouchers';
 
 // API
-import { getSettingByKey, createSetting, updateSetting, getSettings, batchUpdateSettings, type Setting } from '../lib/api';
+import { getSettingByKey, createSetting, updateSetting, getSettings, batchUpdateSettings, getInstitution, updateInstitution, type Setting, type Institution } from '../lib/api';
 
 export function Settings() {
   const { t, direction, language, setLanguage } = useLanguage();
@@ -200,14 +200,53 @@ export function Settings() {
     }
   };
 
+  // Function to fetch institution data and populate company settings
+  const loadInstitutionData = async (institutionId: number | null) => {
+    if (!institutionId) return;
+    
+    try {
+      const result = await getInstitution(institutionId);
+      if (result.success && result.data?.institution) {
+        const institution = result.data.institution;
+        
+        // Populate company settings from institution data
+        // Use institution values if they exist, otherwise keep previous values
+        setCompanySettings(prev => ({
+          name_ar: institution.name_ar ? String(institution.name_ar) : prev.name_ar,
+          name_en: institution.name_en ? String(institution.name_en) : prev.name_en,
+          activity_ar: institution.activity_ar ? String(institution.activity_ar) : prev.activity_ar,
+          activity_en: institution.activity_en ? String(institution.activity_en) : prev.activity_en,
+          phone_number: institution.phone_number ? String(institution.phone_number) : prev.phone_number,
+          secondary_phone_number: institution.secondary_phone_number ? String(institution.secondary_phone_number) : prev.secondary_phone_number,
+          email: institution.email ? String(institution.email) : prev.email,
+          website: institution.website ? String(institution.website) : prev.website,
+          address: institution.address ? String(institution.address) : prev.address,
+          tax_number: institution.tax_number ? String(institution.tax_number) : prev.tax_number,
+          business_registry: institution.business_registry ? String(institution.business_registry) : prev.business_registry,
+          default_currency: institution.default_currency ? String(institution.default_currency) : (prev.default_currency || 'SAR'),
+          notes: institution.notes ? String(institution.notes) : prev.notes,
+        }));
+      }
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error loading institution data:', error);
+      }
+    }
+  };
+
   useEffect(() => {
-    const loadSettings = async () => {
+    const loadSettings = async (skipInstitutionLoad: boolean = false) => {
       setIsLoadingSettings(true);
       try {
         // Get current institution from localStorage
         const selectedInstitutionId = typeof window !== 'undefined' 
           ? localStorage.getItem('selected_institution_id') 
           : null;
+
+        // Fetch institution data first to populate company settings (unless skipped)
+        if (selectedInstitutionId && !skipInstitutionLoad) {
+          await loadInstitutionData(Number(selectedInstitutionId));
+        }
 
         // Fetch settings based on institution
         const params: any = { per_page: 100 };
@@ -272,22 +311,23 @@ export function Settings() {
         // Load price_modification_includes_tax setting
         setPriceModificationIncludesTax(getBoolean('price_modification_includes_tax', true));
 
-        // Load company settings - ensure all values are strings, never null
-        setCompanySettings({
-          name_ar: String(getValue('company_name_ar', '') || ''),
-          name_en: String(getValue('company_name_en', '') || ''),
-          activity_ar: String(getValue('company_activity_ar', '') || ''),
-          activity_en: String(getValue('company_activity_en', '') || ''),
-          phone_number: String(getValue('company_phone_number', '') || ''),
-          secondary_phone_number: String(getValue('company_secondary_phone_number', '') || ''),
-          email: String(getValue('company_email', '') || ''),
-          website: String(getValue('company_website', '') || ''),
-          address: String(getValue('company_address', '') || ''),
-          tax_number: String(getValue('company_tax_number', '') || ''),
-          business_registry: String(getValue('company_business_registry', '') || ''),
-          default_currency: String(getValue('company_default_currency', 'SAR') || 'SAR'),
-          notes: String(getValue('company_notes', '') || ''),
-        });
+        // Load company settings from settings (will override institution data if settings exist)
+        // Only update if settings have values, otherwise keep institution data
+        setCompanySettings(prev => ({
+          name_ar: String(getValue('company_name_ar', prev.name_ar) || prev.name_ar),
+          name_en: String(getValue('company_name_en', prev.name_en) || prev.name_en),
+          activity_ar: String(getValue('company_activity_ar', prev.activity_ar) || prev.activity_ar),
+          activity_en: String(getValue('company_activity_en', prev.activity_en) || prev.activity_en),
+          phone_number: String(getValue('company_phone_number', prev.phone_number) || prev.phone_number),
+          secondary_phone_number: String(getValue('company_secondary_phone_number', prev.secondary_phone_number) || prev.secondary_phone_number),
+          email: String(getValue('company_email', prev.email) || prev.email),
+          website: String(getValue('company_website', prev.website) || prev.website),
+          address: String(getValue('company_address', prev.address) || prev.address),
+          tax_number: String(getValue('company_tax_number', prev.tax_number) || prev.tax_number),
+          business_registry: String(getValue('company_business_registry', prev.business_registry) || prev.business_registry),
+          default_currency: String(getValue('company_default_currency', prev.default_currency) || prev.default_currency || 'SAR'),
+          notes: String(getValue('company_notes', prev.notes) || prev.notes),
+        }));
 
         // Load financial settings - ensure string values are never null
         setFinancialSettings({
@@ -362,8 +402,17 @@ export function Settings() {
     setOtherRecipients(loadOtherRecipients());
 
     // Listen for institution changes
-    const handleInstitutionChange = () => {
-      loadSettings();
+    const handleInstitutionChange = async (event?: Event) => {
+      const customEvent = event as CustomEvent<{ institutionId: number | null }> | undefined;
+      const institutionId = customEvent?.detail?.institutionId 
+        ? customEvent.detail.institutionId 
+        : (typeof window !== 'undefined' ? localStorage.getItem('selected_institution_id') : null);
+      
+      // Load institution data first, then load settings (skip institution load in loadSettings)
+      if (institutionId) {
+        await loadInstitutionData(Number(institutionId));
+      }
+      await loadSettings(true); // Skip institution load since we just loaded it
     };
 
     if (typeof window !== 'undefined') {
@@ -454,6 +503,66 @@ export function Settings() {
           updatedMap.set(setting.key, setting);
         });
         setExistingSettingsMap(updatedMap);
+        
+        // Also update the Institution table if we have an institution ID
+        if (institutionId) {
+          try {
+            // Fetch current institution to get required fields (country)
+            const institutionResult = await getInstitution(institutionId);
+            if (institutionResult.success && institutionResult.data?.institution) {
+              const currentInstitution = institutionResult.data.institution;
+              
+              // Update institution with company settings
+              // For required fields: use company settings if not empty, otherwise keep current
+              // For optional fields: use company settings (can be empty to clear)
+              const institutionUpdateData: Partial<{
+                name_ar: string;
+                name_en: string;
+                activity_ar: string;
+                activity_en: string;
+                phone_number: string;
+                secondary_phone_number?: string;
+                email: string;
+                website?: string;
+                address?: string;
+                country: string;
+                tax_number?: string;
+                business_registry?: string;
+                system_type: 'restaurant' | 'retail';
+                default_currency?: string;
+                notes?: string;
+              }> = {
+                name_ar: companySettings.name_ar.trim() || currentInstitution.name_ar,
+                name_en: companySettings.name_en.trim() || currentInstitution.name_en,
+                activity_ar: companySettings.activity_ar.trim() || currentInstitution.activity_ar,
+                activity_en: companySettings.activity_en.trim() || currentInstitution.activity_en,
+                phone_number: companySettings.phone_number.trim() || currentInstitution.phone_number,
+                email: companySettings.email.trim() || currentInstitution.email,
+                country: currentInstitution.country, // Keep existing country
+                system_type: systemType || currentInstitution.system_type,
+              };
+
+              // Optional fields - always include them (empty string to clear, or the value)
+              institutionUpdateData.secondary_phone_number = companySettings.secondary_phone_number.trim();
+              institutionUpdateData.website = companySettings.website.trim();
+              institutionUpdateData.address = companySettings.address.trim();
+              institutionUpdateData.tax_number = companySettings.tax_number.trim();
+              institutionUpdateData.business_registry = companySettings.business_registry.trim();
+              institutionUpdateData.default_currency = companySettings.default_currency.trim();
+              institutionUpdateData.notes = companySettings.notes.trim();
+
+              // Update the institution
+              const updateResult = await updateInstitution(institutionId, institutionUpdateData);
+              if (!updateResult.success) {
+                console.error('Failed to update institution:', updateResult.message);
+                // Don't throw - settings were saved successfully, just log the error
+              }
+            }
+          } catch (error) {
+            console.error('Error updating institution:', error);
+            // Don't throw - settings were saved successfully, just log the error
+          }
+        }
         
         // Dispatch event to update company name in navbar
         if (typeof window !== 'undefined') {
