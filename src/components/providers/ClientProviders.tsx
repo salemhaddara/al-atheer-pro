@@ -2,6 +2,7 @@
 
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { UserProvider } from '@/contexts/UserContext';
+import { SettingsProvider } from '@/contexts/SettingsContext';
 import { Toaster } from '@/components/ui/sonner';
 import { FullscreenToggle } from '@/components/FullscreenToggle';
 import { ReactNode } from 'react';
@@ -21,17 +22,19 @@ export function ClientProviders({ children, initialLanguage = 'ar' }: ClientProv
   return (
     <LanguageProvider initialLanguage={initialLanguage}>
       <UserProvider>
-        {isLoginPage ? (
-          children
-        ) : (
-          <AuthGuard>
-            <AppLayout>
-              {children}
-            </AppLayout>
-          </AuthGuard>
-        )}
-        <Toaster position="top-center" richColors />
-        {!isLoginPage && <FullscreenToggle />}
+        <SettingsProvider>
+          {isLoginPage ? (
+            children
+          ) : (
+            <AuthGuard>
+              <AppLayout>
+                {children}
+              </AppLayout>
+            </AuthGuard>
+          )}
+          <Toaster position="top-center" richColors />
+          {!isLoginPage && <FullscreenToggle />}
+        </SettingsProvider>
       </UserProvider>
     </LanguageProvider>
   );

@@ -42,12 +42,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Input } from './ui/input';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useUser } from '../contexts/UserContext';
+import { useSettings } from '../contexts/SettingsContext';
+
+// Simplified institution interface for Sidebar (only what we need)
+interface SimplifiedInstitution {
+  id: number;
+  name_ar: string;
+  name_en: string;
+}
 
 interface SidebarProps {
   currentCompany: string;
   onCompanyChange: (company: string) => void;
   isCollapsed?: boolean;
   onToggle?: (collapsed: boolean) => void;
+  institutions?: SimplifiedInstitution[];
+  currentInstitutionId?: number | null;
+  onInstitutionChange?: (institutionId: number | null) => void;
+  isSuperAdmin?: boolean;
 }
 
 // Route mapping for Next.js
@@ -95,9 +107,28 @@ const routeMap: Record<string, string> = {
   'permissions': '/settings/permissions',
 };
 
-export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, isCollapsed: controlledCollapsed, onToggle }: SidebarProps) {
-  const { t, direction } = useLanguage();
+export const Sidebar = memo(function Sidebar({
+  currentCompany,
+  onCompanyChange,
+  isCollapsed: controlledCollapsed,
+  onToggle,
+  institutions = [],
+  currentInstitutionId,
+  onInstitutionChange,
+  isSuperAdmin = false
+}: SidebarProps) {
+  const { t, direction, language } = useLanguage();
   const { currentUser, logout } = useUser();
+  const { companySettings } = useSettings();
+  
+  // Get company name from settings context (prefer Arabic, fallback to English)
+  const companyNameFromSettings = companySettings.name_ar || companySettings.name_en || currentCompany;
+  
+  // Get logo from settings context (no need for institution logo_url since we use settings)
+  const logoFromSettings = companySettings.logo;
+  
+  // Get current institution name for display (if needed)
+  const currentInstitution = institutions.find(inst => inst.id === currentInstitutionId);
   const pathname = usePathname();
   const router = useRouter();
   const [internalCollapsed, setInternalCollapsed] = useState(() => {
@@ -157,12 +188,16 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
     );
   }, []);
 
-  const companies = useMemo(() => [
-    { id: 'alamal', name: t('sidebar.companies.alamal') },
-    { id: 'alnajah', name: t('sidebar.companies.alnajah') },
-    { id: 'alreyada', name: t('sidebar.companies.alreyada') },
-    { id: 'altamayoz', name: t('sidebar.companies.altamayoz') }
-  ], [t]);
+  // Use the current company from settings context
+  // Priority: 1. Settings context, 2. Props, 3. Default
+  const companies = useMemo(() => {
+    const displayName = companyNameFromSettings || currentCompany;
+    if (displayName) {
+      return [{ id: 'current', name: displayName }];
+    }
+    // Fallback to default
+    return [{ id: 'current', name: t('sidebar.noCompany') }];
+  }, [companyNameFromSettings, currentCompany, t]);
 
   const menuSections = useMemo(() => {
     const allSections = [
@@ -325,9 +360,19 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
       <div className={`border-b border-gray-200 relative ${isCollapsed ? 'p-3' : 'p-6'}`}>
         {isCollapsed ? (
           <div className="flex flex-col items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-sm">
-              <LayoutDashboard className="w-5 h-5 text-white" />
-            </div>
+            {logoFromSettings ? (
+              <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center p-1 shadow-sm overflow-hidden">
+                <img
+                  src={logoFromSettings}
+                  alt={companyNameFromSettings || currentCompany || "Logo"}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            ) : (
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shadow-sm">
+                <LayoutDashboard className="w-5 h-5 text-white" />
+              </div>
+            )}
             <button
               onClick={toggleCollapse}
               className="p-1.5 rounded-lg hover:bg-gray-100 active:scale-95 transition-all text-gray-600 hover:text-gray-900"
@@ -342,8 +387,21 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
           </div>
         ) : (
           <>
-            <h1 className="text-blue-600 font-semibold pr-10">{t('sidebar.systemTitle')}</h1>
-            <p className="text-gray-500 text-sm mt-1 pr-10">{t('sidebar.systemSubtitle')}</p>
+            <div className="flex items-center gap-3 pr-10">
+              {logoFromSettings && (
+                <div className="w-10 h-10 rounded-lg bg-white border border-gray-100 flex flex-shrink-0 items-center justify-center p-0.5 overflow-hidden">
+                  <img
+                    src={logoFromSettings}
+                    alt={companyNameFromSettings || currentCompany || "Logo"}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              )}
+              <div>
+                <h1 className="text-blue-600 font-semibold leading-tight">{t('sidebar.systemTitle')}</h1>
+                <p className="text-gray-500 text-sm">{t('sidebar.systemSubtitle')}</p>
+              </div>
+            </div>
             <button
               onClick={toggleCollapse}
               className={`absolute top-4 ${direction === 'rtl' ? 'left-4' : 'right-4'} p-1.5 rounded-lg hover:bg-gray-100 transition-colors text-gray-600 hover:text-gray-900`}
@@ -360,22 +418,54 @@ export const Sidebar = memo(function Sidebar({ currentCompany, onCompanyChange, 
       </div>
 
 
-      {/* Company Selector */}
+      {/* Institution Selector (for super admin) or Company Display */}
       {!isCollapsed && (
         <div className="p-4 border-b border-gray-200">
-          <label className="text-sm text-gray-600 mb-2 block">{t('sidebar.currentCompany')}</label>
-          <Select value={currentCompany} onValueChange={onCompanyChange}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {companies.map((company) => (
-                <SelectItem key={company.id} value={company.name}>
-                  {company.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {isSuperAdmin && institutions.length > 0 ? (
+            <>
+              <label className="text-sm text-gray-600 mb-2 block">{t('sidebar.currentInstitution') || 'المؤسسة الحالية'}</label>
+              <Select
+                value={currentInstitutionId ? String(currentInstitutionId) : ''}
+                onValueChange={(value) => {
+                  if (onInstitutionChange) {
+                    onInstitutionChange(value ? Number(value) : null);
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {institutions.map((institution) => (
+                    <SelectItem key={institution.id} value={String(institution.id)}>
+                      {language === 'ar' ? institution.name_ar : institution.name_en}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : currentInstitution ? (
+            <>
+              <label className="text-sm text-gray-600 mb-2 block">{t('sidebar.currentCompany') || 'الشركة الحالية'}</label>
+              <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm font-medium">
+                {(() => {
+                  // Priority: 1. Company name from settings context, 2. Props, 3. Institution name, 4. Default
+                  if (companyNameFromSettings) return companyNameFromSettings;
+                  if (currentCompany) return currentCompany;
+                  const institutionName = language === 'ar' ? currentInstitution.name_ar : currentInstitution.name_en;
+                  if (institutionName) return institutionName;
+                  return t('sidebar.noCompany');
+                })()}
+              </div>
+            </>
+          ) : (
+            <>
+              <label className="text-sm text-gray-600 mb-2 block">{t('sidebar.currentCompany') || 'الشركة الحالية'}</label>
+              <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm font-medium">
+                {companyNameFromSettings || currentCompany || t('sidebar.noCompany')}
+              </div>
+            </>
+          )}
         </div>
       )}
 

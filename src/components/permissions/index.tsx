@@ -10,6 +10,7 @@ import { RolesTable } from './RolesTable';
 import { RoleFormDialog } from './RoleFormDialog';
 import { ViewRoleDialog } from './ViewRoleDialog';
 import { ManagePermissionsDialog } from './ManagePermissionsDialog';
+import { AssignUsersDialog } from './AssignUsersDialog';
 import type { Role } from '@/lib/roles-api';
 import type { RoleFormData, PermissionsStats as Stats } from './types';
 
@@ -24,6 +25,7 @@ export function Permissions() {
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
     const [isPermissionsDialogOpen, setIsPermissionsDialogOpen] = useState(false);
+    const [isAssignUsersDialogOpen, setIsAssignUsersDialogOpen] = useState(false);
 
     const [formData, setFormData] = useState<RoleFormData>({
         name: '',
@@ -125,6 +127,12 @@ export function Permissions() {
         setIsPermissionsDialogOpen(true);
     };
 
+    // Handle assign users
+    const handleAssignUsers = (role: Role) => {
+        setSelectedRole(role);
+        setIsAssignUsersDialogOpen(true);
+    };
+
     // Handle save permissions
     const handleSavePermissions = async (roleId: number, permissionIds: number[]) => {
         const result = await syncPermissions(roleId, permissionIds);
@@ -156,6 +164,7 @@ export function Permissions() {
                 onEdit={handleEdit}
                 onDelete={handleDelete}
                 onManagePermissions={handleManagePermissions}
+                onAssignUsers={handleAssignUsers}
             />
 
             {/* Create Role Dialog */}
@@ -194,6 +203,16 @@ export function Permissions() {
                 }}
                 onSave={handleSavePermissions}
                 loading={permissionSyncLoading}
+            />
+
+            {/* Assign Users Dialog */}
+            <AssignUsersDialog
+                role={selectedRole}
+                isOpen={isAssignUsersDialogOpen}
+                onClose={() => {
+                    setIsAssignUsersDialogOpen(false);
+                    setSelectedRole(null);
+                }}
             />
         </div>
     );

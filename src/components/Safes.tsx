@@ -11,10 +11,10 @@ import { Textarea } from './ui/textarea';
 import { Switch } from './ui/switch';
 import { Vault, Plus, DollarSign, TrendingUp, Edit, HistoryIcon, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { 
-  getSafes, 
-  createSafe, 
-  updateSafe, 
+import {
+  getSafes,
+  createSafe,
+  updateSafe,
   deleteSafe,
   getBranches,
   type Safe as SafeType,
@@ -55,11 +55,11 @@ export function Safes() {
         const safesList = safesData?.data || (Array.isArray(safesData) ? safesData : []);
         setSafes(safesList);
       } else {
-        toast.error(result.message || 'Failed to load safes');
+        toast.error(result.message || t('safes.messages.loadFailed'));
       }
     } catch (error) {
       console.error('Error fetching safes:', error);
-      toast.error('An error occurred while loading safes');
+      toast.error(t('safes.messages.loadError'));
     } finally {
       setIsLoading(false);
     }
@@ -106,7 +106,7 @@ export function Safes() {
 
   const handleSaveSafe = async () => {
     if (!safeFormData.name_ar || !safeFormData.name_en || !safeFormData.branch_id) {
-      toast.error('Please fill all required fields');
+      toast.error(t('safes.messages.fillRequired'));
       return;
     }
 
@@ -128,12 +128,12 @@ export function Safes() {
       if (editingSafe) {
         result = await updateSafe(editingSafe.id, payload);
         if (result.success) {
-          toast.success('Safe updated successfully');
+          toast.success(t('safes.messages.updateSuccess'));
         }
       } else {
         result = await createSafe(payload);
         if (result.success) {
-          toast.success('Safe created successfully');
+          toast.success(t('safes.messages.createSuccess'));
         }
       }
 
@@ -154,38 +154,38 @@ export function Safes() {
           const errorMessages = Object.values(result.errors).flat();
           toast.error(errorMessages[0] || result.message);
         } else {
-          toast.error(result.message || 'Failed to save safe');
+          toast.error(result.message || t('safes.messages.saveFailed'));
         }
       }
     } catch (error) {
       console.error('Error saving safe:', error);
-      toast.error('An error occurred while saving safe');
+      toast.error(t('safes.messages.saveError'));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDeleteSafe = async (safe: SafeType) => {
-    if (!confirm('Are you sure you want to delete this safe?')) {
+    if (!confirm(t('safes.messages.deleteConfirm') || 'Are you sure you want to delete this safe?')) {
       return;
     }
 
     try {
       const result = await deleteSafe(safe.id);
       if (result.success) {
-        toast.success('Safe deleted successfully');
+        toast.success(t('safes.messages.deleteSuccess'));
         await fetchSafes();
       } else {
-        toast.error(result.message || 'Failed to delete safe');
+        toast.error(result.message || t('safes.messages.deleteFailed'));
       }
     } catch (error) {
       console.error('Error deleting safe:', error);
-      toast.error('An error occurred while deleting safe');
+      toast.error(t('safes.messages.deleteError'));
     }
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ar-SA', {
+    return new Intl.NumberFormat(direction === 'rtl' ? 'ar-SA' : 'en-US', {
       style: 'currency',
       currency: 'SAR'
     }).format(amount);
@@ -197,38 +197,38 @@ export function Safes() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="text-right flex-1">
-          <h1>إدارة الخزائن</h1>
-          <p className="text-gray-600">إدارة الخزائن والأرصدة النقدية</p>
+      <div className={`flex items-center justify-between ${direction === 'rtl' ? 'flex-row-reverse' : 'flex-row'}`}>
+        <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+          <h1>{t('safes.title')}</h1>
+          <p className="text-gray-600">{t('safes.subtitle')}</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={handleAddSafe} className="gap-2 shrink-0">
               <Plus className="w-4 h-4" />
-              خزينة جديدة
+              {t('safes.newSafe')}
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl" dir="rtl">
-            <DialogHeader className="text-right">
-              <DialogTitle>{editingSafe ? 'تعديل الخزينة' : 'إضافة خزينة جديدة'}</DialogTitle>
-              <DialogDescription>قم بإدخال بيانات الخزينة</DialogDescription>
+          <DialogContent className="max-w-2xl" dir={direction}>
+            <DialogHeader className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+              <DialogTitle>{editingSafe ? t('safes.editSafe') : t('safes.addSafe')}</DialogTitle>
+              <DialogDescription>{t('safes.safeData')}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>اسم الخزينة (عربي) *</Label>
-                  <Input 
-                    placeholder="خزينة الفرع الشرقي"
+                <div className="space-y-2 text-right">
+                  <Label>{t('safes.form.nameAr')}</Label>
+                  <Input
+                    placeholder={t('safes.form.nameArPlaceholder') || 'خزينة الفرع الشرقي'}
                     value={safeFormData.name_ar}
                     onChange={(e) => setSafeFormData({ ...safeFormData, name_ar: e.target.value })}
-                    dir={direction}
+                    dir="rtl"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Safe Name (English) *</Label>
-                  <Input 
-                    placeholder="East Branch Safe" 
+                <div className="space-y-2 text-left">
+                  <Label className="block">{t('safes.form.nameEn')}</Label>
+                  <Input
+                    placeholder={t('safes.form.nameEnPlaceholder') || 'East Branch Safe'}
                     dir="ltr"
                     value={safeFormData.name_en}
                     onChange={(e) => setSafeFormData({ ...safeFormData, name_en: e.target.value })}
@@ -236,27 +236,27 @@ export function Safes() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>الفرع المرتبط *</Label>
+              <div className={`space-y-2 ${direction === 'rtl' ? 'text-right' : 'text-left'}`}>
+                <Label>{t('safes.form.linkedBranch')}</Label>
                 <Select
                   value={safeFormData.branch_id}
                   onValueChange={(value) => setSafeFormData({ ...safeFormData, branch_id: value })}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر الفرع" />
+                  <SelectTrigger dir={direction}>
+                    <SelectValue placeholder={t('safes.form.selectBranch') || 'اختر الفرع'} />
                   </SelectTrigger>
                   <SelectContent>
                     {branches.map((branch) => {
                       const authUser = getStoredUser();
                       const isSuperAdmin = authUser?.is_system_owner_admin === true;
                       const branchName = direction === 'rtl' ? branch.name_ar : branch.name_en;
-                      const institutionName = branch.institution 
+                      const institutionName = branch.institution
                         ? (direction === 'rtl' ? branch.institution.name_ar : branch.institution.name_en)
                         : '';
-                      
+
                       return (
                         <SelectItem key={branch.id} value={branch.id.toString()}>
-                          {isSuperAdmin && institutionName 
+                          {isSuperAdmin && institutionName
                             ? `${branchName} - ${institutionName}`
                             : branchName}
                         </SelectItem>
@@ -266,32 +266,32 @@ export function Safes() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label>الرصيد الافتتاحي (ر.س)</Label>
-                <Input 
-                  type="number" 
-                  placeholder="0.00" 
+              <div className={`space-y-2 ${direction === 'rtl' ? 'text-right' : 'text-left'}`}>
+                <Label>{t('safes.form.initialBalance')}</Label>
+                <Input
+                  type="number"
+                  placeholder="0.00"
                   value={safeFormData.current_balance}
                   onChange={(e) => setSafeFormData({ ...safeFormData, current_balance: e.target.value })}
                   dir="ltr"
                 />
               </div>
 
-              <div className="flex items-center justify-between p-3 border rounded-lg">
-                <div>
-                  <Label>حالة الخزينة</Label>
-                  <p className="text-sm text-gray-600">تفعيل أو تعطيل الخزينة</p>
+              <div className={`flex items-center justify-between p-3 border rounded-lg ${direction === 'rtl' ? 'flex-row-reverse' : 'flex-row'}`}>
+                <div className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+                  <Label>{t('safes.form.status')}</Label>
+                  <p className="text-sm text-gray-600">{t('safes.form.statusDesc')}</p>
                 </div>
-                <Switch 
+                <Switch
                   checked={safeFormData.is_active}
                   onCheckedChange={(checked) => setSafeFormData({ ...safeFormData, is_active: checked })}
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label>ملاحظات</Label>
+              <div className={`space-y-2 ${direction === 'rtl' ? 'text-right' : 'text-left'}`}>
+                <Label>{t('safes.form.notes')}</Label>
                 <Textarea
-                  placeholder="أدخل أي ملاحظات إضافية..."
+                  placeholder={t('safes.form.notesPlaceholder') || 'أدخل أي ملاحظات إضافية...'}
                   rows={3}
                   value={safeFormData.notes}
                   onChange={(e) => setSafeFormData({ ...safeFormData, notes: e.target.value })}
@@ -299,29 +299,29 @@ export function Safes() {
                 />
               </div>
 
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
+              <div className={`flex gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : 'flex-row'}`}>
+                <Button
+                  variant="outline"
                   className="flex-1"
                   onClick={() => {
                     setIsDialogOpen(false);
                     setEditingSafe(null);
                   }}
                 >
-                  إلغاء
+                  {t('safes.cancel')}
                 </Button>
-                <Button 
-                  className="flex-1" 
+                <Button
+                  className="flex-1"
                   onClick={handleSaveSafe}
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      جاري الحفظ...
+                      {t('safes.saving')}
                     </>
                   ) : (
-                    editingSafe ? 'حفظ التغييرات' : 'حفظ الخزينة'
+                    editingSafe ? t('safes.saveChanges') : t('safes.save')
                   )}
                 </Button>
               </div>
@@ -331,56 +331,56 @@ export function Safes() {
       </div>
 
       {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 ${direction === 'rtl' ? 'rtl' : 'ltr'}`}>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardHeader className={`flex flex-row items-center justify-between pb-2 ${direction === 'rtl' ? 'flex-row-reverse space-x-reverse' : ''}`}>
             <Vault className="w-4 h-4 text-blue-600" />
-            <CardTitle className="text-sm">إجمالي الخزائن</CardTitle>
+            <CardTitle className="text-sm">{t('safes.stats.totalSafes')}</CardTitle>
           </CardHeader>
-          <CardContent className="text-right">
+          <CardContent className={direction === 'rtl' ? 'text-right' : 'text-left'}>
             <div className="text-2xl">{safes.length}</div>
-            <p className="text-xs text-gray-600 mt-1">خزينة مسجلة</p>
+            <p className="text-xs text-gray-600 mt-1">{t('safes.stats.registeredSafe')}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardHeader className={`flex flex-row items-center justify-between pb-2 ${direction === 'rtl' ? 'flex-row-reverse space-x-reverse' : ''}`}>
             <TrendingUp className="w-4 h-4 text-green-600" />
-            <CardTitle className="text-sm">الخزائن النشطة</CardTitle>
+            <CardTitle className="text-sm">{t('safes.stats.activeSafes')}</CardTitle>
           </CardHeader>
-          <CardContent className="text-right">
+          <CardContent className={direction === 'rtl' ? 'text-right' : 'text-left'}>
             <div className="text-2xl">{activeSafes}</div>
-            <p className="text-xs text-gray-600 mt-1">خزينة نشطة</p>
+            <p className="text-xs text-gray-600 mt-1">{t('safes.stats.activeSafe')}</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardHeader className={`flex flex-row items-center justify-between pb-2 ${direction === 'rtl' ? 'flex-row-reverse space-x-reverse' : ''}`}>
             <DollarSign className="w-4 h-4 text-purple-600" />
-            <CardTitle className="text-sm">إجمالي الأرصدة</CardTitle>
+            <CardTitle className="text-sm">{t('safes.stats.totalBalances')}</CardTitle>
           </CardHeader>
-          <CardContent className="text-right">
+          <CardContent className={direction === 'rtl' ? 'text-right' : 'text-left'}>
             <div className="text-2xl">{formatCurrency(totalBalance)}</div>
-            <p className="text-xs text-gray-600 mt-1">الرصيد الإجمالي</p>
+            <p className="text-xs text-gray-600 mt-1">{t('safes.stats.totalBalance')}</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Safes Table */}
       <Card>
-        <CardHeader className="text-right">
-          <CardTitle>قائمة الخزائن</CardTitle>
-          <CardDescription>عرض وإدارة جميع الخزائن </CardDescription>
+        <CardHeader className={direction === 'rtl' ? 'text-right' : 'text-left'}>
+          <CardTitle>{t('safes.table.title')}</CardTitle>
+          <CardDescription>{t('safes.table.subtitle')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <div dir="rtl">
+          <div dir={direction}>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-right">اسم الخزينة (عربي)</TableHead>
-                  <TableHead className="text-right">الفرع المرتبط</TableHead>
-                  <TableHead className="text-right">الرصيد الحالي</TableHead>
-                  <TableHead className="text-right">الحالة</TableHead>
-                  <TableHead className="text-right">ملاحظات</TableHead>
-                  <TableHead className="text-right">إجراءات</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('safes.table.nameAr')}</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('safes.table.branch')}</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('safes.table.balance')}</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('safes.table.status')}</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('safes.table.notes')}</TableHead>
+                  <TableHead className={direction === 'rtl' ? 'text-right' : 'text-left'}>{t('safes.table.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -393,7 +393,7 @@ export function Safes() {
                 ) : safes.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                      No safes found
+                      {t('safes.table.noSafes')}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -413,7 +413,7 @@ export function Safes() {
                         </TableCell>
                         <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
                           <Badge variant={safe.is_active ? 'default' : 'secondary'}>
-                            {safe.is_active ? 'نشط' : 'غير نشط'}
+                            {safe.is_active ? t('safes.table.active') : t('safes.table.inactive')}
                           </Badge>
                         </TableCell>
                         <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
@@ -422,26 +422,26 @@ export function Safes() {
                           </span>
                         </TableCell>
                         <TableCell className={direction === 'rtl' ? 'text-right' : 'text-left'}>
-                          <div className="flex gap-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
+                          <div className={`flex gap-2 ${direction === 'rtl' ? 'flex-row-reverse' : 'flex-row'}`}>
+                            <Button
+                              variant="outline"
+                              size="sm"
                               className="gap-1"
                               onClick={() => handleEditSafe(safe)}
                             >
                               <Edit className="w-4 h-4" />
-                              تعديل
+                              {t('safes.table.edit')}
                             </Button>
-                            <Button 
-                              variant="outline" 
+                            <Button
+                              variant="outline"
                               size="sm"
                               onClick={() => handleDeleteSafe(safe)}
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
-                            <Button variant="outline" size="sm">
+                            <Button variant="outline" size="sm" className="gap-1">
                               <HistoryIcon className="w-4 h-4" />
-                              سجل الحركات
+                              {t('safes.table.history')}
                             </Button>
                           </div>
                         </TableCell>

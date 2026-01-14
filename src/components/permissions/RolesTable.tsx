@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Badge } from '../ui/badge';
-import { Shield, Eye, Edit, Trash2, Plus } from 'lucide-react';
+import { Shield, Eye, Edit, Trash2, Plus, UserPlus } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { Role } from '@/lib/roles-api';
 
@@ -15,6 +15,7 @@ interface RolesTableProps {
   onEdit: (role: Role) => void;
   onDelete: (role: Role) => void;
   onManagePermissions: (role: Role) => void;
+  onAssignUsers: (role: Role) => void;
 }
 
 export function RolesTable({
@@ -24,6 +25,7 @@ export function RolesTable({
   onEdit,
   onDelete,
   onManagePermissions,
+  onAssignUsers,
 }: RolesTableProps) {
   const { t, direction } = useLanguage();
 
@@ -105,6 +107,9 @@ export function RolesTable({
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => onManagePermissions(role)}>
                         <Shield className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => onAssignUsers(role)}>
+                        <UserPlus className="w-4 h-4" />
                       </Button>
                       {!role.is_system && (
                         <>

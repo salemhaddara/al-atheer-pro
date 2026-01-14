@@ -389,7 +389,8 @@
   "sidebar": {
     "systemTitle": "Integrated ERP System",
     "systemSubtitle": "Enterprise Resource Planning",
-    "currentCompany": "Current Company",
+    "currentInstitution": "Current Company",
+    "noCompany": "No Company Available",
     "search": "Search in menu...",
     "companies": {
       "alamal": "Al-Amal Trading Company",
@@ -1252,6 +1253,10 @@
   "settings": {
     "title": "General Settings",
     "subtitle": "Manage all system settings",
+    "noInstitutionWarning": {
+      "title": "No Institution Selected - You are editing general system settings",
+      "description": "The settings you enter here will be the default values for any institution that doesn't have its own specific settings."
+    },
     "saveSuccess": "Settings saved successfully",
     "saveChanges": "Save Changes",
     "tabs": {
@@ -1266,7 +1271,7 @@
     "company": {
       "title": "Institution Data",
       "titleEn": "Institution Data",
-      "subtitle": "Update basic institution information (Branches Table)",
+      "subtitle": "Update basic institution information",
       "nameAr": "Institution Name (Arabic)",
       "nameArPlaceholder": "Enter institution name in Arabic",
       "nameEn": "Institution Name (English)",
@@ -1623,6 +1628,65 @@
     "title": "Banks & ATM Management",
     "subtitle": "Manage bank accounts, ATMs, and point of sale devices"
   },
+  "safes": {
+    "title": "Safe Management",
+    "subtitle": "Manage safes and cash balances",
+    "newSafe": "New Safe",
+    "editSafe": "Edit Safe",
+    "addSafe": "Add New Safe",
+    "safeData": "Safe Data",
+    "save": "save",
+    "cancel": "cancel",
+    "form": {
+      "nameAr": "Safe Name (Arabic) *",
+      "nameArPlaceholder": "East Branch Safe (Arabic)",
+      "nameEn": "Safe Name (English) *",
+      "nameEnPlaceholder": "East Branch Safe",
+      "linkedBranch": "Linked Branch *",
+      "selectBranch": "Select Branch",
+      "initialBalance": "Initial Balance (SAR)",
+      "status": "Safe Status",
+      "statusDesc": "Activate or deactivate the safe",
+      "notes": "Notes",
+      "notesPlaceholder": "Enter any additional notes..."
+    },
+    "stats": {
+      "totalSafes": "Total Safes",
+      "activeSafes": "Active Safes",
+      "totalBalances": "Total Balances",
+      "registeredSafe": "registered safe",
+      "activeSafe": "active safe",
+      "totalBalance": "Total Balance"
+    },
+    "table": {
+      "title": "Safes List",
+      "subtitle": "View and manage all safes",
+      "nameAr": "Safe Name (Arabic)",
+      "branch": "Linked Branch",
+      "balance": "Current Balance",
+      "status": "Status",
+      "notes": "Notes",
+      "actions": "Actions",
+      "edit": "Edit",
+      "history": "History",
+      "active": "Active",
+      "inactive": "Inactive",
+      "noSafes": "No safes found"
+    },
+    "messages": {
+      "loadFailed": "Failed to load safes",
+      "loadError": "An error occurred while loading safes",
+      "fillRequired": "Please fill all required fields",
+      "updateSuccess": "Safe updated successfully",
+      "createSuccess": "Safe created successfully",
+      "saveFailed": "Failed to save safe",
+      "saveError": "An error occurred while saving safe",
+      "deleteConfirm": "Are you sure you want to delete this safe?",
+      "deleteSuccess": "Safe deleted successfully",
+      "deleteFailed": "Failed to delete safe",
+      "deleteError": "An error occurred while deleting safe"
+    }
+  },
   "openingInventory": {
     "title": "Opening Inventory",
     "subtitle": "Initial Inventory System",
@@ -1799,6 +1863,10 @@
       "defaultCurrencyPlaceholder": "SAR",
       "notes": "Notes",
       "notesPlaceholder": "Additional notes...",
+      "logo": "Logo",
+      "uploadLogo": "Upload Logo",
+      "changeLogo": "Change Logo",
+      "logoHint": "JPEG, PNG, or WebP. Max 5MB",
       "adminUser": "Admin User",
       "adminUserPlaceholder": "Select admin user",
       "adminUserSearchPlaceholder": "Search by name or email...",
@@ -1818,7 +1886,7 @@
       "actions": "Actions",
       "edit": "Edit",
       "delete": "Delete",
-      "noInstitutions": "No institutions registered",
+      "noInstitutions": "No Company Available",
       "loading": "Loading..."
     },
     "messages": {
@@ -1830,6 +1898,8 @@
       "deleteFailed": "Failed to delete institution",
       "loadFailed": "Failed to load institutions list",
       "networkError": "An error occurred while loading institutions",
+      "invalidImageType": "Please select a valid image file",
+      "imageTooLarge": "Image size must be less than 5MB",
       "validation": {
         "nameArRequired": "Please enter institution name in both Arabic and English",
         "activityRequired": "Please enter institution activity in both Arabic and English",
@@ -1952,6 +2022,7 @@
       "statusDescription": "Enable or disable",
       "active": "Active",
       "inactive": "Inactive",
+      "maintenance": "Maintenance",
       "save": "Add Shelf",
       "saveChanges": "Save Changes",
       "list": "Shelves List",
@@ -2012,6 +2083,9 @@
       "toWarehouse": "To",
       "status": "Status",
       "completed": "Completed",
+      "statusCompleted": "Completed",
+      "statusInTransit": "In Transit",
+      "statusPending": "Pending",
       "inTransit": "In Transit",
       "pending": "Pending",
       "transferCreated": "Transfer request created"
@@ -2115,6 +2189,7 @@
       "subtitle": "Track products in warehouses",
       "searchPlaceholder": "Search for product or barcode...",
       "advancedSearch": "Advanced Search",
+      "statusAvailable": "Available",
       "product": "Product",
       "barcode": "Barcode",
       "warehouse": "Warehouse",
