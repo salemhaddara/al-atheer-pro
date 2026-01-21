@@ -120,13 +120,13 @@ export const Sidebar = memo(function Sidebar({
   const { t, direction, language } = useLanguage();
   const { currentUser, logout } = useUser();
   const { companySettings } = useSettings();
-  
+
   // Get company name from settings context (prefer Arabic, fallback to English)
   const companyNameFromSettings = companySettings.name_ar || companySettings.name_en || currentCompany;
-  
+
   // Get logo from settings context (no need for institution logo_url since we use settings)
   const logoFromSettings = companySettings.logo;
-  
+
   // Get current institution name for display (if needed)
   const currentInstitution = institutions.find(inst => inst.id === currentInstitutionId);
   const pathname = usePathname();
@@ -446,7 +446,7 @@ export const Sidebar = memo(function Sidebar({
             </>
           ) : currentInstitution ? (
             <>
-              <label className="text-sm text-gray-600 mb-2 block">{t('sidebar.currentCompany') || 'الشركة الحالية'}</label>
+              <label className="text-sm text-gray-600 mb-2 block">{t('sidebar.currentInstitution') || 'الشركة الحالية'}</label>
               <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm font-medium">
                 {(() => {
                   // Priority: 1. Company name from settings context, 2. Props, 3. Institution name, 4. Default
@@ -460,7 +460,7 @@ export const Sidebar = memo(function Sidebar({
             </>
           ) : (
             <>
-              <label className="text-sm text-gray-600 mb-2 block">{t('sidebar.currentCompany') || 'الشركة الحالية'}</label>
+              <label className="text-sm text-gray-600 mb-2 block">{t('sidebar.currentInstitution') || 'الشركة الحالية'}</label>
               <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm font-medium">
                 {companyNameFromSettings || currentCompany || t('sidebar.noCompany')}
               </div>
