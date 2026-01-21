@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -8,6 +8,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Plus, Search, Edit, Trash2, Mail, Phone, Briefcase, CalendarClock, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { defaultShiftTemplates } from '../data/shifts';
+import {
+  getInstitutions,
+  getInstitutionEmployees,
+  getInstitutionRoles,
+  getUsers,
+  createInstitutionEmployee,
+  type Institution,
+  type InstitutionEmployee as ApiInstitutionEmployee,
+  type InstitutionRole,
+  type User,
+} from '../lib/api';
 
 export interface Employee {
   id: string;
@@ -32,29 +43,37 @@ export interface Employee {
   // Permissions & Access
   role?: 'admin' | 'employee'; // دور الموظف: إدارة أو موظف عادي
   assignedWarehouseId?: string; // المستودع المخصص للموظف
+  institutionId?: number; // المؤسسة التابع لها الموظف
+  userId?: number; // معرف المستخدم في النظام
+  institutionRoleId?: number; // معرف دور المؤسسة
 }
 
 interface EmployeesProps {
   onViewEmployee?: (employeeId: string) => void;
 }
 
+type EmployeeFormData = {
+  name: string;
+  position: string;
+  department: string;
+  email: string;
+  phone: string;
+  salary: number;
+  joinDate: string;
+  shiftId: string;
+  role: 'admin' | 'employee';
+  assignedWarehouseId: string;
+  institutionId: number | '';
+};
+
 export function Employees({ onViewEmployee }: EmployeesProps) {
   const [shiftTemplates] = useState(defaultShiftTemplates);
-  const [employees, setEmployees] = useState<Employee[]>([
-    { id: '1', name: 'خالد أحمد', position: 'مدير عام', department: 'الإدارة', email: 'khaled@example.com', phone: '0501234567', salary: 15000, joinDate: '2020-01-15', shiftId: 'shift-1', status: 'نشط', nationality: 'سعودي', maritalStatus: 'متزوج', birthDate: '1985-05-10', gender: 'ذكر', branchIds: ['1'], role: 'admin' },
-    { id: '2', name: 'سارة محمد', position: 'مديرة مبيعات', department: 'المبيعات', email: 'sara@example.com', phone: '0502345678', salary: 12000, joinDate: '2021-03-20', shiftId: 'shift-4', status: 'نشط', nationality: 'سعودي', maritalStatus: 'متزوج', birthDate: '1990-08-15', gender: 'أنثى', branchIds: ['1', '2'], role: 'admin' },
-    { id: '3', name: 'عبدالله حسن', position: 'محاسب', department: 'المحاسبة', email: 'abdullah@example.com', phone: '0503456789', salary: 8000, joinDate: '2021-06-10', shiftId: 'shift-2', status: 'نشط', nationality: 'سعودي', maritalStatus: 'أعزب', birthDate: '1995-12-20', gender: 'ذكر', branchIds: ['1'], role: 'admin' },
-    { id: '4', name: 'هند علي', position: 'مديرة موارد بشرية', department: 'الموارد البشرية', email: 'hind@example.com', phone: '0504567890', salary: 10000, joinDate: '2020-09-05', shiftId: 'shift-1', status: 'نشط', nationality: 'سعودي', maritalStatus: 'متزوج', birthDate: '1988-03-25', gender: 'أنثى', branchIds: ['1'], role: 'admin' },
-    { id: '5', name: 'يوسف عمر', position: 'مطور برمجيات', department: 'تقنية المعلومات', email: 'youssef@example.com', phone: '0505678901', salary: 11000, joinDate: '2022-02-14', shiftId: 'shift-2', status: 'نشط', nationality: 'سعودي', maritalStatus: 'أعزب', birthDate: '1993-07-08', gender: 'ذكر', branchIds: ['1'], role: 'admin' },
-    { id: '6', name: 'ريم سعيد', position: 'مسؤولة تسويق', department: 'التسويق', email: 'reem@example.com', phone: '0506789012', salary: 9000, joinDate: '2022-05-22', shiftId: 'shift-3', status: 'نشط', nationality: 'سعودي', maritalStatus: 'أعزب', birthDate: '1996-11-12', gender: 'أنثى', branchIds: ['2'], role: 'admin' },
-    { id: '7', name: 'محمد الكاشير', position: 'كاشير', department: 'المبيعات', email: 'cashier1@example.com', phone: '0501111111', salary: 5000, joinDate: '2023-01-01', shiftId: 'shift-1', status: 'نشط', nationality: 'سعودي', maritalStatus: 'أعزب', birthDate: '1998-01-01', gender: 'ذكر', branchIds: ['1'], role: 'employee', assignedWarehouseId: '1' },
-    { id: '8', name: 'فاطمة الكاشيرة', position: 'كاشيرة', department: 'المبيعات', email: 'cashier2@example.com', phone: '0502222222', salary: 5000, joinDate: '2023-02-01', shiftId: 'shift-2', status: 'نشط', nationality: 'سعودي', maritalStatus: 'أعزب', birthDate: '1999-01-01', gender: 'أنثى', branchIds: ['2'], role: 'employee', assignedWarehouseId: '2' },
-  ]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<EmployeeFormData>({
     name: '',
     position: '',
     department: '',
@@ -64,8 +83,117 @@ export function Employees({ onViewEmployee }: EmployeesProps) {
     joinDate: '',
     shiftId: '',
     role: 'employee' as 'admin' | 'employee',
-    assignedWarehouseId: ''
+    assignedWarehouseId: '',
+    institutionId: ''
   });
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [selectedInstitutionId, setSelectedInstitutionId] = useState<number | null>(null);
+  const [isLoadingEmployees, setIsLoadingEmployees] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+  const [institutionRoles, setInstitutionRoles] = useState<InstitutionRole[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
+
+  const formatDate = (value: string) => {
+    if (!value) return '';
+    // Try to parse full ISO and fall back to simple split
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      // عرض التاريخ بصيغة يوم/شهر/سنة عربية
+      return parsed.toLocaleDateString('ar-SA');
+    }
+    return value.split('T')[0] || value;
+  };
+
+  const mapApiEmployeeToEmployee = (apiEmployee: ApiInstitutionEmployee): Employee => {
+    const user = apiEmployee.user;
+    const nameFromUser =
+      user?.full_name ||
+      [user?.first_name, user?.last_name].filter(Boolean).join(' ').trim();
+
+    return {
+      id: String(apiEmployee.id),
+      name: nameFromUser || 'بدون اسم',
+      position: apiEmployee.position || '',
+      department: apiEmployee.department || '',
+      email: user?.email || '',
+      phone: user?.phone_number || '',
+      salary: Number(apiEmployee.salary ?? 0),
+      // نأخذ فقط جزء التاريخ بدون الوقت ليتناسب مع حقل التاريخ والعرض
+      joinDate: apiEmployee.join_date ? apiEmployee.join_date.substring(0, 10) : '',
+      shiftId: apiEmployee.shift_id || undefined,
+      status: apiEmployee.status === 'active' ? 'نشط' : 'غير نشط',
+      assignedWarehouseId: apiEmployee.assigned_warehouse_id
+        ? String(apiEmployee.assigned_warehouse_id)
+        : undefined,
+      institutionId: apiEmployee.institution_id,
+      userId: apiEmployee.user_id,
+      institutionRoleId: apiEmployee.institution_role_id,
+    };
+  };
+
+  useEffect(() => {
+    const loadInitialData = async () => {
+      const [institutionsResult, usersResult] = await Promise.all([
+        getInstitutions({ per_page: 100 }),
+        getUsers({ per_page: 100 }),
+      ]);
+
+      if (institutionsResult.success) {
+        const list = institutionsResult.data.institutions;
+        const institutionsArray = Array.isArray(list) ? list : list.data;
+        setInstitutions(institutionsArray || []);
+
+        // If there is at least one institution, select it and load its employees
+        if (institutionsArray && institutionsArray.length > 0) {
+          const firstInstitutionId = institutionsArray[0].id;
+          setSelectedInstitutionId(firstInstitutionId);
+          void loadInstitutionEmployees(firstInstitutionId);
+        }
+      } else {
+        toast.error(institutionsResult.message || 'فشل في تحميل المؤسسات');
+      }
+
+      if (usersResult.success) {
+        setUsers(usersResult.data.users);
+      } else {
+        toast.error(usersResult.message || 'فشل في تحميل المستخدمين');
+      }
+    };
+
+    loadInitialData();
+  }, []);
+
+  // Load roles when institution changes in the form
+  useEffect(() => {
+    if (typeof formData.institutionId === 'number') {
+      getInstitutionRoles(formData.institutionId).then((result) => {
+        if (result.success) {
+          setInstitutionRoles(result.data.roles);
+        } else {
+          toast.error(result.message || 'فشل في تحميل أدوار المؤسسة');
+        }
+      });
+    } else {
+      setInstitutionRoles([]);
+    }
+  }, [formData.institutionId]);
+
+  const loadInstitutionEmployees = async (institutionId: number) => {
+    setIsLoadingEmployees(true);
+    try {
+      const result = await getInstitutionEmployees(institutionId);
+      if (result.success) {
+        const apiEmployees = result.data.employees || [];
+        const mapped = apiEmployees.map(mapApiEmployeeToEmployee);
+        setEmployees(mapped);
+      } else {
+        toast.error(result.message || 'فشل في تحميل الموظفين');
+      }
+    } finally {
+      setIsLoadingEmployees(false);
+    }
+  };
 
   const getShiftInfo = (shiftId?: string) => shiftTemplates.find((shift) => shift.id === shiftId);
 
@@ -101,8 +229,12 @@ export function Employees({ onViewEmployee }: EmployeesProps) {
       joinDate: employee.joinDate || '',
       shiftId: employee.shiftId || '',
       role: employee.role || 'employee',
-      assignedWarehouseId: employee.assignedWarehouseId || ''
+      assignedWarehouseId: employee.assignedWarehouseId || '',
+      institutionId: employee.institutionId ?? ''
     });
+    setSelectedInstitutionId(employee.institutionId ?? null);
+    setSelectedUserId(employee.userId ?? null);
+    setSelectedRoleId(employee.institutionRoleId ?? null);
     setIsDialogOpen(true);
   };
 
@@ -118,8 +250,11 @@ export function Employees({ onViewEmployee }: EmployeesProps) {
       joinDate: '',
       shiftId: '',
       role: 'employee',
-      assignedWarehouseId: ''
+      assignedWarehouseId: '',
+      institutionId: (selectedInstitutionId ?? '') as number | ''
     });
+    setSelectedUserId(null);
+    setSelectedRoleId(null);
     setIsDialogOpen(true);
   };
 
@@ -149,63 +284,95 @@ export function Employees({ onViewEmployee }: EmployeesProps) {
       toast.error('يرجى إدخال تاريخ التعيين');
       return;
     }
-
-    if (editingEmployee) {
-      // Update existing employee
-      setEmployees(employees.map(emp =>
-        emp.id === editingEmployee.id
-          ? {
-            ...emp,
-            ...formData,
-            salary: Number(formData.salary),
-            shiftId: formData.shiftId || undefined,
-            assignedWarehouseId: formData.assignedWarehouseId || undefined
-          }
-          : emp
-      ));
-      toast.success('تم تحديث الموظف بنجاح');
-    } else {
-      // Add new employee
-      const newEmployee: Employee = {
-        id: Date.now().toString(),
-        name: formData.name.trim(),
-        position: formData.position.trim(),
-        department: formData.department,
-        email: formData.email.trim(),
-        phone: formData.phone.trim(),
-        salary: Number(formData.salary),
-        joinDate: formData.joinDate,
-        shiftId: formData.shiftId || undefined,
-        role: formData.role,
-        assignedWarehouseId: formData.assignedWarehouseId || undefined,
-        status: 'نشط'
-      };
-      setEmployees([...employees, newEmployee]);
-      toast.success('تم إضافة الموظف بنجاح');
+    if (typeof formData.institutionId !== 'number') {
+      toast.error('يرجى اختيار المؤسسة');
+      return;
+    }
+    if (!selectedUserId) {
+      toast.error('يرجى اختيار المستخدم');
+      return;
+    }
+    if (!selectedRoleId) {
+      toast.error('يرجى اختيار دور المؤسسة');
+      return;
     }
 
-    setIsDialogOpen(false);
+    const save = async () => {
+      if (editingEmployee) {
+        // For now, update only locally - backend update endpoint is not defined
+        setEmployees(employees.map(emp =>
+          emp.id === editingEmployee.id
+            ? {
+              ...emp,
+              name: formData.name.trim(),
+              position: formData.position.trim(),
+              department: formData.department,
+              email: formData.email.trim(),
+              phone: formData.phone.trim(),
+              salary: Number(formData.salary),
+              joinDate: formData.joinDate,
+              shiftId: formData.shiftId || undefined,
+              role: formData.role,
+              assignedWarehouseId: formData.assignedWarehouseId || undefined,
+              institutionId: formData.institutionId as number,
+              userId: selectedUserId,
+              institutionRoleId: selectedRoleId,
+            }
+            : emp
+        ));
+        toast.success('تم تحديث الموظف (محليًا)');
+      } else {
+        // Add new employee via backend
+        const result = await createInstitutionEmployee(formData.institutionId as number, {
+          user_id: selectedUserId!,
+          institution_role_id: selectedRoleId!,
+          position: formData.position.trim(),
+          department: formData.department,
+          salary: Number(formData.salary),
+          join_date: formData.joinDate,
+          status: 'active',
+          shift_id: formData.shiftId || null,
+          assigned_warehouse_id: formData.assignedWarehouseId
+            ? Number(formData.assignedWarehouseId)
+            : null,
+        });
+
+        if (result.success) {
+          const created = mapApiEmployeeToEmployee(result.data.employee);
+          setEmployees([...employees, created]);
+          toast.success(result.message || 'تم إضافة الموظف بنجاح');
+        } else {
+          toast.error(result.message || 'فشل في إضافة الموظف');
+          return;
+        }
+      }
+
+      setIsDialogOpen(false);
+    };
+
+    void save();
   };
 
   return (
-    <div>
+    <div dir="rtl">
       <div className="flex items-center justify-between mb-8">
         <div className="text-right flex-1">
           <h1>إدارة الموظفين</h1>
           <p className="text-gray-600">عرض وإدارة جميع الموظفين</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={handleAddNew} className="gap-2 shrink-0">
-              <Plus className="w-4 h-4" />
-              إضافة موظف جديد
-            </Button>
-          </DialogTrigger>
-          <DialogContent dir="rtl">
-            <DialogHeader className="text-right">
-              <DialogTitle>{editingEmployee ? 'تعديل الموظف' : 'إضافة موظف جديد'}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
+        <div className="flex items-center gap-4">
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={handleAddNew} className="gap-2 shrink-0">
+                <Plus className="w-4 h-4" />
+                إضافة موظف جديد
+              </Button>
+            </DialogTrigger>
+            <DialogContent dir="rtl">
+              <DialogHeader className="text-right">
+                <DialogTitle>{editingEmployee ? 'تعديل الموظف' : 'إضافة موظف جديد'}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
               <div>
                 <Label>الاسم الكامل *</Label>
                 <Input
@@ -239,6 +406,68 @@ export function Employees({ onViewEmployee }: EmployeesProps) {
                       <SelectItem value="الموارد البشرية">الموارد البشرية</SelectItem>
                       <SelectItem value="تقنية المعلومات">تقنية المعلومات</SelectItem>
                       <SelectItem value="التسويق">التسويق</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label>المؤسسة *</Label>
+                  <Select
+                    value={formData.institutionId ? String(formData.institutionId) : ''}
+                    onValueChange={(value) =>
+                      setFormData({
+                        ...formData,
+                        institutionId: Number(value),
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر المؤسسة" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {institutions.map((institution) => (
+                        <SelectItem key={institution.id} value={String(institution.id)}>
+                          {institution.name_ar}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>المستخدم *</Label>
+                  <Select
+                    value={selectedUserId ? String(selectedUserId) : ''}
+                    onValueChange={(value) => setSelectedUserId(Number(value))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر المستخدم" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users.map((user) => (
+                        <SelectItem key={user.id} value={String(user.id)}>
+                          {user.full_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>دور المؤسسة *</Label>
+                  <Select
+                    value={selectedRoleId ? String(selectedRoleId) : ''}
+                    onValueChange={(value) => setSelectedRoleId(Number(value))}
+                    disabled={institutionRoles.length === 0}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر الدور" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {institutionRoles.map((role) => (
+                        <SelectItem key={role.id} value={String(role.id)}>
+                          {role.name_ar}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -330,17 +559,18 @@ export function Employees({ onViewEmployee }: EmployeesProps) {
                   </Select>
                 </div>
               </div>
-              <div className="flex gap-2 pt-4">
-                <Button className="flex-1" onClick={handleSave}>
-                  {editingEmployee ? 'تحديث' : 'إضافة'}
-                </Button>
-                <Button variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>
-                  إلغاء
-                </Button>
+                <div className="flex gap-2 pt-4">
+                  <Button className="flex-1" onClick={handleSave}>
+                    {editingEmployee ? 'تحديث' : 'إضافة'}
+                  </Button>
+                  <Button variant="outline" className="flex-1" onClick={() => setIsDialogOpen(false)}>
+                    إلغاء
+                  </Button>
+                </div>
               </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <Card className="mb-6">
@@ -417,7 +647,7 @@ export function Employees({ onViewEmployee }: EmployeesProps) {
                   <div className="flex justify-between items-center">
                     <div className="text-right">
                       <p className="text-sm text-gray-600">تاريخ التعيين</p>
-                      <p className="text-sm">{employee.joinDate}</p>
+                      <p className="text-sm">{formatDate(employee.joinDate)}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm text-gray-600">الراتب</p>

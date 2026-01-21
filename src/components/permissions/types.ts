@@ -5,6 +5,7 @@ export interface RoleFormData {
     slug: string;
     description: string;
     is_active: boolean;
+    institution_id?: number | null;
 }
 
 export interface PermissionsStats {

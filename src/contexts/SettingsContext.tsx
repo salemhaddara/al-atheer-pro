@@ -71,11 +71,11 @@ interface SettingsContextType {
   notificationSettings: NotificationSettings;
   securitySettings: SecuritySettings;
   appearanceSettings: AppearanceSettings;
-  
+
   // Loading states
   isLoadingSettings: boolean;
   isSaving: boolean;
-  
+
   // Actions
   setSystemType: (type: SystemType) => void;
   setPricesIncludeTax: (value: boolean) => void;
@@ -86,7 +86,7 @@ interface SettingsContextType {
   setNotificationSettings: (settings: NotificationSettings | ((prev: NotificationSettings) => NotificationSettings)) => void;
   setSecuritySettings: (settings: SecuritySettings | ((prev: SecuritySettings) => SecuritySettings)) => void;
   setAppearanceSettings: (settings: AppearanceSettings | ((prev: AppearanceSettings) => AppearanceSettings)) => void;
-  
+
   // Methods
   loadSettings: () => Promise<void>;
   saveSettings: () => Promise<boolean>;
@@ -164,14 +164,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [priceModificationIncludesTax, setPriceModificationIncludesTaxState] = useState(true);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  
+
   const [companySettings, setCompanySettingsState] = useState<CompanySettings>(defaultCompanySettings);
   const [financialSettings, setFinancialSettingsState] = useState<FinancialSettings>(defaultFinancialSettings);
   const [taxSettings, setTaxSettingsState] = useState<TaxSettings>(defaultTaxSettings);
   const [notificationSettings, setNotificationSettingsState] = useState<NotificationSettings>(defaultNotificationSettings);
   const [securitySettings, setSecuritySettingsState] = useState<SecuritySettings>(defaultSecuritySettings);
   const [appearanceSettings, setAppearanceSettingsState] = useState<AppearanceSettings>(defaultAppearanceSettings);
-  
+
   // Cache existing settings to avoid checking existence on save
   const [existingSettingsMap, setExistingSettingsMap] = useState<Map<string, Setting>>(new Map());
 
@@ -273,7 +273,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         }
         return value;
       };
-      
+
       // Helper to parse boolean values
       const getBoolean = (key: string, defaultValue: boolean) => {
         const value = getValue(key, defaultValue);
@@ -467,51 +467,51 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         label_en: string;
         label_ar: string;
       }> = [
-        { key: 'system_type', value: systemType, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'System Type', label_ar: 'نوع النظام' },
-        { key: 'prices_include_tax', value: pricesIncludeTax, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Prices Include Tax', label_ar: 'الأسعار شاملة الضريبة' },
-        { key: 'price_modification_includes_tax', value: priceModificationIncludesTax, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Price Modification Includes Tax', label_ar: 'تعديل السعر يشمل الضريبة' },
-        // Company settings
-        { key: 'company_name_ar', value: companySettings.name_ar, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Name (Arabic)', label_ar: 'اسم الشركة (عربي)' },
-        { key: 'company_name_en', value: companySettings.name_en, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Name (English)', label_ar: 'اسم الشركة (إنجليزي)' },
-        { key: 'company_activity_ar', value: companySettings.activity_ar, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Activity (Arabic)', label_ar: 'نشاط الشركة (عربي)' },
-        { key: 'company_activity_en', value: companySettings.activity_en, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Activity (English)', label_ar: 'نشاط الشركة (إنجليزي)' },
-        { key: 'company_phone_number', value: companySettings.phone_number, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Phone Number', label_ar: 'رقم هاتف الشركة' },
-        { key: 'company_secondary_phone_number', value: companySettings.secondary_phone_number, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Secondary Phone', label_ar: 'رقم هاتف الشركة الثانوي' },
-        { key: 'company_email', value: companySettings.email, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Email', label_ar: 'بريد الشركة الإلكتروني' },
-        { key: 'company_website', value: companySettings.website, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Website', label_ar: 'موقع الشركة الإلكتروني' },
-        { key: 'company_address', value: companySettings.address, type: 'text' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Address', label_ar: 'عنوان الشركة' },
-        { key: 'company_tax_number', value: companySettings.tax_number, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Tax Number', label_ar: 'الرقم الضريبي للشركة' },
-        { key: 'company_business_registry', value: companySettings.business_registry, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Business Registry', label_ar: 'السجل التجاري للشركة' },
-        { key: 'company_default_currency', value: companySettings.default_currency, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Default Currency', label_ar: 'العملة الافتراضية للشركة' },
-        { key: 'company_notes', value: companySettings.notes, type: 'text' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Notes', label_ar: 'ملاحظات الشركة' },
-        // Financial settings
-        { key: 'financial_fiscal_year', value: financialSettings.fiscal_year, type: 'string' as const, group: 'financial', scope, institution_id: institutionId, label_en: 'Fiscal Year', label_ar: 'السنة المالية' },
-        { key: 'financial_costing_method', value: financialSettings.costing_method, type: 'string' as const, group: 'financial', scope, institution_id: institutionId, label_en: 'Costing Method', label_ar: 'طريقة التكلفة' },
-        { key: 'financial_auto_entries', value: financialSettings.auto_entries, type: 'boolean' as const, group: 'financial', scope, institution_id: institutionId, label_en: 'Auto Entries', label_ar: 'القيد التلقائي' },
-        { key: 'financial_approve_entries', value: financialSettings.approve_entries, type: 'boolean' as const, group: 'financial', scope, institution_id: institutionId, label_en: 'Approve Entries', label_ar: 'اعتماد القيود' },
-        // Tax settings
-        { key: 'tax_default_vat_rate', value: taxSettings.default_vat_rate, type: 'string' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Default VAT Rate', label_ar: 'نسبة ضريبة القيمة المضافة الافتراضية' },
-        { key: 'tax_institution_tax_number', value: taxSettings.institution_tax_number, type: 'string' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Institution Tax Number', label_ar: 'الرقم الضريبي للمؤسسة' },
-        { key: 'tax_enable_vat', value: taxSettings.enable_vat, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Enable VAT', label_ar: 'تفعيل ضريبة القيمة المضافة' },
-        { key: 'tax_show_prices_with_vat', value: taxSettings.show_prices_with_vat, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Show Prices With VAT', label_ar: 'عرض الأسعار مع الضريبة' },
-        { key: 'tax_show_vat_details', value: taxSettings.show_vat_details, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Show VAT Details', label_ar: 'عرض تفاصيل الضريبة' },
-        { key: 'tax_discount_timing', value: taxSettings.discount_timing, type: 'string' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Discount Timing', label_ar: 'توقيت الخصم' },
-        { key: 'tax_tobacco_tax', value: taxSettings.tobacco_tax, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Tobacco Tax', label_ar: 'ضريبة التبغ' },
-        { key: 'tax_e_invoicing', value: taxSettings.e_invoicing, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'E-Invoicing', label_ar: 'الفواتير الإلكترونية' },
-        // Notification settings
-        { key: 'notification_low_stock', value: notificationSettings.low_stock, type: 'boolean' as const, group: 'notifications', scope, institution_id: institutionId, label_en: 'Low Stock Notifications', label_ar: 'إشعارات المخزون المنخفض' },
-        { key: 'notification_payments', value: notificationSettings.payments, type: 'boolean' as const, group: 'notifications', scope, institution_id: institutionId, label_en: 'Payment Notifications', label_ar: 'إشعارات المدفوعات' },
-        { key: 'notification_daily_reports', value: notificationSettings.daily_reports, type: 'boolean' as const, group: 'notifications', scope, institution_id: institutionId, label_en: 'Daily Reports', label_ar: 'التقارير اليومية' },
-        { key: 'notification_email_notifications', value: notificationSettings.email_notifications, type: 'boolean' as const, group: 'notifications', scope, institution_id: institutionId, label_en: 'Email Notifications', label_ar: 'الإشعارات البريدية' },
-        { key: 'notification_sms_notifications', value: notificationSettings.sms_notifications, type: 'boolean' as const, group: 'notifications', scope, institution_id: institutionId, label_en: 'SMS Notifications', label_ar: 'إشعارات الرسائل النصية' },
-        // Security settings
-        { key: 'security_two_factor', value: securitySettings.two_factor, type: 'boolean' as const, group: 'security', scope, institution_id: institutionId, label_en: 'Two Factor Authentication', label_ar: 'المصادقة الثنائية' },
-        { key: 'security_auto_logout', value: securitySettings.auto_logout, type: 'boolean' as const, group: 'security', scope, institution_id: institutionId, label_en: 'Auto Logout', label_ar: 'تسجيل الخروج التلقائي' },
-        // Appearance settings
-        { key: 'appearance_theme', value: appearanceSettings.theme, type: 'string' as const, group: 'appearance', scope, institution_id: institutionId, label_en: 'Theme', label_ar: 'المظهر' },
-        { key: 'appearance_font_size', value: appearanceSettings.font_size, type: 'string' as const, group: 'appearance', scope, institution_id: institutionId, label_en: 'Font Size', label_ar: 'حجم الخط' },
-        { key: 'appearance_date_format', value: appearanceSettings.date_format, type: 'string' as const, group: 'appearance', scope, institution_id: institutionId, label_en: 'Date Format', label_ar: 'تنسيق التاريخ' },
-      ];
+          { key: 'system_type', value: systemType, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'System Type', label_ar: 'نوع النظام' },
+          { key: 'prices_include_tax', value: pricesIncludeTax, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Prices Include Tax', label_ar: 'الأسعار شاملة الضريبة' },
+          { key: 'price_modification_includes_tax', value: priceModificationIncludesTax, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Price Modification Includes Tax', label_ar: 'تعديل السعر يشمل الضريبة' },
+          // Company settings
+          { key: 'company_name_ar', value: companySettings.name_ar, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Name (Arabic)', label_ar: 'اسم الشركة (عربي)' },
+          { key: 'company_name_en', value: companySettings.name_en, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Name (English)', label_ar: 'اسم الشركة (إنجليزي)' },
+          { key: 'company_activity_ar', value: companySettings.activity_ar, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Activity (Arabic)', label_ar: 'نشاط الشركة (عربي)' },
+          { key: 'company_activity_en', value: companySettings.activity_en, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Activity (English)', label_ar: 'نشاط الشركة (إنجليزي)' },
+          { key: 'company_phone_number', value: companySettings.phone_number, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Phone Number', label_ar: 'رقم هاتف الشركة' },
+          { key: 'company_secondary_phone_number', value: companySettings.secondary_phone_number, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Secondary Phone', label_ar: 'رقم هاتف الشركة الثانوي' },
+          { key: 'company_email', value: companySettings.email, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Email', label_ar: 'بريد الشركة الإلكتروني' },
+          { key: 'company_website', value: companySettings.website, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Website', label_ar: 'موقع الشركة الإلكتروني' },
+          { key: 'company_address', value: companySettings.address, type: 'text' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Address', label_ar: 'عنوان الشركة' },
+          { key: 'company_tax_number', value: companySettings.tax_number, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Tax Number', label_ar: 'الرقم الضريبي للشركة' },
+          { key: 'company_business_registry', value: companySettings.business_registry, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Business Registry', label_ar: 'السجل التجاري للشركة' },
+          { key: 'company_default_currency', value: companySettings.default_currency, type: 'string' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Default Currency', label_ar: 'العملة الافتراضية للشركة' },
+          { key: 'company_notes', value: companySettings.notes, type: 'text' as const, group: 'company', scope, institution_id: institutionId, label_en: 'Company Notes', label_ar: 'ملاحظات الشركة' },
+          // Financial settings
+          { key: 'financial_fiscal_year', value: financialSettings.fiscal_year, type: 'string' as const, group: 'financial', scope, institution_id: institutionId, label_en: 'Fiscal Year', label_ar: 'السنة المالية' },
+          { key: 'financial_costing_method', value: financialSettings.costing_method, type: 'string' as const, group: 'financial', scope, institution_id: institutionId, label_en: 'Costing Method', label_ar: 'طريقة التكلفة' },
+          { key: 'financial_auto_entries', value: financialSettings.auto_entries, type: 'boolean' as const, group: 'financial', scope, institution_id: institutionId, label_en: 'Auto Entries', label_ar: 'القيد التلقائي' },
+          { key: 'financial_approve_entries', value: financialSettings.approve_entries, type: 'boolean' as const, group: 'financial', scope, institution_id: institutionId, label_en: 'Approve Entries', label_ar: 'اعتماد القيود' },
+          // Tax settings
+          { key: 'tax_default_vat_rate', value: taxSettings.default_vat_rate, type: 'string' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Default VAT Rate', label_ar: 'نسبة ضريبة القيمة المضافة الافتراضية' },
+          { key: 'tax_institution_tax_number', value: taxSettings.institution_tax_number, type: 'string' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Institution Tax Number', label_ar: 'الرقم الضريبي للمؤسسة' },
+          { key: 'tax_enable_vat', value: taxSettings.enable_vat, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Enable VAT', label_ar: 'تفعيل ضريبة القيمة المضافة' },
+          { key: 'tax_show_prices_with_vat', value: taxSettings.show_prices_with_vat, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Show Prices With VAT', label_ar: 'عرض الأسعار مع الضريبة' },
+          { key: 'tax_show_vat_details', value: taxSettings.show_vat_details, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Show VAT Details', label_ar: 'عرض تفاصيل الضريبة' },
+          { key: 'tax_discount_timing', value: taxSettings.discount_timing, type: 'string' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Discount Timing', label_ar: 'توقيت الخصم' },
+          { key: 'tax_tobacco_tax', value: taxSettings.tobacco_tax, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'Tobacco Tax', label_ar: 'ضريبة التبغ' },
+          { key: 'tax_e_invoicing', value: taxSettings.e_invoicing, type: 'boolean' as const, group: 'taxes', scope, institution_id: institutionId, label_en: 'E-Invoicing', label_ar: 'الفواتير الإلكترونية' },
+          // Notification settings
+          { key: 'notification_low_stock', value: notificationSettings.low_stock, type: 'boolean' as const, group: 'notifications', scope, institution_id: institutionId, label_en: 'Low Stock Notifications', label_ar: 'إشعارات المخزون المنخفض' },
+          { key: 'notification_payments', value: notificationSettings.payments, type: 'boolean' as const, group: 'notifications', scope, institution_id: institutionId, label_en: 'Payment Notifications', label_ar: 'إشعارات المدفوعات' },
+          { key: 'notification_daily_reports', value: notificationSettings.daily_reports, type: 'boolean' as const, group: 'notifications', scope, institution_id: institutionId, label_en: 'Daily Reports', label_ar: 'التقارير اليومية' },
+          { key: 'notification_email_notifications', value: notificationSettings.email_notifications, type: 'boolean' as const, group: 'notifications', scope, institution_id: institutionId, label_en: 'Email Notifications', label_ar: 'الإشعارات البريدية' },
+          { key: 'notification_sms_notifications', value: notificationSettings.sms_notifications, type: 'boolean' as const, group: 'notifications', scope, institution_id: institutionId, label_en: 'SMS Notifications', label_ar: 'إشعارات الرسائل النصية' },
+          // Security settings
+          { key: 'security_two_factor', value: securitySettings.two_factor, type: 'boolean' as const, group: 'security', scope, institution_id: institutionId, label_en: 'Two Factor Authentication', label_ar: 'المصادقة الثنائية' },
+          { key: 'security_auto_logout', value: securitySettings.auto_logout, type: 'boolean' as const, group: 'security', scope, institution_id: institutionId, label_en: 'Auto Logout', label_ar: 'تسجيل الخروج التلقائي' },
+          // Appearance settings
+          { key: 'appearance_theme', value: appearanceSettings.theme, type: 'string' as const, group: 'appearance', scope, institution_id: institutionId, label_en: 'Theme', label_ar: 'المظهر' },
+          { key: 'appearance_font_size', value: appearanceSettings.font_size, type: 'string' as const, group: 'appearance', scope, institution_id: institutionId, label_en: 'Font Size', label_ar: 'حجم الخط' },
+          { key: 'appearance_date_format', value: appearanceSettings.date_format, type: 'string' as const, group: 'appearance', scope, institution_id: institutionId, label_en: 'Date Format', label_ar: 'تنسيق التاريخ' },
+        ];
 
       // Save all settings in ONE batch API call
       const result = await batchUpdateSettings({ settings: settingsToSave });
