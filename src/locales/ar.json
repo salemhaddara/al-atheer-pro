@@ -2,6 +2,16 @@
   "permissions": {
     "title": "الصلاحيات والأدوار",
     "subtitle": "إدارة صلاحيات المستخدمين والأدوار",
+    "tabs": {
+      "globalRoles": "الأدوار العامة",
+      "institutionRoles": "أدوار المؤسسات"
+    },
+    "institutionRoles": {
+      "selectInstitution": "اختر المؤسسة",
+      "selectInstitutionPlaceholder": "اختر مؤسسة لإدارة أدوارها",
+      "noInstitutionSelected": "لم يتم اختيار مؤسسة",
+      "selectInstitutionMessage": "يرجى اختيار مؤسسة لعرض وإدارة أدوارها"
+    },
     "stats": {
       "totalUsers": "إجمالي المستخدمين",
       "activeUsers": "مستخدم نشط",

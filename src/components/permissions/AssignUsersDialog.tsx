@@ -17,24 +17,34 @@ import { Search, X, UserPlus } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getUsers, type User } from '@/lib/api';
 import { useRoleAssignment } from '@/hooks/useRoles';
-import type { Role } from '@/lib/roles-api';
+import { type Role } from '@/lib/roles-api';
 import { toast } from 'sonner';
+import {
+  listInstitutionEmployees,
+  assignUserToInstitutionRole,
+  removeUserFromInstitution,
+  type InstitutionRole as InstitutionRoleType
+} from '@/lib/institution-roles-api';
 
 interface AssignUsersDialogProps {
-  role: Role | null;
+  role: Role | InstitutionRoleType | null;
   isOpen: boolean;
   onClose: () => void;
+  institutionId?: number | null;
 }
 
-export function AssignUsersDialog({ role, isOpen, onClose }: AssignUsersDialogProps) {
+export function AssignUsersDialog({ role, isOpen, onClose, institutionId }: AssignUsersDialogProps) {
   const { t, direction } = useLanguage();
-  const { assignToUser, revokeFromUser, loading } = useRoleAssignment();
-  
+  const { assignToUser, revokeFromUser, loading: globalLoading } = useRoleAssignment();
+
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+
+  const loading = globalLoading || isAssigning;
 
   useEffect(() => {
     if (isOpen && role) {
@@ -55,7 +65,7 @@ export function AssignUsersDialog({ role, isOpen, onClose }: AssignUsersDialogPr
           (user) =>
             user.email.toLowerCase().includes(query) ||
             user.full_name.toLowerCase().includes(query) ||
-            user.username.toLowerCase().includes(query)
+            user.username?.toLowerCase().includes(query)
         )
       );
     } else {
@@ -66,12 +76,49 @@ export function AssignUsersDialog({ role, isOpen, onClose }: AssignUsersDialogPr
   const loadUsers = async () => {
     setIsLoadingUsers(true);
     try {
-      const result = await getUsers({ per_page: 100 });
-      if (result.success && result.data?.users) {
-        setUsers(result.data.users);
-        setFilteredUsers(result.data.users);
+      // Get institutionId from props or localStorage as requested by the user
+      const storedInstitutionId = typeof window !== 'undefined'
+        ? localStorage.getItem('selected_institution_id')
+        : null;
+
+      const effectiveInstitutionId = institutionId || (storedInstitutionId ? Number(storedInstitutionId) : null);
+
+      if (effectiveInstitutionId) {
+        // Load only employees of this institution
+        const employeesResult = await listInstitutionEmployees(effectiveInstitutionId);
+
+        if (employeesResult.success) {
+          // Flatten employees to user list with their roles
+          const uniqueUsers: Record<number, User> = {};
+          employeesResult.data.employees.forEach(emp => {
+            if (!uniqueUsers[emp.user.id]) {
+              uniqueUsers[emp.user.id] = {
+                ...emp.user,
+                roles: []
+              } as unknown as User;
+            }
+            if (emp.institution_role) {
+              uniqueUsers[emp.user.id].roles?.push(emp.institution_role as any);
+            }
+          });
+
+          const userList = Object.values(uniqueUsers);
+          setUsers(userList);
+          setFilteredUsers(userList);
+        } else {
+          toast.error(employeesResult.message || 'Failed to load institution employees');
+          setUsers([]);
+          setFilteredUsers([]);
+        }
       } else {
-        toast.error(result.message || 'Failed to load users');
+        // Global roles context - fetch system users
+        const allUsersResult = await getUsers({ per_page: 100 });
+        if (allUsersResult.success && allUsersResult.data?.users) {
+          setUsers(allUsersResult.data.users);
+          setFilteredUsers(allUsersResult.data.users);
+        } else {
+          toast.error(allUsersResult.message || 'Failed to load users');
+        }
       }
     } catch (error) {
       if (process.env.NODE_ENV === 'development') {
@@ -89,13 +136,29 @@ export function AssignUsersDialog({ role, isOpen, onClose }: AssignUsersDialogPr
       return;
     }
 
-    const result = await assignToUser(role.id, selectedUserId);
-    if (result.success) {
-      toast.success(
-        t('permissions.users.assignedSuccess') || 'Role assigned to user successfully'
-      );
-      setSelectedUserId(null);
-      loadUsers(); // Reload to get updated roles
+    setIsAssigning(true);
+    try {
+      if (institutionId) {
+        const result = await assignUserToInstitutionRole(institutionId, selectedUserId, role.id);
+        if (result.success) {
+          toast.success(t('permissions.users.assignedSuccess') || 'Role assigned to user successfully');
+          setSelectedUserId(null);
+          loadUsers();
+        } else {
+          toast.error(result.message || 'Failed to assign role');
+        }
+      } else {
+        const result = await assignToUser(role.id, selectedUserId);
+        if (result.success) {
+          toast.success(t('permissions.users.assignedSuccess') || 'Role assigned to user successfully');
+          setSelectedUserId(null);
+          loadUsers();
+        }
+      }
+    } catch (error) {
+      toast.error('An error occurred during assignment');
+    } finally {
+      setIsAssigning(false);
     }
   };
 
@@ -106,12 +169,27 @@ export function AssignUsersDialog({ role, isOpen, onClose }: AssignUsersDialogPr
       return;
     }
 
-    const result = await revokeFromUser(role.id, user.id);
-    if (result.success) {
-      toast.success(
-        t('permissions.users.revokedSuccess') || 'Role revoked from user successfully'
-      );
-      loadUsers(); // Reload to get updated roles
+    setIsAssigning(true);
+    try {
+      if (institutionId) {
+        const result = await removeUserFromInstitution(institutionId, user.id);
+        if (result.success) {
+          toast.success(t('permissions.users.revokedSuccess') || 'Role revoked from user successfully');
+          loadUsers();
+        } else {
+          toast.error(result.message || 'Failed to revoke role');
+        }
+      } else {
+        const result = await revokeFromUser(role.id, user.id);
+        if (result.success) {
+          toast.success(t('permissions.users.revokedSuccess') || 'Role revoked from user successfully');
+          loadUsers();
+        }
+      }
+    } catch (error) {
+      toast.error('An error occurred during revocation');
+    } finally {
+      setIsAssigning(false);
     }
   };
 
@@ -132,7 +210,7 @@ export function AssignUsersDialog({ role, isOpen, onClose }: AssignUsersDialogPr
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" dir={direction}>
         <DialogHeader className={direction === 'rtl' ? 'text-right' : 'text-left'}>
           <DialogTitle>
-            {t('permissions.users.assignRole') || 'Assign Role to Users'} - {role.name}
+            {t('permissions.users.assignRole') || 'Assign Role to Users'} - {'name' in role ? role.name : (direction === 'rtl' ? role.name_ar : role.name_en)}
           </DialogTitle>
           <DialogDescription>
             {t('permissions.users.description') || 'Assign or revoke this role from users'}

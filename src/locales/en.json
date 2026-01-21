@@ -2,6 +2,16 @@
   "permissions": {
     "title": "Permissions and Roles",
     "subtitle": "Manage user permissions and roles",
+    "tabs": {
+      "globalRoles": "Global Roles",
+      "institutionRoles": "Institution Roles"
+    },
+    "institutionRoles": {
+      "selectInstitution": "Select Institution",
+      "selectInstitutionPlaceholder": "Choose an institution to manage its roles",
+      "noInstitutionSelected": "No institution selected",
+      "selectInstitutionMessage": "Please select an institution to view and manage its roles"
+    },
     "stats": {
       "totalUsers": "Total Users",
       "activeUsers": "active users",

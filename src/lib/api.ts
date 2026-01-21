@@ -474,6 +474,14 @@ export interface InstitutionEmployee {
     id: number;
     user_id: number;
     institution_role_id: number;
+    institution_id?: number;
+    position?: string;
+    department?: string;
+    salary?: number;
+    join_date?: string;
+    status?: string;
+    shift_id?: string | null;
+    assigned_warehouse_id?: number | null;
     user?: User;
     institution_role?: {
         id: number;
@@ -488,11 +496,60 @@ export interface InstitutionEmployeeListResponse {
     employees: InstitutionEmployee[];
 }
 
+export interface InstitutionEmployeeResponse {
+    employee: InstitutionEmployee;
+}
+
+export interface CreateInstitutionEmployeeRequest {
+    user_id: number;
+    institution_role_id: number;
+    position: string;
+    department: string;
+    salary: number;
+    join_date: string;
+    status?: string | null;
+    shift_id?: string | null;
+    assigned_warehouse_id?: number | null;
+}
+
 /**
  * Get list of employees for an institution
  */
 export async function getInstitutionEmployees(institutionId: number): Promise<ApiResult<InstitutionEmployeeListResponse>> {
     return apiRequest<InstitutionEmployeeListResponse>(`/api/v1/institutions/${institutionId}/employees`, {
+        method: 'GET',
+    });
+}
+
+/**
+ * Create (assign) a new employee to an institution
+ */
+export async function createInstitutionEmployee(
+    institutionId: number,
+    data: CreateInstitutionEmployeeRequest
+): Promise<ApiResult<InstitutionEmployeeResponse>> {
+    return apiRequest<InstitutionEmployeeResponse>(`/api/v1/institutions/${institutionId}/employees`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+}
+
+/**
+ * Institution Role API calls
+ */
+export interface InstitutionRole {
+    id: number;
+    institution_id: number;
+    name_en: string;
+    name_ar: string;
+}
+
+export interface InstitutionRoleListResponse {
+    roles: InstitutionRole[];
+}
+
+export async function getInstitutionRoles(institutionId: number): Promise<ApiResult<InstitutionRoleListResponse>> {
+    return apiRequest<InstitutionRoleListResponse>(`/api/v1/institutions/${institutionId}/roles`, {
         method: 'GET',
     });
 }
