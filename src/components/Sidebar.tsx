@@ -361,7 +361,7 @@ export const Sidebar = memo(function Sidebar({
         {isCollapsed ? (
           <div className="flex flex-col items-center gap-3">
             {logoFromSettings ? (
-              <div className="w-10 h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center p-1 shadow-sm overflow-hidden">
+              <div className="w-10 h-10 flex items-center justify-center p-1 overflow-hidden">
                 <img
                   src={logoFromSettings}
                   alt={companyNameFromSettings || currentCompany || "Logo"}
@@ -387,20 +387,23 @@ export const Sidebar = memo(function Sidebar({
           </div>
         ) : (
           <>
-            <div className="flex items-center gap-3 pr-10">
+            <div className="flex items-center mt-6">
               {logoFromSettings && (
-                <div className="w-10 h-10 rounded-lg bg-white border border-gray-100 flex flex-shrink-0 items-center justify-center p-0.5 overflow-hidden">
-                  <img
-                    src={logoFromSettings}
-                    alt={companyNameFromSettings || currentCompany || "Logo"}
-                    className="w-full h-full object-contain"
-                  />
+                <div className='flex flex-row items-center gap-4'>
+                  <div className="w-10 h-10 flex flex-shrink-0 items-center justify-center p-0.5 overflow-hidden">
+                    <img
+                      src={logoFromSettings}
+                      alt={companyNameFromSettings || currentCompany || "Logo"}
+                      className="w-full h-full object-contain"
+                    />
+
+                  </div>
+                  <div>
+                    <h2 className='sm:text-sm md:text-md lg:text-lg'>{companyNameFromSettings}</h2>
+                  </div>
                 </div>
+
               )}
-              <div>
-                <h1 className="text-blue-600 font-semibold leading-tight">{t('sidebar.systemTitle')}</h1>
-                <p className="text-gray-500 text-sm">{t('sidebar.systemSubtitle')}</p>
-              </div>
             </div>
             <button
               onClick={toggleCollapse}

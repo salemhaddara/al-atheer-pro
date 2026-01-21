@@ -95,8 +95,8 @@ export function Settings() {
   const handleSave = async () => {
     const success = await saveSettings();
     if (success) {
-        toast.success(t('settings.saveSuccess') || 'Settings saved successfully');
-      } else {
+      toast.success(t('settings.saveSuccess') || 'Settings saved successfully');
+    } else {
       toast.error(t('settings.saveError') || 'Failed to save settings');
     }
   };
@@ -233,12 +233,6 @@ export function Settings() {
 
       {!localStorage.getItem('selected_institution_id') && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
-          <div className="flex items-center gap-3 text-amber-800">
-            <Building2 className="w-5 h-5 text-amber-600" />
-            <div className="font-medium">
-              {t('settings.noInstitutionWarning.title')}
-            </div>
-          </div>
           <p className={`mt-1 text-sm text-amber-700 ${direction === 'rtl' ? 'mr-8' : 'ml-8'}`}>
             {t('settings.noInstitutionWarning.description')}
           </p>

@@ -258,12 +258,12 @@ export interface Institution {
 }
 
 export interface InstitutionListResponse {
-    institutions: {
-        data: Institution[];
-        current_page: number;
-        per_page: number;
-        total: number;
-        last_page: number;
+    data: {
+        institutions: Institution[];
+        current_page?: number;
+        per_page?: number;
+        total?: number;
+        last_page?: number;
     };
 }
 
@@ -284,7 +284,7 @@ export interface CreateInstitutionRequest {
     default_currency?: string;
     notes?: string;
     admin_user_id: number;
-    logo?: string;
+    logo?: File;
 }
 
 export interface InstitutionResponse {
@@ -331,7 +331,28 @@ export async function getInstitutions(params?: { per_page?: number; system_type?
 /**
  * Create a new institution
  */
-export async function createInstitution(data: CreateInstitutionRequest): Promise<ApiResult<InstitutionResponse>> {
+export async function createInstitution(data: CreateInstitutionRequest, logoFile?: File): Promise<ApiResult<InstitutionResponse>> {
+    if (logoFile) {
+        const formData = new FormData();
+        formData.append('name_ar', data.name_ar);
+        formData.append('name_en', data.name_en);
+        formData.append('activity_ar', data.activity_ar);
+        formData.append('activity_en', data.activity_en);
+        formData.append('phone_number', data.phone_number);
+        formData.append('email', data.email);
+        formData.append('country', data.country);
+        formData.append('system_type', data.system_type);
+        formData.append('admin_user_id', String(data.admin_user_id));
+        if (data.secondary_phone_number) formData.append('secondary_phone_number', data.secondary_phone_number);
+        if (data.website) formData.append('website', data.website);
+        if (data.address) formData.append('address', data.address);
+        if (data.tax_number) formData.append('tax_number', data.tax_number);
+        if (data.business_registry) formData.append('business_registry', data.business_registry);
+        if (data.default_currency) formData.append('default_currency', data.default_currency);
+        if (data.notes) formData.append('notes', data.notes);
+        formData.append('logo', logoFile);
+        return apiRequestFormData<InstitutionResponse>('/api/v1/institutions', formData, 'POST');
+    }
     return apiRequest<InstitutionResponse>('/api/v1/institutions', {
         method: 'POST',
         body: JSON.stringify(data),
@@ -350,11 +371,28 @@ export async function getInstitution(id: number): Promise<ApiResult<InstitutionR
 /**
  * Update an institution
  */
-export async function updateInstitution(id: number, data: Partial<CreateInstitutionRequest>): Promise<ApiResult<InstitutionResponse>> {
-    return apiRequest<InstitutionResponse>(`/api/v1/institutions/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(data),
-    });
+export async function updateInstitution(id: number, data: Partial<CreateInstitutionRequest>, logoFile?: File): Promise<ApiResult<InstitutionResponse>> {
+    const formData = new FormData();
+    if (data.name_ar) formData.append('name_ar', data.name_ar);
+    if (data.name_en) formData.append('name_en', data.name_en);
+    if (data.activity_ar) formData.append('activity_ar', data.activity_ar);
+    if (data.activity_en) formData.append('activity_en', data.activity_en);
+    if (data.phone_number) formData.append('phone_number', data.phone_number);
+    if (data.secondary_phone_number !== undefined) formData.append('secondary_phone_number', data.secondary_phone_number || '');
+    if (data.email) formData.append('email', data.email);
+    if (data.website !== undefined) formData.append('website', data.website || '');
+    if (data.address !== undefined) formData.append('address', data.address || '');
+    if (data.country) formData.append('country', data.country);
+    if (data.tax_number !== undefined) formData.append('tax_number', data.tax_number || '');
+    if (data.business_registry !== undefined) formData.append('business_registry', data.business_registry || '');
+    if (data.system_type) formData.append('system_type', data.system_type);
+    if (data.default_currency !== undefined) formData.append('default_currency', data.default_currency || '');
+    if (data.notes !== undefined) formData.append('notes', data.notes || '');
+    if (logoFile) {
+        formData.append('logo', logoFile);
+    }
+    formData.append('_method', 'PUT');
+    return apiRequestFormData<InstitutionResponse>(`/api/v1/institutions/${id}`, formData, 'POST');
 }
 
 /**
@@ -1127,4 +1165,3 @@ export async function batchUpdateSettings(data: BatchUpdateSettingsRequest): Pro
         body: JSON.stringify(data),
     });
 }
-

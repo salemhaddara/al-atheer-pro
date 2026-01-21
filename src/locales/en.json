@@ -1842,6 +1842,8 @@
       "thisMonth": "This month"
     },
     "form": {
+      "title": "Add New Institution",
+      "subtitle": "Enter institution details",
       "nameAr": "Institution Name (Arabic) *",
       "nameArPlaceholder": "شركة الأثير للتجارة",
       "nameEn": "Institution Name (English) *",
@@ -1881,7 +1883,8 @@
       "adminUserPlaceholder": "Select admin user",
       "adminUserSearchPlaceholder": "Search by name or email...",
       "loadingUsers": "Loading users...",
-      "noUsersFound": "No users found"
+      "noUsersFound": "No users found",
+      "back": "Back"
     },
     "table": {
       "title": "Institutions List",
@@ -1897,7 +1900,8 @@
       "edit": "Edit",
       "delete": "Delete",
       "noInstitutions": "No Company Available",
-      "loading": "Loading..."
+      "loading": "Loading...",
+      "logo": "Logo"
     },
     "messages": {
       "createSuccess": "Institution added successfully",

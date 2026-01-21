@@ -87,101 +87,6 @@ export function AppLayout({ children }: AppLayoutProps) {
   useEffect(() => {
     let isMounted = true;
 
-    const loadInstitutions = async () => {
-      try {
-        const authUser = getStoredUser();
-        if (!authUser) return;
-
-        const superAdmin = authUser.is_system_owner_admin === true;
-        setIsSuperAdmin(superAdmin);
-
-        if (superAdmin) {
-          // Super admin: fetch all institutions
-          const result = await getInstitutions({ per_page: 100 });
-          if (!isMounted) return;
-
-          if (result.success && result.data?.institutions?.data) {
-            setInstitutions(result.data.institutions.data);
-
-            // Get selected institution from localStorage or use first one
-            const savedInstitutionId = typeof window !== 'undefined'
-              ? localStorage.getItem('selected_institution_id')
-              : null;
-
-            if (savedInstitutionId) {
-              const institution = result.data.institutions.data.find(
-                (inst: Institution) => inst.id === Number(savedInstitutionId)
-              );
-              if (institution) {
-                setCurrentInstitutionId(institution.id);
-                await loadCompanyName(institution.id);
-                return;
-              }
-            }
-
-            // Use first institution if available
-            if (result.data.institutions.data.length > 0) {
-              const firstInstitution = result.data.institutions.data[0];
-              setCurrentInstitutionId(firstInstitution.id);
-              await loadCompanyName(firstInstitution.id);
-            } else {
-              // No institutions, load system settings
-              await loadCompanyName(null);
-            }
-          } else {
-            await loadCompanyName(null);
-          }
-        } else {
-          // Regular user: get their institution(s) from API
-          // The API filters institutions by user access automatically
-          const result = await getInstitutions({ per_page: 100 });
-          if (!isMounted) return;
-
-          if (result.success && result.data?.institutions?.data && result.data.institutions.data.length > 0) {
-            const userInstitutions = result.data.institutions.data;
-            setInstitutions(userInstitutions);
-
-            // Get saved institution or use first one
-            const savedInstitutionId = typeof window !== 'undefined'
-              ? localStorage.getItem('selected_institution_id')
-              : null;
-
-            let selectedInstitution = userInstitutions[0]; // Default to first
-
-            if (savedInstitutionId) {
-              const savedInstitution = userInstitutions.find(
-                (inst: Institution) => inst.id === Number(savedInstitutionId)
-              );
-              if (savedInstitution) {
-                selectedInstitution = savedInstitution;
-              }
-            }
-
-            setCurrentInstitutionId(selectedInstitution.id);
-            // Set company name from institution name immediately as fallback
-            const institutionName = language === 'ar' ? selectedInstitution.name_ar : selectedInstitution.name_en;
-            if (institutionName) {
-              setCurrentCompany(institutionName);
-            }
-            // Then try to load from settings (will override if found)
-            await loadCompanyName(selectedInstitution.id);
-          } else {
-            // No institution assigned, use system settings
-            setInstitutions([]);
-            setCurrentInstitutionId(null);
-            await loadCompanyName(null);
-          }
-        }
-      } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Error loading institutions:', error);
-        }
-        if (isMounted) {
-          await loadCompanyName(null);
-        }
-      }
-    };
-
     const loadCompanyName = async (institutionId: number | null) => {
       if (!isMounted) return;
 
@@ -203,40 +108,126 @@ export function AppLayout({ children }: AppLayoutProps) {
             settingsMap.set(setting.key, setting.value);
           });
 
-          // Get company name based on current language
           const companyKey = language === 'ar' ? 'company_name_ar' : 'company_name_en';
           const companyName = settingsMap.get(companyKey) || settingsMap.get('company_name_ar') || settingsMap.get('company_name_en');
 
-          // Only update if we have a company name from settings, otherwise keep the institution name
           if (companyName) {
             setCurrentCompany(companyName);
           }
         }
-        // Don't set fallback here - let the institution name stay if settings don't have company name
       } catch (error) {
         if (process.env.NODE_ENV === 'development') {
           console.error('Error loading company name:', error);
         }
-        // Don't override with fallback - keep institution name
+      }
+    };
+
+    const loadInstitutions = async () => {
+      try {
+        const authUser = getStoredUser();
+        if (!authUser) return;
+
+        const superAdmin = authUser.is_system_owner_admin === true;
+        setIsSuperAdmin(superAdmin);
+
+        if (superAdmin) {
+          const result = await getInstitutions({ per_page: 100 });
+          if (!isMounted) return;
+
+          if (result.success && result.data) {
+            const instData: any = (result as any).data?.institutions;
+            const allInstitutions: Institution[] = Array.isArray(instData) ? instData : instData?.data || [];
+            setInstitutions(allInstitutions);
+
+            const savedInstitutionId = typeof window !== 'undefined'
+              ? localStorage.getItem('selected_institution_id')
+              : null;
+
+            if (savedInstitutionId) {
+              const institution = allInstitutions.find(
+                (inst: Institution) => inst.id === Number(savedInstitutionId)
+              );
+              if (institution) {
+                setCurrentInstitutionId(institution.id);
+                await loadCompanyName(institution.id);
+                return;
+              }
+            }
+
+            if (allInstitutions.length > 0) {
+              const firstInstitution = allInstitutions[0];
+              setCurrentInstitutionId(firstInstitution.id);
+              await loadCompanyName(firstInstitution.id);
+            } else {
+              await loadCompanyName(null);
+            }
+          } else {
+            await loadCompanyName(null);
+          }
+        } else {
+          const result = await getInstitutions({ per_page: 100 });
+          if (!isMounted) return;
+
+          if (result.success && result.data) {
+            const instData: any = (result as any).data?.institutions;
+            const userInstitutions: Institution[] = Array.isArray(instData) ? instData : instData?.data || [];
+            if (userInstitutions.length > 0) {
+              setInstitutions(userInstitutions);
+
+              const savedInstitutionId = typeof window !== 'undefined'
+                ? localStorage.getItem('selected_institution_id')
+                : null;
+
+              let selectedInstitution = userInstitutions[0];
+
+              if (savedInstitutionId) {
+                const savedInstitution = userInstitutions.find(
+                  (inst: Institution) => inst.id === Number(savedInstitutionId)
+                );
+                if (savedInstitution) {
+                  selectedInstitution = savedInstitution;
+                }
+              }
+
+              setCurrentInstitutionId(selectedInstitution.id);
+              const institutionName = language === 'ar' ? selectedInstitution.name_ar : selectedInstitution.name_en;
+              if (institutionName) {
+                setCurrentCompany(institutionName);
+              }
+              await loadCompanyName(selectedInstitution.id);
+            } else {
+              setInstitutions([]);
+              setCurrentInstitutionId(null);
+              await loadCompanyName(null);
+            }
+          } else {
+            setInstitutions([]);
+            setCurrentInstitutionId(null);
+            await loadCompanyName(null);
+          }
+        }
+      } catch (error) {
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error loading institutions:', error);
+        }
+        if (isMounted) {
+          await loadCompanyName(null);
+        }
       }
     };
 
     loadInstitutions();
 
-    // Listen for settings updates (when settings are saved)
     const handleSettingsUpdate = async () => {
       if (!isMounted) return;
-      // Use ref to get current institution ID (avoids stale closure)
       const currentInstId = currentInstitutionIdRef.current;
       if (currentInstId) {
-        // No need to refresh institution data - logo comes from settings context
         loadCompanyName(currentInstId);
       } else {
         loadCompanyName(null);
       }
     };
 
-    // Listen for institution changes
     const handleInstitutionChange = (event: Event) => {
       if (!isMounted) return;
       const customEvent = event as CustomEvent<{ institutionId: number | null }>;
@@ -261,7 +252,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         window.removeEventListener('institutionChanged', handleInstitutionChange);
       }
     };
-  }, [language]); // Only reload when language changes, NOT when institutions change
+  }, [language]);
 
   const handleSidebarToggle = (collapsed: boolean) => {
     setIsSidebarCollapsed(collapsed);
@@ -299,4 +290,3 @@ export function AppLayout({ children }: AppLayoutProps) {
     </>
   );
 }
-
